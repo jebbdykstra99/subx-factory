@@ -1,6 +1,7 @@
 name: stamp
-# Opens ONE PR per room with the current factory release. Never pushes to main, never force-pushes:
-# each run pushes a NEW branch factory/<version>-<run_id> and skips the room if that branch already exists.
+# Manual dispatch only. Never pushes to main, never force-pushes.
+# The job refuses to run — no room clone, no branch, no PR — until rules_step1_live is YES.
+# After that, a non-dry run pushes a NEW branch factory/<version>-<run_id> and skips the room if that branch exists.
 # Needs secret ROOMS_TOKEN: fine-grained PAT (owner jebbdykstra99), repos = the room repos, Contents: write,
 # Pull requests: write. Nothing else. Rules are NOT touched (Jebb hand-publishes Firestore/Storage rules).
 on:
@@ -26,8 +27,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Gate
-        if: inputs.dry_run != 'true' && inputs.rules_step1_live != 'YES'
-        run: echo "Refusing to open stamp PRs before rules step 1 is live." && exit 1
+        env:
+          RULES_STEP1: ${{ inputs.rules_step1_live }}
+        run: |
+          set -euo pipefail
+          if [ "$RULES_STEP1" != "YES" ]; then
+            echo "Refusing to run before rules step 1 is confirmed."
+            exit 1
+          fi
       - name: Stamp rooms
         env:
           GH_TOKEN: ${{ secrets.ROOMS_TOKEN }}
