@@ -1,0 +1,7 @@
+node_modules
+work/
+build/*.js
+!build/sources/*.js
+*.log
+rules/tests/firestore.rules
+rules/tests/storage.rules

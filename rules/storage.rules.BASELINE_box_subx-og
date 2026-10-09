@@ -1,0 +1,37 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function factorySiteId(siteId) {
+      return siteId in ['samochat', 'bartchat', '415chat', 'gpchat', '27chat', '808chat', 'buffettchat', 'gaichat', 'popechat', 'recruitchat', 'booze', 'buffet', 'boyfriend', 'cia', 'cobra'];
+    }
+
+    match /posts/{siteId}/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.uid == uid
+        && factorySiteId(siteId)
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 5 * 1024 * 1024;
+      allow delete: if request.auth != null
+        && request.auth.uid == uid
+        && factorySiteId(siteId);
+    }
+
+    match /stories/{siteId}/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && factorySiteId(siteId)
+        && request.resource.size < 8 * 1024 * 1024
+        && (
+          request.resource.contentType.matches('image/.*')
+          || request.resource.contentType == 'video/mp4'
+          || request.resource.contentType == 'video/webm'
+        );
+      allow delete: if request.auth != null
+        && request.auth.uid == userId
+        && factorySiteId(siteId);
+    }
+  }
+}

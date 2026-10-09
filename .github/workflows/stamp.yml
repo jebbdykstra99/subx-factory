@@ -1,0 +1,63 @@
+name: stamp
+# Opens ONE PR per room with the current factory release. Never pushes to main, never force-pushes:
+# each run pushes a NEW branch factory/<version>-<run_id> and skips the room if that branch already exists.
+# Needs secret ROOMS_TOKEN: fine-grained PAT (owner jebbdykstra99), repos = the room repos, Contents: write,
+# Pull requests: write. Nothing else. Rules are NOT touched (Jebb hand-publishes Firestore/Storage rules).
+on:
+  workflow_dispatch:
+    inputs:
+      rooms:
+        description: "Comma-separated rooms, or 'ready' for every rooms.json entry with status ready and no waitFor"
+        required: true
+        default: ready
+      rules_step1_live:
+        description: "Type YES only if Firestore rules step 1 (rateLimits) is published in subx-skins. The new factory.js writes rateLimits on every post."
+        required: true
+        default: "no"
+      dry_run:
+        description: "true = run the stamp and print the report, open no PRs"
+        required: true
+        default: "true"
+permissions: { contents: read }
+concurrency: { group: stamp, cancel-in-progress: false }
+jobs:
+  stamp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gate
+        if: inputs.dry_run != 'true' && inputs.rules_step1_live != 'YES'
+        run: echo "Refusing to open stamp PRs before rules step 1 is live." && exit 1
+      - name: Stamp rooms
+        env:
+          GH_TOKEN: ${{ secrets.ROOMS_TOKEN }}
+          ROOMS: ${{ inputs.rooms }}
+          DRY: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          VERSION=$(python3 -c "import json;print(json.load(open('rooms.json'))['version'])")
+          if [ "$ROOMS" = ready ]; then
+            ROOMS=$(python3 -c "import json;print(','.join(e['room'] for e in sorted(json.load(open('rooms.json'))['rooms'],key=lambda e:e['order']) if e['status']=='ready' and not e.get('waitFor')))")
+          fi
+          BR="factory/${VERSION}-${GITHUB_RUN_ID}"
+          echo "## Stamp ${VERSION} (dry_run=${DRY})" >> "$GITHUB_STEP_SUMMARY"
+          for ROOM in ${ROOMS//,/ }; do
+            REPO=$(python3 -c "import json,sys;print(next(e['repo'] for e in json.load(open('rooms.json'))['rooms'] if e['room']=='$ROOM'))")
+            rm -rf "work/$ROOM"
+            git clone -q --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "work/$ROOM"
+            if git -C "work/$ROOM" ls-remote --exit-code --heads origin "$BR" >/dev/null 2>&1; then echo "- $ROOM: branch exists, skipped" >> "$GITHUB_STEP_SUMMARY"; continue; fi
+            if ! python3 tools/stamp.py --room "$ROOM" --repo-dir "work/$ROOM" $([ "$DRY" = true ] && echo --dry-run) --json "report-$ROOM.json" > /dev/null; then
+              echo "- $ROOM: REFUSED $(python3 -c "import json;print('; '.join(json.load(open('report-$ROOM.json'))['blockers']))")" >> "$GITHUB_STEP_SUMMARY"; continue
+            fi
+            if [ "$DRY" = true ]; then echo "- $ROOM: would stamp" >> "$GITHUB_STEP_SUMMARY"; continue; fi
+            cd "work/$ROOM"
+            git config user.name "subx-factory-bot"; git config user.email "jebb@subx.it"
+            git checkout -q -b "$BR"; git add -A
+            if git diff --cached --quiet; then cd - >/dev/null; echo "- $ROOM: already current" >> "$GITHUB_STEP_SUMMARY"; continue; fi
+            git commit -q -m "factory ${VERSION}: stamp (subx-factory run ${GITHUB_RUN_ID})"
+            git push -q origin "HEAD:refs/heads/${BR}"          # new branch only; no --force, never main
+            cd - >/dev/null
+            python3 tools/pr_body.py "report-$ROOM.json" > "body-$ROOM.md"
+            URL=$(gh pr create --repo "$REPO" --base main --head "$BR" --title "factory ${VERSION}: stamp ${ROOM}" --body-file "body-$ROOM.md")
+            echo "- $ROOM: $URL" >> "$GITHUB_STEP_SUMMARY"
+          done

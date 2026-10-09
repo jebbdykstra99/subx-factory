@@ -1,0 +1,38 @@
+    function factorySiteId(sid) {
+      return sid in ['samochat', 'bartchat', '415chat', 'gpchat', '27chat', '808chat', 'buffettchat', 'gaichat', 'popechat', 'recruitchat'];
+    }
+    function nestSlugOk(slug) {
+      return slug is string
+        && slug.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
+        && slug.size() >= 2
+        && slug.size() <= 40
+        && !(slug in [
+          'home', 'explore', 'following', 'notifications', 'chat', 'profile', 'news',
+          'about', 'terms', 'privacy', 'api', 'admin', 'watchlist', 'stories',
+          'feed', 'thoughts', 'hot', 'new'
+        ]);
+    }
+
+/*BLOCK*/
+      // Member-created nested rooms for the signed-in user only.
+      // sites/{siteId}/memberNests/{uid}/rooms/{slug}
+      // Starter nests stay in site.json and are not written here.
+      match /memberNests/{uid}/rooms/{slug} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create: if emailVerified()
+          && request.auth.uid == uid
+          && factorySiteId(siteId)
+          && nestSlugOk(slug)
+          && request.resource.data.siteId == siteId
+          && request.resource.data.ownerUid == uid
+          && request.resource.data.slug == slug
+          && request.resource.data.label is string
+          && request.resource.data.label.size() > 0
+          && request.resource.data.label.size() <= 40
+          && request.resource.data.nav == true
+          && request.resource.data.parent == null
+          && request.resource.data.kind == 'user';
+        allow update, delete: if signedIn()
+          && request.auth.uid == uid
+          && resource.data.ownerUid == uid;
+      }
