@@ -1,0 +1,13 @@
+{
+  "version": "v1.0.0",
+  "factory.js": {
+    "sha256": "7466eefc88f4103dcc159bcea5a788d35dc4b1402ffba14b270f3ede99b610d0",
+    "bytes": 277678
+  },
+  "sources": {
+    "template": "build/sources/template_factory_660144d1886e.js (T0, sha256 660144d1886e\u2026)",
+    "gpchat_base": "jebbdykstra99/gpchat@7553762",
+    "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)"
+  },
+  "built": "2026-10-08 (MT)"
+}

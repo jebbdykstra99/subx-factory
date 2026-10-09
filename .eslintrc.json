@@ -1,0 +1,2 @@
+{"root":true,"env":{"browser":true,"es2020":true},"parserOptions":{"ecmaVersion":2020,"sourceType":"script"},
+ "globals":{"firebase":"readonly"},"rules":{"no-undef":"error","no-redeclare":"error","no-dupe-keys":"error","no-unreachable":"warn"}}

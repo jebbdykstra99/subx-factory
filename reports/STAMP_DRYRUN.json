@@ -1,0 +1,782 @@
+[
+  {
+    "room": "311chat",
+    "cluster": "T0",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 4,
+    "diff": {
+      "FACTORY.lock": [
+        "15",
+        "0"
+      ],
+      "factory.js": [
+        "2075",
+        "194"
+      ],
+      "index.html": [
+        "3",
+        "3"
+      ],
+      "site.json": [
+        "6",
+        "1"
+      ]
+    },
+    "diff_total": "+2099/-198"
+  },
+  {
+    "room": "atmchat",
+    "cluster": "T0",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 4,
+    "diff": {
+      "FACTORY.lock": [
+        "15",
+        "0"
+      ],
+      "factory.js": [
+        "2075",
+        "194"
+      ],
+      "index.html": [
+        "3",
+        "3"
+      ],
+      "site.json": [
+        "2",
+        "2"
+      ]
+    },
+    "diff_total": "+2095/-199"
+  },
+  {
+    "room": "behindtheblackwall",
+    "cluster": "T0",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 4,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2075",
+        "194"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "2",
+        "2"
+      ]
+    },
+    "diff_total": "+2092/-198"
+  },
+  {
+    "room": "cobrachat",
+    "cluster": "L1a",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 36,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2177",
+        "258"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "7",
+        "2"
+      ]
+    },
+    "diff_total": "+2199/-262"
+  },
+  {
+    "room": "boyfriendchat",
+    "cluster": "L1a",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 35,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2179",
+        "256"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "9",
+        "2"
+      ]
+    },
+    "diff_total": "+2203/-260"
+  },
+  {
+    "room": "buffetchat",
+    "cluster": "L1b",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 35,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2224",
+        "259"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "2",
+        "2"
+      ]
+    },
+    "diff_total": "+2241/-263"
+  },
+  {
+    "room": "gaichat",
+    "cluster": "L1b",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [
+      "app.js",
+      "firestore.rules",
+      "storage.rules"
+    ],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 32,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2224",
+        "259"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "2",
+        "2"
+      ]
+    },
+    "diff_total": "+2241/-263"
+  },
+  {
+    "room": "ciachat",
+    "cluster": "L1b",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "allowLoss: earlyWelcomeCopy",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 36,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2223",
+        "270"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "12",
+        "2"
+      ]
+    },
+    "diff_total": "+2250/-274"
+  },
+  {
+    "room": "boozechat",
+    "cluster": "L1b",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge",
+      "minAge None -> 21"
+    ],
+    "cleanup": [],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 36,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2224",
+        "259"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "6",
+        "2"
+      ]
+    },
+    "diff_total": "+2245/-263"
+  },
+  {
+    "room": "27chat",
+    "cluster": "L3",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "rail overlay code new (dormant: rail.overlay not enabled)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [
+      "app.js",
+      "firestore.rules",
+      "storage.rules",
+      "firebase.indexes.json"
+    ],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 30,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2532",
+        "277"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "3",
+        "2"
+      ]
+    },
+    "diff_total": "+2550/-281"
+  },
+  {
+    "room": "bartchat",
+    "cluster": "L3",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "rail overlay code new (dormant: rail.overlay not enabled)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [
+      "firestore.rules",
+      "storage.rules",
+      "firebase.indexes.json",
+      "RULES.md"
+    ],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 29,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2494",
+        "266"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "3",
+        "2"
+      ]
+    },
+    "diff_total": "+2512/-270"
+  },
+  {
+    "room": "buffettchat",
+    "cluster": "L3",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "rail overlay code new (dormant: rail.overlay not enabled)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [
+      "app.js",
+      "firestore.rules",
+      "storage.rules"
+    ],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 29,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2494",
+        "266"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "3",
+        "2"
+      ]
+    },
+    "diff_total": "+2512/-270"
+  },
+  {
+    "room": "recruitchat",
+    "cluster": "L3",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "rail overlay code new (dormant: rail.overlay not enabled)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [
+      "app.js",
+      "firestore.rules",
+      "storage.rules"
+    ],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 29,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2503",
+        "269"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "3",
+        "2"
+      ]
+    },
+    "diff_total": "+2521/-273"
+  },
+  {
+    "room": "808chat",
+    "cluster": "L3",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "rail overlay code new and ENABLED by site.json",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [
+      "app.js",
+      "firestore.rules",
+      "storage.rules"
+    ],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 31,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2494",
+        "266"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "3",
+        "2"
+      ]
+    },
+    "diff_total": "+2512/-270"
+  },
+  {
+    "room": "415chat",
+    "cluster": "L2",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [
+      "app.js",
+      "firestore.rules",
+      "storage.rules"
+    ],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)"
+    ],
+    "ok": true,
+    "factory_v": 31,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2234",
+        "263"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "8",
+        "1"
+      ]
+    },
+    "diff_total": "+2257/-266"
+  },
+  {
+    "room": "samochat",
+    "cluster": "L2",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [
+      "firestore.rules",
+      "storage.rules",
+      "firebase.indexes.json",
+      "RULES.md"
+    ],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)"
+    ],
+    "ok": true,
+    "factory_v": 31,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2231",
+        "266"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "8",
+        "2"
+      ]
+    },
+    "diff_total": "+2254/-270"
+  },
+  {
+    "room": "airlineschat",
+    "cluster": "F-w4",
+    "status": "blocked",
+    "blockers": [
+      "rooms.json status blocked: userNests -> memberNests migration (R3, read-only count first); airlineschat PR #3 (gate) decided",
+      "14 room-only functions would be deleted (not in allowLoss): nestSlugFromSearch, searchKeeping, ensureNestCss, catalogNests, nestsFromUserDoc, mergeUserNestRows, listenUserNests, slugifyNest, nestSlugTaken, closeNestCreate, ensureNestCreate, openNestCreate \u2026"
+    ],
+    "risks": [
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [
+      "nest_stubs.py"
+    ],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": false,
+    "factory_v": 4,
+    "diff": {
+      "FACTORY.lock": [
+        "15",
+        "0"
+      ],
+      "factory.js": [
+        "2467",
+        "542"
+      ],
+      "index.html": [
+        "3",
+        "3"
+      ],
+      "site.json": [
+        "2",
+        "2"
+      ]
+    },
+    "diff_total": "+2487/-547"
+  },
+  {
+    "room": "amachat",
+    "cluster": "F-w4",
+    "status": "blocked",
+    "blockers": [
+      "rooms.json status blocked: userNests -> memberNests migration (R3, read-only count first)",
+      "15 room-only functions would be deleted (not in allowLoss): syncPreviewChrome, nestSlugFromSearch, searchKeeping, ensureNestCss, catalogNests, nestsFromUserDoc, mergeUserNestRows, listenUserNests, slugifyNest, nestSlugTaken, closeNestCreate, ensureNestCreate \u2026"
+    ],
+    "risks": [
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [
+      "nest_stubs.py"
+    ],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": false,
+    "factory_v": 5,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2465",
+        "547"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "2",
+        "2"
+      ]
+    },
+    "diff_total": "+2482/-551"
+  },
+  {
+    "room": "popechat",
+    "cluster": "F-pope",
+    "status": "blocked",
+    "blockers": [
+      "rooms.json status blocked: Nest Listen (Kokoro TTS, ~30 room-only functions) moved to a factory flag or plugin file",
+      "47 room-only functions would be deleted (not in allowLoss): nestSlugFromSearch, searchWithoutNest, searchWithNest, ensureNestCss, formatLeadBody, nestLeadHtml, nestVoicePlayable, nestSpeakText, nestAudioOf, nestHonesty, pastoralById, nestListenConfig \u2026"
+    ],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "rail overlay code new (dormant: rail.overlay not enabled)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge"
+    ],
+    "cleanup": [
+      "app.js",
+      "firestore.rules",
+      "storage.rules"
+    ],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": false,
+    "factory_v": 37,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "2756",
+        "1441"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "3",
+        "2"
+      ]
+    },
+    "diff_total": "+2774/-1445"
+  },
+  {
+    "room": "gpchat",
+    "cluster": "F-gp",
+    "status": "ready",
+    "blockers": [],
+    "risks": [
+      "hosted config replaces inline AIza key (runtime fetch of subx-skins.web.app/firebase-web-config.json)",
+      "rail overlay code new (dormant: rail.overlay not enabled)",
+      "write guards: posts/DMs now batch rateLimits; requires Firestore rules step 1 published BEFORE merge",
+      "features ON: watchlist, following, notifs, topicFollow, sessionSeeds"
+    ],
+    "cleanup": [
+      "app.js",
+      "firestore.rules",
+      "storage.rules",
+      "firebase.indexes.json"
+    ],
+    "changes": [
+      "localStorage keys -> subx.user/subx.likes (one-time migration from legacy keys)",
+      "Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)"
+    ],
+    "ok": true,
+    "factory_v": 47,
+    "diff": {
+      "FACTORY.lock": [
+        "13",
+        "0"
+      ],
+      "factory.js": [
+        "1394",
+        "229"
+      ],
+      "index.html": [
+        "2",
+        "2"
+      ],
+      "site.json": [
+        "19",
+        "7"
+      ]
+    },
+    "diff_total": "+1428/-238"
+  }
+]

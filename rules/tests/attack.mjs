@@ -1,0 +1,21 @@
+import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
+import firebase from 'firebase/compat/app'; import 'firebase/compat/firestore'; import fs from 'fs';
+const FV = firebase.firestore.FieldValue, TS = firebase.firestore.Timestamp;
+const env = await initializeTestEnvironment({ projectId: 'demo-subx-atk', firestore: { rules: fs.readFileSync(process.env.RULES, 'utf8'), host: '127.0.0.1', port: 8080 } });
+const d = env.authenticatedContext('spammer', { email_verified: true }).firestore();
+const base = (x = {}) => Object.assign({ siteId: 'gpchat', parentId: null, authorUid: 'spammer', authorName: 'Fan', authorHandle: 'fan', text: 'spam', likes: {}, likeCount: 0, replyCount: 0, nestSlug: '', createdAt: FV.serverTimestamp() }, x);
+const out = [];
+async function a(name, fn) { try { await fn(); out.push('ALLOWED  ' + name); } catch (e) { out.push('denied   ' + name); } }
+await env.withSecurityRulesDisabled(async c => c.firestore().doc('posts/real').set({ siteId: 'gpchat', authorUid: 'member', text: 'real member post', likes: {}, createdAt: TS.now() }));
+await a('100 posts back-to-back from one account (flood the newest-80 feed window)', async () => { for (let i = 0; i < 100; i++) await d.collection('posts').add(base({ text: 'flood ' + i })); });
+await a('post with createdAt 2099 (pinned top of feed forever)', () => d.collection('posts').add(base({ createdAt: TS.fromDate(new Date('2099-01-01')) })));
+await a('post as authorName "gpchat Admin" / handle "admin"', () => d.collection('posts').add(base({ authorName: 'gpchat Admin', authorHandle: 'admin' })));
+await a('post with forged likeCount 9999', () => d.collection('posts').add(base({ likeCount: 9999 })));
+await a('post with 10 links + bit.ly', () => d.collection('posts').add(base({ text: Array(10).fill('https://bit.ly/x').join(' ') })));
+await a('post with arbitrary extra fields (pinned:true, 50KB junk)', () => d.collection('posts').add(base({ pinned: true, junk: 'x'.repeat(50000) })));
+await a('100 DMs in a loop to one member', async () => { const cid = 'gpchat__member_spammer'; await d.doc('conversations/' + cid).set({ siteId: 'gpchat', participants: ['member', 'spammer'] }); for (let i = 0; i < 100; i++) await d.collection('conversations/' + cid + '/messages').add({ siteId: 'gpchat', fromUid: 'spammer', text: 'buy ' + i, createdAt: FV.serverTimestamp() }); });
+const admin = env.authenticatedContext('o774wL9hUVSi19EkDCgLqQomP8i2', { email_verified: true }).firestore();
+await env.withSecurityRulesDisabled(async c => c.firestore().doc('posts/spam1').set(base({ createdAt: TS.now() })));
+await a('ADMIN deletes a spam post from the app', () => admin.doc('posts/spam1').delete());
+await a('member + nest save (memberNests)', () => d.doc('sites/gpchat/memberNests/spammer/rooms/my-nest').set({ siteId: 'gpchat', ownerUid: 'spammer', slug: 'my-nest', label: 'x', nav: true, parent: null, kind: 'user' }));
+console.log(out.join('\n')); await env.cleanup(); process.exit(0);

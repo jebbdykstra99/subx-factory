@@ -1,0 +1,18 @@
+{
+  "name": "subx-rules-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:step1": "cp ../firestore.rules.proposed firestore.rules && firebase emulators:exec --only firestore --project demo-subx-guard 'MODE=step1 RULES=firestore.rules node test.mjs'",
+    "test:step3": "sed \"s/return sid in \\[\\];/return sid in ['gpchat'];/\" ../firestore.rules.proposed > firestore.rules && firebase emulators:exec --only firestore --project demo-subx-guard 'RULES=firestore.rules node test.mjs'",
+    "attack:proposed": "sed \"s/return sid in \\[\\];/return sid in ['gpchat'];/\" ../firestore.rules.proposed > firestore.rules && firebase emulators:exec --only firestore --project demo-subx-atk 'RULES=firestore.rules node attack.mjs'",
+    "attack:baseline": "cp ../firestore.rules.BASELINE_box_subx-og firestore.rules && firebase emulators:exec --only firestore --project demo-subx-atk 'RULES=firestore.rules node attack.mjs'",
+    "test:storage": "cp ../storage.rules.proposed storage.rules && firebase emulators:exec --only storage --project demo-subx-storage 'RULES=storage.rules node storage.test.mjs'",
+    "test:storage:baseline": "cp ../storage.rules.BASELINE_box_subx-og storage.rules && firebase emulators:exec --only storage --project demo-subx-storage 'MODE=baseline RULES=storage.rules node storage.test.mjs'"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase": "^10.14.1",
+    "firebase-tools": "^13.0.0"
+  }
+}

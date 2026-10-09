@@ -1,0 +1,497 @@
+{
+  "version": "v1.0.0",
+  "owner": "jebbdykstra99",
+  "rooms": [
+    {
+      "room": "311chat",
+      "repo": "jebbdykstra99/311chat",
+      "domain": "311chat.com",
+      "siteId": "311chat",
+      "cluster": "T0",
+      "order": 1,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [
+        "gate.js"
+      ],
+      "features": {},
+      "skin": {
+        "avatarInitials": "311",
+        "bioDefault": "Unofficial helper — not a substitute for 911.",
+        "profileEmpty": "No posts yet. Official 311 is the handoff at the top of Home. Sign in to talk with neighbors."
+      },
+      "sitePatch": {
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": ""
+    },
+    {
+      "room": "atmchat",
+      "repo": "jebbdykstra99/atmchat",
+      "domain": "atmchat.com",
+      "siteId": "atmchat",
+      "cluster": "T0",
+      "order": 2,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [
+        "gate.js"
+      ],
+      "features": {},
+      "skin": {},
+      "sitePatch": {
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": ""
+    },
+    {
+      "room": "behindtheblackwall",
+      "repo": "jebbdykstra99/behindtheblackwall",
+      "domain": "behindtheblackwall.com",
+      "siteId": "behindtheblackwall",
+      "cluster": "T0",
+      "order": 3,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {},
+      "sitePatch": {
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": "HTTPS cert SAN mismatch on behindtheblackwall.com (known, out of band). Drift check reports ERROR but does not fail.",
+      "driftIgnore": [
+        "https"
+      ]
+    },
+    {
+      "room": "cobrachat",
+      "repo": "jebbdykstra99/cobrachat",
+      "domain": "cobrachat.com",
+      "siteId": "cobra",
+      "cluster": "L1a",
+      "order": 4,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {
+        "avatarInitials": "CO",
+        "bioDefault": "Wildlife education — not ownership advice.",
+        "profileEmpty": "No posts yet. Hit Post with a species note, myth bust, or story."
+      },
+      "sitePatch": {
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": ""
+    },
+    {
+      "room": "boyfriendchat",
+      "repo": "jebbdykstra99/boyfriendchat",
+      "domain": "boyfriendchat.com",
+      "siteId": "boyfriend",
+      "cluster": "L1a",
+      "order": 5,
+      "status": "ready",
+      "waitFor": [
+        "boyfriendchat PR #8 (18+ age gate, sets minAge 18) merged"
+      ],
+      "keepFiles": [],
+      "features": {},
+      "skin": {
+        "avatarInitials": "BF",
+        "bioDefault": "Visiting the table.",
+        "exploreEmpty": "Nothing at the table matched that.",
+        "profileEmpty": "No posts yet. Hit Post when something happened at the table.",
+        "seatTag": "Seat"
+      },
+      "sitePatch": {
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": ""
+    },
+    {
+      "room": "buffetchat",
+      "repo": "jebbdykstra99/buffetchat",
+      "domain": "buffetchat.com",
+      "siteId": "buffet",
+      "cluster": "L1b",
+      "order": 6,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {},
+      "sitePatch": {
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": ""
+    },
+    {
+      "room": "gaichat",
+      "repo": "jebbdykstra99/gaichat",
+      "domain": "gaichat.com",
+      "siteId": "gaichat",
+      "cluster": "L1b",
+      "order": 7,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {},
+      "sitePatch": {
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": ""
+    },
+    {
+      "room": "ciachat",
+      "repo": "jebbdykstra99/ciachat",
+      "domain": "ciachat.com",
+      "siteId": "cia",
+      "cluster": "L1b",
+      "order": 8,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {
+        "avatarInitials": "CI",
+        "bioDefault": "Public sources. Speculation labeled.",
+        "exploreEmpty": "Nothing in this reading room matched that.",
+        "profileEmpty": "No posts yet. Cite a public source — or label speculation.",
+        "guestHandle": "guestcia",
+        "taglineH1": "true",
+        "regNamePlaceholder": "A ciachat handle"
+      },
+      "sitePatch": {
+        "trustBlurb": "Public sources and FOIA. Speculation labeled. Not official CIA.",
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [
+        "earlyWelcomeCopy"
+      ],
+      "notes": "earlyWelcome is false; before turning it on, set site.json earlyWelcomeCopy (cia's rule: no factory fallback copy)."
+    },
+    {
+      "room": "boozechat",
+      "repo": "jebbdykstra99/boozechat",
+      "domain": "boozechat.com",
+      "siteId": "booze",
+      "cluster": "L1b",
+      "order": 9,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {
+        "keepBrandTitle": "true"
+      },
+      "sitePatch": {
+        "minAge": 21,
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": "21+ was hardcoded text; now site.json minAge 21 (EXCEPTIONS: policy, not code)."
+    },
+    {
+      "room": "27chat",
+      "repo": "jebbdykstra99/27chat",
+      "domain": "27chat.com",
+      "siteId": "27chat",
+      "cluster": "L3",
+      "order": 10,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {},
+      "sitePatch": {
+        "pixel": false,
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": "Person nests are site.json config (nests/nestGroups), not code. No visit pixel today: pixel:false until CLO privacy v1.1 names the beacon."
+    },
+    {
+      "room": "bartchat",
+      "repo": "jebbdykstra99/bartchat",
+      "domain": "bartchat.com",
+      "siteId": "bartchat",
+      "cluster": "L3",
+      "order": 11,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {},
+      "sitePatch": {
+        "pixel": false,
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": "bart-bsa rail is extra-first (handled in renderTrends). No visit pixel today: pixel:false until CLO privacy v1.1 names the beacon."
+    },
+    {
+      "room": "buffettchat",
+      "repo": "jebbdykstra99/buffettchat",
+      "domain": "buffettchat.com",
+      "siteId": "buffettchat",
+      "cluster": "L3",
+      "order": 12,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {},
+      "sitePatch": {
+        "pixel": false,
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": "No visit pixel today: pixel:false until CLO privacy v1.1 names the beacon."
+    },
+    {
+      "room": "recruitchat",
+      "repo": "jebbdykstra99/recruitchat",
+      "domain": "recruitchat.com",
+      "siteId": "recruitchat",
+      "cluster": "L3",
+      "order": 13,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {},
+      "sitePatch": {
+        "pixel": false,
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": "No visit pixel today: pixel:false until CLO privacy v1.1 names the beacon."
+    },
+    {
+      "room": "808chat",
+      "repo": "jebbdykstra99/808chat",
+      "domain": "808chat.com",
+      "siteId": "808chat",
+      "cluster": "L3",
+      "order": 14,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {},
+      "sitePatch": {
+        "pixel": false,
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": "No visit pixel today: pixel:false until CLO privacy v1.1 names the beacon. Parked room."
+    },
+    {
+      "room": "415chat",
+      "repo": "jebbdykstra99/415chat",
+      "domain": "415chat.com",
+      "siteId": "415chat",
+      "cluster": "L2",
+      "order": 15,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {
+        "avatarInitials": "415",
+        "bioDefault": "Talking about the city.",
+        "profileEmpty": "No posts yet. Hit Post when something about the city is on your mind.",
+        "guestHandle": "guest415",
+        "exploreEmpty": "Nothing in the 415 matched that."
+      },
+      "sitePatch": {},
+      "allowLoss": [],
+      "notes": ""
+    },
+    {
+      "room": "samochat",
+      "repo": "jebbdykstra99/samochat",
+      "domain": "samochat.com",
+      "siteId": "samochat",
+      "cluster": "L2",
+      "order": 16,
+      "status": "ready",
+      "waitFor": [],
+      "keepFiles": [],
+      "features": {},
+      "skin": {
+        "bioDefault": "Talking about the city.",
+        "profileEmpty": "No posts yet. Hit Post when something about the city is on your mind."
+      },
+      "sitePatch": {
+        "rail": {
+          "liveKeep": true,
+          "productLocation": "LOX"
+        }
+      },
+      "allowLoss": [],
+      "notes": "liveKeep NWS+outbound merge and LOX product location preserved via site.json rail."
+    },
+    {
+      "room": "airlineschat",
+      "repo": "jebbdykstra99/airlineschat",
+      "domain": "airlineschat.com",
+      "siteId": "airlineschat",
+      "cluster": "F-w4",
+      "order": 17,
+      "status": "blocked",
+      "waitFor": [
+        "userNests -> memberNests migration (R3, read-only count first)",
+        "airlineschat PR #3 (gate) decided"
+      ],
+      "keepFiles": [
+        "gate.js"
+      ],
+      "features": {},
+      "skin": {},
+      "sitePatch": {
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": ""
+    },
+    {
+      "room": "amachat",
+      "repo": "jebbdykstra99/amachat",
+      "domain": "amachat.com",
+      "siteId": "amachat",
+      "cluster": "F-w4",
+      "order": 18,
+      "status": "blocked",
+      "waitFor": [
+        "userNests -> memberNests migration (R3, read-only count first)"
+      ],
+      "keepFiles": [],
+      "features": {},
+      "skin": {},
+      "sitePatch": {
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": ""
+    },
+    {
+      "room": "popechat",
+      "repo": "jebbdykstra99/popechat",
+      "domain": "popechat.com",
+      "siteId": "popechat",
+      "cluster": "F-pope",
+      "order": 19,
+      "status": "blocked",
+      "waitFor": [
+        "Nest Listen (Kokoro TTS, ~30 room-only functions) moved to a factory flag or plugin file"
+      ],
+      "keepFiles": [],
+      "features": {},
+      "skin": {},
+      "sitePatch": {
+        "pixel": false,
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": "No visit pixel today: pixel:false until CLO privacy v1.1 names the beacon."
+    },
+    {
+      "room": "gpchat",
+      "repo": "jebbdykstra99/gpchat",
+      "domain": "gpchat.com",
+      "siteId": "gpchat",
+      "cluster": "F-gp",
+      "order": 20,
+      "status": "ready",
+      "waitFor": [
+        "Singapore GP over (after Sun Oct 11)",
+        "gpchat PR #31 merged",
+        "rules step 1 + step 3 published",
+        "privacy v1.1 (visit pixel line) before removing pixel:false"
+      ],
+      "keepFiles": [],
+      "features": {
+        "watchlist": true,
+        "following": true,
+        "notifs": true,
+        "topicFollow": true,
+        "sessionSeeds": true
+      },
+      "skin": {
+        "avatarInitials": "GP"
+      },
+      "sitePatch": {
+        "earlyWelcomeCopy": "You're early. This room is live but unfinished. Who do you sit with on the grid — driver, team, or both? Tell the room.",
+        "pixel": false,
+        "redditCrosspost": false,
+        "_dropKeys": [
+          "redditSr"
+        ]
+      },
+      "allowLoss": [],
+      "notes": "No visit pixel today: pixel:false until CLO privacy v1.1 names the beacon."
+    }
+  ]
+}

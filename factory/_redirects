@@ -1,0 +1,4 @@
+# Cloudflare Pages: nest rooms are the same shell at /{slug}.
+# Existing files (factory.js, site.json, terms.html, …) still win.
+# GitHub Pages ignores this file — use 404.html bounce or a Pages 404 → index fallback.
+/*    /index.html   200
