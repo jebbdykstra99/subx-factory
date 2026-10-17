@@ -17,6 +17,64 @@ for k in ['findPost', 'requireVerified', 'selectThoughtsTab', 'applyRoute', 'ren
           'outboundCards', 'f1CardsFromRace', 'f1FormatGap', 'overlayOpenF1Cards', 'railNwsSlots', 'openThread',
           'startDm', 'sendDm', 'openChat', 'toggleLike', 'syncChatChrome']:
     R[k] = G[k]
+# Nest feed. Listeners live in the template. These three functions are still gpchat's,
+# so the per-nest query has to be reapplied here or the next rebuild drops it.
+# Home stays the newest 80 (siteId + createdAt). A nest view uses nestPosts.
+R['findPost'] = ed(G['findPost'],
+    "    for (var i = 0; i < livePosts.length; i++) if (livePosts[i].id === id) return livePosts[i];\n",
+    "    var i;\n    for (i = 0; i < livePosts.length; i++) if (livePosts[i].id === id) return livePosts[i];\n"
+    "    for (i = 0; i < nestPosts.length; i++) if (nestPosts[i].id === id) return nestPosts[i];\n")
+R['applyRoute'] = ed(G['applyRoute'],
+    "    currentNest = resolveNestFromPath();\n    applyNestChrome();\n",
+    "    currentNest = resolveNestFromPath();\n    syncNestFeed();\n    applyNestChrome();\n")
+R['renderFeed'] = ed(G['renderFeed'],
+    "    var seeds = currentNest ? [] : sessionSeedPosts();\n"
+    "    if (liveError && !seeds.length) {\n"
+    "      el.innerHTML = '<div class=\"post-empty\">Live feed could not load. The error is in the compose line above — this is not an empty room.</div>';\n"
+    "      refreshPorchUi();\n"
+    "      return;\n"
+    "    }\n"
+    "    if (!liveReady && !seeds.length) {\n"
+    "      el.innerHTML = '<div class=\"post-empty\">Connecting to the live feed…</div>';\n"
+    "      refreshPorchUi();\n"
+    "      return;\n"
+    "    }\n"
+    "\n"
+    "    let posts = (liveReady && !liveError) ? topLevelPosts().slice() : [];\n"
+    "    if (liveReady && !liveError && currentTab === 'hot') posts.sort(function (a, b) { return (b.likes || 0) - (a.likes || 0); });\n"
+    "    if (liveReady && !liveError && currentTab === 'new') posts.sort(function (a, b) { return (b.ms || 0) - (a.ms || 0); });\n",
+    "    var nestView = !!currentNest;\n"
+    "    var seeds = nestView ? [] : sessionSeedPosts();\n"
+    "    var scopeError = nestView ? nestError : liveError;\n"
+    "    var scopeReady = nestView ? nestReady : liveReady;\n"
+    "    if (scopeError && !seeds.length) {\n"
+    "      el.innerHTML = '<div class=\"post-empty\">' + (nestView\n"
+    "        ? 'This nest could not load. The error is in the compose line above — this is not an empty room.'\n"
+    "        : 'Live feed could not load. The error is in the compose line above — this is not an empty room.') + '</div>';\n"
+    "      refreshPorchUi();\n"
+    "      return;\n"
+    "    }\n"
+    "    if (!scopeReady && !seeds.length) {\n"
+    "      el.innerHTML = '<div class=\"post-empty\">Connecting to the live feed…</div>';\n"
+    "      refreshPorchUi();\n"
+    "      return;\n"
+    "    }\n"
+    "\n"
+    "    let posts = (scopeReady && !scopeError) ? topLevelPosts().slice() : [];\n"
+    "    if (scopeReady && !scopeError && currentTab === 'hot') posts.sort(function (a, b) { return (b.likes || 0) - (a.likes || 0); });\n"
+    "    if (scopeReady && !scopeError && currentTab === 'new') posts.sort(function (a, b) { return (b.ms || 0) - (a.ms || 0); });\n")
+R['renderFeed'] = ed(R['renderFeed'],
+    "      var empty = currentNest\n"
+    "        ? ('No posts in ' + (currentNest.label || currentNest.slug) + ' yet. This nest is live at /' + currentNest.slug + '. Sign in to post the first take.')\n"
+    "        : ((site && site.emptyState) || 'This room is empty. Sign in to post. Guest can browse only.');\n",
+    "      var empty = nestView\n"
+    "        ? (nestScanCapped\n"
+    "          ? ('Posts in ' + (currentNest.label || currentNest.slug) + ' could not be reached yet. The nest index is not built, and the fallback scan stopped after ' + NEST_SCAN_CAP + ' newer posts. This is not an empty room.')\n"
+    "          : ('No posts in ' + (currentNest.label || currentNest.slug) + ' yet. This nest is live at /' + currentNest.slug + '. Sign in to post the first take.'))\n"
+    "        : ((site && site.emptyState) || 'This room is empty. Sign in to post. Guest can browse only.');\n")
+R['renderFeed'] = ed(R['renderFeed'],
+    "    }).join('');\n    highlightDeepPost();\n",
+    "    }).join('') + nestMoreHtml();\n    highlightDeepPost();\n")
 # 2) feature flags (site.json "features": {...}); everything gpchat-specific is OFF unless the room opts in
 R['followingOn'] = ed(G['followingOn'], 'return !!fbDb;', "return !!fbDb && featureOn('following');")
 R['notifsOn'] = ed(G['notifsOn'], 'return !!fbDb;', "return !!fbDb && featureOn('notifs');")
@@ -140,6 +198,9 @@ R['applySiteChrome'] = a
 R['stubSignIn'] = R['stubSignIn'].replace("(handle || 'guest')", "(handle || skin('guestHandle', 'guest'))").replace("|| 'guest',", "|| skin('guestHandle', 'guest'),")
 R['wireEvents'] = ed(R['wireEvents'], "stubSignIn('Guest', 'guest');", "stubSignIn('Guest', skin('guestHandle', 'guest'));")
 R['wireEvents'] = ed(R['wireEvents'], "'<p class=\"empty-note\">Nothing in this room matched that.</p>'", "'<p class=\"empty-note\">' + escapeHtml(skin('exploreEmpty', 'Nothing in this room matched that.')) + '</p>'")
+R['wireEvents'] = ed(R['wireEvents'],
+    "      const nestLink = e.target.closest('a[data-nest]');\n",
+    "      if (e.target.closest('#nest-feed-more')) {\n        e.preventDefault();\n        loadMoreNestPosts();\n        return;\n      }\n      const nestLink = e.target.closest('a[data-nest]');\n")
 n = T['nestSeatCards']
 n = ed(n, "tag: (n.kind === 'species' ? 'Species' : (n.kind || 'Nest')),", "tag: (n.kind === 'species' ? 'Species' : (n.kind || skin('seatTag', 'Nest'))),")
 n = ed(n, "title: n.label || n.slug || 'Nest',", "title: n.label || n.slug || skin('seatTag', 'Nest'),")

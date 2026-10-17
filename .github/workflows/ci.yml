@@ -11,6 +11,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: node --check factory/factory.js
       - run: npx eslint --no-eslintrc -c .eslintrc.json factory/factory.js
+      - run: node test/nest-feed.test.js
       - name: No inline Firebase web key (Sep 25 secret-scan lock)
         run: "! grep -n 'AIza' factory/factory.js"
       - name: Rebuild is reproducible
