@@ -32,7 +32,8 @@ Copy note: many rooms carried stale fallbacks from the 415/311 lineage (avatar "
 - `tools/dry_run.py`: stamp all 20 in temp copies and write the table (`reports/STAMP_DRYRUN.md`).
 - `tools/smoke.mjs`: headless load of stamped folders. Read-only; the pixel and Cloud Functions are blocked.
 - `tools/drift_check.py`: live hashes vs `FACTORY.lock` vs the release.
-- `.github/workflows/`: `ci.yml` (node --check, eslint, no `AIza`, reproducible rebuild), `drift.yml` (nightly 4:17 AM MT, read-only), `stamp.yml` (manual dispatch only; refuses to run, including room clones, until `rules_step1_live=YES`; then one PR per room on a new branch; **no force-push, never main**).
+- `templates/room/`: shared Playwright smoke test + PR workflow synced into every room; `tools/room_agents_md.py` renders each room's `AGENTS.md`. See `templates/README.md`.
+- `.github/workflows/`: `room-smoke.yml` (shared smoke test on 3 pilot rooms, as-is and locally stamped, on every PR), `ci.yml` (node --check, eslint, no `AIza`, reproducible rebuild), `drift.yml` (nightly 4:17 AM MT, read-only), `stamp.yml` (manual dispatch only; refuses to run, including room clones, until `rules_step1_live=YES`; then one PR per room on a new branch; **no force-push, never main**).
 - `rules/`: proposed Firestore (= gpchat PR #31 final) and Storage rules, baselines, emulator tests. Reference only.
 
 ## Stamping (Jebb)

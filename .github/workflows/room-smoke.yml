@@ -1,0 +1,42 @@
+# Shared room smoke test, run from subx-factory on every PR (free GitHub Actions minutes, public repo).
+# For each pilot room it clones the PUBLIC room repo (no token), runs templates/room/tests/smoke against
+# (a) the room as it is on main and (b) the room stamped locally with this PR's factory.js (tools/stamp.py
+# writes into the runner's checkout only; nothing is pushed). Read-only: no secrets, no deploy, no writes.
+name: room-smoke
+on:
+  pull_request:
+  workflow_dispatch:
+permissions: { contents: read }
+concurrency: { group: room-smoke-${{ github.ref }}, cancel-in-progress: true }
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        room: [cobrachat, buffetchat, ciachat]
+        variant: [main, stamped]
+    name: ${{ matrix.room }} (${{ matrix.variant }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Clone room (public, read-only)
+        run: git clone -q --depth 1 "https://github.com/jebbdykstra99/${{ matrix.room }}.git" "work/${{ matrix.room }}"
+      - name: Stamp with this PR's factory.js (local only)
+        if: matrix.variant == 'stamped'
+        run: python3 tools/stamp.py --room "${{ matrix.room }}" --repo-dir "work/${{ matrix.room }}" --json stamp-report.json
+      - name: Install shared smoke test
+        working-directory: templates/room/tests/smoke
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Run shared smoke test
+        working-directory: templates/room/tests/smoke
+        env:
+          SMOKE_ROOT: ${{ github.workspace }}/work/${{ matrix.room }}
+        run: npm test
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: "smoke-${{ matrix.room }}-${{ matrix.variant }}", path: templates/room/tests/smoke/test-results, retention-days: 7 }

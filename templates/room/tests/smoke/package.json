@@ -1,0 +1,12 @@
+{
+  "name": "subx-room-smoke",
+  "private": true,
+  "type": "module",
+  "description": "Shared SubX room smoke test (synced from subx-factory templates/room). Do not edit per room; change it in subx-factory.",
+  "scripts": {
+    "test": "playwright test --config playwright.config.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}
