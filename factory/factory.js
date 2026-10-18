@@ -56,6 +56,20 @@
   let livePosts = [];
   let liveReady = false;
   let liveError = null;
+  let postsUnsub = null;
+  let nestUnsub = null;
+  let nestPosts = [];
+  let nestReady = false;
+  let nestError = null;
+  let nestCursor = null;
+  let nestHasMore = false;
+  let nestLoadingMore = false;
+  let nestListenSlug = '';
+  let nestMode = '';
+  let nestGen = 0;
+  let nestScanned = 0;
+  let nestScanCapped = false;
+  let nestExtended = false;
   let replyTo = null;
   let attachedFile = null;
   let pollActive = false;
@@ -1002,7 +1016,9 @@
     return !!(post && post.sessionSeed);
   }
   function findPost(id) {
-    for (var i = 0; i < livePosts.length; i++) if (livePosts[i].id === id) return livePosts[i];
+    var i;
+    for (i = 0; i < livePosts.length; i++) if (livePosts[i].id === id) return livePosts[i];
+    for (i = 0; i < nestPosts.length; i++) if (nestPosts[i].id === id) return nestPosts[i];
     var seeds = sessionSeedPosts();
     for (var j = 0; j < seeds.length; j++) if (seeds[j].id === id) return seeds[j];
     return null;
@@ -1132,7 +1148,8 @@
   }
 
   function highlightDeepPost() {
-    if (!deepPostId || deepPostDone || !liveReady) return;
+    if (!deepPostId || deepPostDone) return;
+    if (showingNestFeed() ? !nestReady : !liveReady) return;
     var feed = document.getElementById('thoughts-feed');
     if (!feed) return;
     var safe = String(deepPostId).replace(/"/g, '');
@@ -1566,30 +1583,319 @@
     };
   }
 
+
+  function firestoreQuery(spec, cursor) {
+    var q = fbDb.collection(spec.collection);
+    var i;
+    for (i = 0; i < spec.where.length; i++) {
+      var w = spec.where[i];
+      q = q.where(w.field, w.op, w.value);
+    }
+    q = q.orderBy(spec.orderBy.field, spec.orderBy.dir);
+    if (cursor) q = q.startAfter(cursor);
+    return q.limit(spec.limit);
+  }
+
   function listenLivePosts() {
     if (!fbDb) {
       composeErr('Feed is not connected.');
       return;
     }
-    fbDb.collection('posts')
-      .where('siteId', '==', SITE_ID)
-      .orderBy('createdAt', 'desc')
-      .limit(80)
-      .onSnapshot(function (snap) {
-        liveReady = true;
-        if (liveError) composeErr('');
-        liveError = null;
-        livePosts = snap.docs.map(mapLive);
-        renderFeed();
-        if (currentUser) syncProfile();
-      }, function (err) {
-        liveReady = false;
-        liveError = err;
-        var msg = (err && err.message) ? err.message : 'Could not load live posts.';
-        composeErr('Feed: ' + msg + ' A composite index on posts (siteId ASC, createdAt DESC) may be required in Firebase project subx-skins. Do not treat this as a loaded empty room.');
+    if (postsUnsub) { postsUnsub(); postsUnsub = null; }
+    postsUnsub = firestoreQuery(feedQuerySpec(SITE_ID, null), null).onSnapshot(function (snap) {
+      liveReady = true;
+      if (liveError) composeErr('');
+      liveError = null;
+      livePosts = snap.docs.map(mapLive);
+      renderFeed();
+      if (currentUser) syncProfile();
+    }, function (err) {
+      liveReady = false;
+      liveError = err;
+      var msg = (err && err.message) ? err.message : 'Could not load live posts.';
+      composeErr('Feed: ' + msg + ' A composite index on posts (siteId ASC, createdAt DESC) may be required in Firebase project subx-skins. Do not treat this as a loaded empty room.');
+      renderFeed();
+    });
+    syncNestFeed();
+  }
+
+  function resetNestFeed() {
+    nestGen += 1;
+    if (nestUnsub) { nestUnsub(); nestUnsub = null; }
+    nestPosts = [];
+    nestReady = false;
+    nestError = null;
+    nestCursor = null;
+    nestHasMore = false;
+    nestLoadingMore = false;
+    nestListenSlug = '';
+    nestMode = '';
+    nestScanned = 0;
+    nestScanCapped = false;
+    nestExtended = false;
+  }
+
+  function syncNestFeed() {
+    var slug = currentNest ? currentNest.slug : '';
+    if (!slug) {
+      if (nestListenSlug || nestUnsub || nestPosts.length) resetNestFeed();
+      return;
+    }
+    if (!fbDb) return;
+    if (slug === nestListenSlug && (nestUnsub || nestMode === 'scan' || nestLoadingMore || nestReady || nestError)) return;
+    listenNestPosts(slug);
+  }
+
+  function dedupePosts(list) {
+    var seen = {};
+    var out = [];
+    var i;
+    for (i = 0; i < list.length; i++) {
+      var post = list[i];
+      if (!post || !post.id || seen[post.id]) continue;
+      seen[post.id] = true;
+      out.push(post);
+    }
+    return out;
+  }
+
+  function absorbNestPage(page, lastSnap, hasMore) {
+    var older = [];
+    var floor = page.length ? (page[page.length - 1].ms || 0) : 0;
+    var i;
+    if (nestExtended && page.length) {
+      for (i = 0; i < nestPosts.length; i++) {
+        if ((nestPosts[i].ms || 0) < floor) older.push(nestPosts[i]);
+      }
+    }
+    nestPosts = dedupePosts(page.concat(older));
+    if (!nestExtended) {
+      nestCursor = lastSnap || null;
+      nestHasMore = !!hasMore;
+    }
+  }
+
+  function runNestScan(slug, gen, cursor, append) {
+    if (gen !== nestGen || nestListenSlug !== slug) return;
+    nestLoadingMore = true;
+    nestMode = 'scan';
+    var found = [];
+    var scanned = append ? nestScanned : 0;
+    function finish(hasMore, capped, nextCursor) {
+      if (gen !== nestGen || nestListenSlug !== slug) return;
+      nestLoadingMore = false;
+      nestReady = true;
+      nestError = null;
+      nestMode = 'scan';
+      nestScanned = scanned;
+      nestScanCapped = !!capped;
+      nestCursor = nextCursor || null;
+      nestHasMore = !!hasMore;
+      if (append) nestPosts = dedupePosts(nestPosts.concat(found));
+      else nestPosts = found.slice();
+      if (append) nestExtended = true;
+      renderFeed();
+    }
+    function step(cur) {
+      if (gen !== nestGen || nestListenSlug !== slug) return;
+      firestoreQuery(feedQuerySpec(SITE_ID, null), cur).get().then(function (snap) {
+        if (gen !== nestGen || nestListenSlug !== slug) return;
+        var plain = snap.docs.map(mapLive);
+        var folded = foldScanPage(plain, slug, scanned, found.length, FEED_PAGE, NEST_SCAN_CAP, FEED_PAGE);
+        var t;
+        for (t = 0; t < folded.take.length; t++) found.push(folded.take[t]);
+        scanned = folded.scanned;
+        var next = folded.consumed > 0 ? snap.docs[folded.consumed - 1] : cur;
+        if (folded.exhausted || folded.capped || !folded.hasMore || found.length >= FEED_PAGE) {
+          finish(folded.hasMore, folded.capped, next);
+          return;
+        }
+        step(next);
+      }).catch(function (err) {
+        if (gen !== nestGen || nestListenSlug !== slug) return;
+        nestLoadingMore = false;
+        nestReady = false;
+        nestError = err;
+        var msg = (err && err.message) ? err.message : 'Could not load this nest.';
+        composeErr('Nest: ' + msg + ' This is not an empty room.');
         renderFeed();
       });
+    }
+    step(cursor);
   }
+
+  function listenNestPosts(slug) {
+    if (!fbDb) {
+      composeErr('Feed is not connected.');
+      return;
+    }
+    resetNestFeed();
+    var gen = nestGen;
+    nestListenSlug = slug;
+    nestMode = 'index';
+    renderFeed();
+    var spec = feedQuerySpec(SITE_ID, slug);
+    nestUnsub = firestoreQuery(spec, null).onSnapshot(function (snap) {
+      if (gen !== nestGen || nestListenSlug !== slug) return;
+      nestReady = true;
+      nestError = null;
+      nestMode = 'index';
+      nestScanCapped = false;
+      nestLoadingMore = false;
+      var page = snap.docs.map(mapLive);
+      var last = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
+      absorbNestPage(page, last, snap.docs.length === spec.limit);
+      if (!liveError) composeErr('');
+      renderFeed();
+    }, function (err) {
+      if (gen !== nestGen || nestListenSlug !== slug) return;
+      if (isMissingIndexError(err)) {
+        if (nestUnsub) { nestUnsub(); nestUnsub = null; }
+        nestMode = 'scan';
+        nestError = null;
+        if (!liveError) composeErr('');
+        runNestScan(slug, gen, null, false);
+        return;
+      }
+      nestReady = false;
+      nestError = err;
+      nestLoadingMore = false;
+      var msg = (err && err.message) ? err.message : 'Could not load this nest.';
+      composeErr('Nest: ' + msg + ' This is not an empty room.');
+      renderFeed();
+    });
+  }
+
+  function loadMoreNestPosts() {
+    if (!currentNest || !nestHasMore || nestLoadingMore || !nestCursor || !fbDb) return;
+    var slug = currentNest.slug;
+    var gen = nestGen;
+    if (nestMode === 'scan') {
+      runNestScan(slug, gen, nestCursor, true);
+      return;
+    }
+    nestLoadingMore = true;
+    nestExtended = true;
+    renderFeed();
+    var spec = feedQuerySpec(SITE_ID, slug);
+    firestoreQuery(spec, nestCursor).get().then(function (snap) {
+      if (gen !== nestGen || nestListenSlug !== slug) return;
+      nestLoadingMore = false;
+      nestPosts = dedupePosts(nestPosts.concat(snap.docs.map(mapLive)));
+      if (snap.docs.length) nestCursor = snap.docs[snap.docs.length - 1];
+      nestHasMore = snap.docs.length === spec.limit;
+      renderFeed();
+    }).catch(function (err) {
+      if (gen !== nestGen || nestListenSlug !== slug) return;
+      nestLoadingMore = false;
+      if (isMissingIndexError(err)) {
+        nestMode = 'scan';
+        runNestScan(slug, gen, nestCursor, true);
+        return;
+      }
+      composeErr('Nest: ' + ((err && err.message) || 'Could not load older posts.') + ' This is not an empty room.');
+      renderFeed();
+    });
+  }
+
+  function ensureNestFeedCss() {
+    if (document.getElementById('nest-feed-css')) return;
+    var st = document.createElement('style');
+    st.id = 'nest-feed-css';
+    st.textContent = '.nest-feed-more{display:block;width:100%;margin:0;padding:1rem 1.4rem;border:0;border-top:1px solid var(--border,#c9d5de);background:transparent;color:var(--accent,#e07a3d);font:inherit;font-weight:600;cursor:pointer;text-align:center}.nest-feed-more:disabled{cursor:default;color:var(--text-light,#6d8292)}';
+    document.head.appendChild(st);
+  }
+
+  function nestMoreHtml() {
+    if (!showingNestFeed() || !nestReady || nestError) return '';
+    if (!nestHasMore && !nestLoadingMore) return '';
+    ensureNestFeedCss();
+    if (nestLoadingMore) {
+      return '<button type="button" class="nest-feed-more" id="nest-feed-more" disabled>Loading older posts…</button>';
+    }
+    return '<button type="button" class="nest-feed-more" id="nest-feed-more">Older posts in this nest</button>';
+  }
+
+  /* @nest-feed
+     Pure query helpers. test/nest-feed.test.js extracts this block.
+     Home stays siteId + createdAt desc, limit FEED_PAGE.
+     A nest adds nestSlug ==. The scan fold is the pre-index fallback. */
+  var FEED_PAGE = 80;
+  var NEST_SCAN_CAP = 4000;
+
+  function feedQuerySpec(siteId, nestSlug) {
+    var where = [{ field: 'siteId', op: '==', value: siteId }];
+    if (nestSlug) where.push({ field: 'nestSlug', op: '==', value: nestSlug });
+    return {
+      collection: 'posts',
+      where: where,
+      orderBy: { field: 'createdAt', dir: 'desc' },
+      limit: FEED_PAGE
+    };
+  }
+
+  function isMissingIndexError(err) {
+    if (!err) return false;
+    var code = String(err.code || '');
+    if (code === 'failed-precondition' || code === '9') return true;
+    var msg = String(err.message || '');
+    return /requires an index/i.test(msg) || /FAILED_PRECONDITION/i.test(msg);
+  }
+
+  function applyFeedQuery(docs, spec) {
+    var rows = [];
+    var i;
+    var w;
+    for (i = 0; i < docs.length; i++) {
+      var doc = docs[i];
+      var ok = true;
+      for (w = 0; w < spec.where.length; w++) {
+        var clause = spec.where[w];
+        if (clause.op === '==' && doc[clause.field] !== clause.value) ok = false;
+      }
+      if (ok) rows.push(doc);
+    }
+    var field = spec.orderBy.field;
+    var dir = spec.orderBy.dir === 'asc' ? 1 : -1;
+    rows.sort(function (a, b) {
+      var av = a[field] || 0;
+      var bv = b[field] || 0;
+      if (av === bv) return 0;
+      return av < bv ? -dir : dir;
+    });
+    return rows.slice(0, spec.limit);
+  }
+
+  function nestKey(s) {
+    return String(s || '').replace(/^#/, '').trim().toLowerCase();
+  }
+
+  function foldScanPage(pageDocs, nestSlug, scanned, alreadyFound, want, scanCap, pageSize) {
+    var take = [];
+    var i = 0;
+    var wantKey = nestKey(nestSlug);
+    if (!pageDocs || !pageDocs.length) {
+      return { take: take, consumed: 0, scanned: scanned, hasMore: false, capped: false, exhausted: true };
+    }
+    for (; i < pageDocs.length; i++) {
+      if (scanned >= scanCap) break;
+      if (alreadyFound + take.length >= want) break;
+      scanned += 1;
+      if (nestKey(pageDocs[i].nestSlug) === wantKey) take.push(pageDocs[i]);
+    }
+    var consumedAll = i >= pageDocs.length;
+    var exhausted = consumedAll && pageDocs.length < pageSize;
+    var hitCap = scanned >= scanCap;
+    return {
+      take: take,
+      consumed: i,
+      scanned: scanned,
+      hasMore: !exhausted && !hitCap,
+      capped: hitCap && !exhausted,
+      exhausted: exhausted
+    };
+  }
+  /* @nest-feed-end */
 
   function composeErr(msg) {
     var el = document.getElementById('thoughts-compose-err');
@@ -2233,6 +2539,7 @@
   function applyRoute() {
     closeMobileNav();
     currentNest = resolveNestFromPath();
+    syncNestFeed();
     applyNestChrome();
     const raw = routeFromHash();
     var roomHighlight = currentNest ? currentNest.slug : 'home';
@@ -2368,8 +2675,16 @@
     );
   }
 
+  function showingNestFeed() {
+    return !!(currentNest && !focusedTopicId && currentTab !== 'following');
+  }
+
+  function postsForFeed() {
+    return showingNestFeed() ? nestPosts : livePosts;
+  }
+
   function topLevelPosts() {
-    return livePosts.filter(function (p) {
+    return postsForFeed().filter(function (p) {
       if (p.parentId || (p.authorUid && blockedUids[p.authorUid])) return false;
       if (currentNest) return nestSlugNorm(p.nestSlug) === nestSlugNorm(currentNest.slug);
       return true;
@@ -2377,7 +2692,7 @@
   }
 
   function repliesFor(parentId) {
-    return livePosts.filter(function (p) { return p.parentId === parentId && !(p.authorUid && blockedUids[p.authorUid]); })
+    return postsForFeed().filter(function (p) { return p.parentId === parentId && !(p.authorUid && blockedUids[p.authorUid]); })
       .sort(function (a, b) { return (a.ms || 0) - (b.ms || 0); });
   }
 
@@ -2734,28 +3049,35 @@
       return;
     }
 
-    var seeds = currentNest ? [] : sessionSeedPosts();
-    if (liveError && !seeds.length) {
-      el.innerHTML = '<div class="post-empty">Live feed could not load. The error is in the compose line above — this is not an empty room.</div>';
+    var nestView = !!currentNest;
+    var seeds = nestView ? [] : sessionSeedPosts();
+    var scopeError = nestView ? nestError : liveError;
+    var scopeReady = nestView ? nestReady : liveReady;
+    if (scopeError && !seeds.length) {
+      el.innerHTML = '<div class="post-empty">' + (nestView
+        ? 'This nest could not load. The error is in the compose line above — this is not an empty room.'
+        : 'Live feed could not load. The error is in the compose line above — this is not an empty room.') + '</div>';
       refreshPorchUi();
       return;
     }
-    if (!liveReady && !seeds.length) {
+    if (!scopeReady && !seeds.length) {
       el.innerHTML = '<div class="post-empty">Connecting to the live feed…</div>';
       refreshPorchUi();
       return;
     }
 
-    let posts = (liveReady && !liveError) ? topLevelPosts().slice() : [];
-    if (liveReady && !liveError && currentTab === 'hot') posts.sort(function (a, b) { return (b.likes || 0) - (a.likes || 0); });
-    if (liveReady && !liveError && currentTab === 'new') posts.sort(function (a, b) { return (b.ms || 0) - (a.ms || 0); });
+    let posts = (scopeReady && !scopeError) ? topLevelPosts().slice() : [];
+    if (scopeReady && !scopeError && currentTab === 'hot') posts.sort(function (a, b) { return (b.likes || 0) - (a.likes || 0); });
+    if (scopeReady && !scopeError && currentTab === 'new') posts.sort(function (a, b) { return (b.ms || 0) - (a.ms || 0); });
     var seedIds = {};
     for (var si = 0; si < seeds.length; si++) seedIds[seeds[si].id] = true;
     posts = seeds.concat(posts.filter(function (p) { return !seedIds[p.id]; }));
 
     if (!posts.length) {
-      var empty = currentNest
-        ? ('No posts in ' + (currentNest.label || currentNest.slug) + ' yet. This nest is live at /' + currentNest.slug + '. Sign in to post the first take.')
+      var empty = nestView
+        ? (nestScanCapped
+          ? ('Posts in ' + (currentNest.label || currentNest.slug) + ' could not be reached yet. The nest index is not built, and the fallback scan stopped after ' + NEST_SCAN_CAP + ' newer posts. This is not an empty room.')
+          : ('No posts in ' + (currentNest.label || currentNest.slug) + ' yet. This nest is live at /' + currentNest.slug + '. Sign in to post the first take.'))
         : ((site && site.emptyState) || 'This room is empty. Sign in to post. Guest can browse only.');
       el.innerHTML = '<div class="post-empty">' + escapeHtml(empty) + '</div>';
       refreshPorchUi();
@@ -2766,7 +3088,7 @@
     el.innerHTML = posts.map(function (p) {
       var kids = repliesFor(p.id);
       return renderPost(p, false) + kids.map(function (r) { return renderPost(r, true); }).join('');
-    }).join('');
+    }).join('') + nestMoreHtml();
     highlightDeepPost();
     refreshPorchUi();
     refreshNestSurfaces();
@@ -5923,6 +6245,11 @@
       if (e.target.closest('#nest-add-save')) {
         e.preventDefault();
         submitNestAdd();
+        return;
+      }
+      if (e.target.closest('#nest-feed-more')) {
+        e.preventDefault();
+        loadMoreNestPosts();
         return;
       }
       const nestLink = e.target.closest('a[data-nest]');

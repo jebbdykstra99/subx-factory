@@ -2,7 +2,8 @@
 
 The single source for every SubX room's `factory.js`. Rooms stay self-contained GitHub Pages repos. This repo **stamps** them by pull request and **checks nightly** that they haven't drifted.
 
-- Release: `v1.0.0`. `factory/factory.js` sha256 `7466eefc88f4…` (277,678 B; see `FACTORY_RELEASE.json`).
+- Release: `v1.0.1`. `factory/factory.js` sha256 `5db3afa90854…` (289,004 B; see `FACTORY_RELEASE.json`).
+- v1.0.1: a nest view queries its own posts (`siteId` + `nestSlug`, `createdAt` desc, 80 at a time) with an "Older posts in this nest" control. The home feed is still the newest 80 for `siteId`. If the composite index is missing, the nest pages that same `siteId` + `createdAt` query until the page fills, the collection ends, or 4,000 documents are scanned. The index definition is `factory/firestore.indexes.json` — do not deploy that file as the project's full index set.
 - Owner: jebbdykstra99. All Actions are free (public repo). No paid services.
 - **Rules are never deployed from here.** `rules/` is a reference copy plus emulator tests. Jebb hand-publishes Firestore and Storage rules in the console.
 
