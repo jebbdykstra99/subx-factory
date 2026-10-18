@@ -17,8 +17,10 @@ Closes the "Dynamic Workflows / Managed Devins" gap from the Devin brief (2026-1
   - **sync**: deterministic template sync, no agent usage. Clone → branch from the default branch →
     copy `templates/room/*` → render `AGENTS.md` (`tools/room_agents_md.py`) → optional
     `--local-smoke` (Playwright) → commit → **plain push of a new branch** (never `--force`, never `main`).
-    If the branch already exists remotely with identical content it is recorded as pushed; with different
-    content the repo fails with a clear message. Prints the compare links to open as PRs; `record-pr` stores PR URLs.
+    If the branch already exists remotely, fanout checks it out and adds a new commit on top (fast-forward
+    push), so a re-run can extend an open PR; identical content is recorded as already pushed.
+    `--skip-workflows` leaves out `.github/workflows/*` for tokens without GitHub's `workflow` permission
+    (the PR body says so); re-run without it later to add the workflow as one more commit. Prints the compare links to open as PRs; `record-pr` stores PR URLs.
 - `--dry-run`: sync clones and renders and reports the diffstat, but commits and pushes nothing;
   agents prints the exact payload and calls no API. Dry runs use a separate `*.dryrun.json` ledger.
 - Git auth: every git call uses `-c credential.helper=!<gh> auth git-credential` with the real `gh`

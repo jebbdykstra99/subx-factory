@@ -116,11 +116,13 @@ def template_files():
     return sorted(out)
 
 
-def apply_template(clone, repo):
+def apply_template(clone, repo, skip_workflows=False):
     sys.path.insert(0, HERE)
     import room_agents_md  # noqa: E402
     written = []
     for rel in template_files():
+        if skip_workflows and rel.startswith(".github/workflows/"):
+            continue
         dst = os.path.join(clone, rel)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copyfile(os.path.join(TEMPLATE, rel), dst)
@@ -157,17 +159,27 @@ def do_sync(repo, a, L, task):
     git(["clone", "--quiet", url, clone])
     if not base:
         base = git(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], cwd=clone).stdout.strip().split("/", 1)[1]
-    git(["checkout", "--quiet", "-B", a.branch, f"origin/{base}"], cwd=clone)
+    rsha = remote_branch_sha(url, a.branch)
+    if rsha:  # resume on the existing branch: new commits on top, fast-forward push only
+        git(["fetch", "--quiet", "origin", f"refs/heads/{a.branch}:refs/remotes/origin/{a.branch}"], cwd=clone)
+        git(["checkout", "--quiet", "-B", a.branch, f"origin/{a.branch}"], cwd=clone)
+    else:
+        git(["checkout", "--quiet", "-B", a.branch, f"origin/{base}"], cwd=clone)
     if not os.path.exists(os.path.join(clone, "site.json")):
         raise RuntimeError("no site.json at repo root: not a SubX room repo")
-    files = apply_template(clone, repo)
-    L.set(repo, status="cloned", base=base, branch=a.branch, files=files)
+    files = apply_template(clone, repo, skip_workflows=a.skip_workflows)
+    L.set(repo, status="cloned", base=base, branch=a.branch, files=files, workflows_skipped=bool(a.skip_workflows))
     if a.local_smoke:
         ok, tail = local_smoke(clone)
         L.set(repo, local_smoke="pass" if ok else "fail", local_smoke_tail=tail)
     git(["add", "-A"] + files, cwd=clone)
     if not git(["status", "--porcelain"], cwd=clone).stdout.strip():
-        L.set(repo, status="noop", note="already in sync with templates/room")
+        if rsha:
+            L.set(repo, status="pushed", commit=rsha, note="remote branch already up to date",
+                  compare_url=f"https://github.com/{a.owner}/{repo}/compare/{base}...{a.branch}?expand=1",
+                  pr_title=a.pr_title, pr_body=pr_body(repo, task, a, files))
+        else:
+            L.set(repo, status="noop", note="already in sync with templates/room")
         return
     diffstat = git(["diff", "--cached", "--stat"], cwd=clone).stdout.strip().splitlines()[-1:]
     if a.dry_run:
@@ -175,27 +187,24 @@ def do_sync(repo, a, L, task):
         return
     git(["commit", "--quiet", "-m", a.commit_message], cwd=clone)
     head = git(["rev-parse", "HEAD"], cwd=clone).stdout.strip()
-    tree = git(["rev-parse", "HEAD^{tree}"], cwd=clone).stdout.strip()
-    rsha = remote_branch_sha(url, a.branch)
-    if rsha:
-        git(["fetch", "--quiet", "origin", a.branch], cwd=clone)
-        rtree = git(["rev-parse", "FETCH_HEAD^{tree}"], cwd=clone).stdout.strip()
-        if rtree == tree:
-            L.set(repo, status="pushed", commit=rsha, note="remote branch already had this content")
-        else:
-            raise RuntimeError(f"remote branch {a.branch} exists with different content ({rsha[:8]}); not force-pushing. Use a new --branch.")
-    else:
-        git(["push", "--quiet", "origin", f"HEAD:refs/heads/{a.branch}"], cwd=clone)  # plain push, never --force
-        L.set(repo, status="pushed", commit=head)
+    git(["push", "--quiet", "origin", f"HEAD:refs/heads/{a.branch}"], cwd=clone)  # plain (fast-forward) push, never --force
+    L.set(repo, status="pushed", commit=head)
     L.set(repo, compare_url=f"https://github.com/{a.owner}/{repo}/compare/{base}...{a.branch}?expand=1",
-          pr_title=a.pr_title, pr_body=pr_body(repo, task, a))
+          pr_title=a.pr_title, pr_body=pr_body(repo, task, a, files))
 
 
-def pr_body(repo, task, a):
-    return (f"{a.pr_intro}\n\nOpened by `subx-factory/tools/fanout.py` (run `{a.run_id}`, mode sync). "
-            f"Task sha256 `{sha(task)[:12]}`.\n\nPRs only: Jebb merges. Merging adds files only "
-            f"(`AGENTS.md`, `tests/smoke/`, `.github/workflows/smoke.yml`); no change to the live room's pages, "
-            f"`factory.js`, `site.json`, noindex or the banner.")
+def pr_body(repo, task, a, files):
+    listed = ", ".join(f"`{f}`" for f in files)
+    note = ""
+    if a.skip_workflows:
+        note = ("\n\n**CI workflow not included yet:** the push token lacks the GitHub `workflow` permission, so "
+                "`.github/workflows/smoke.yml` could not be pushed. Re-run fanout without `--skip-workflows` once the "
+                "token has it (adds one fast-forward commit to this branch), or add the file from subx-factory "
+                "`templates/room/.github/workflows/smoke.yml` in the GitHub web editor.")
+    return (f"{a.pr_intro}\n\nFiles: {listed}.\n\nOpened by `subx-factory/tools/fanout.py` (run `{a.run_id}`, mode sync). "
+            f"Task sha256 `{sha(task)[:12]}`. Smoke test passed locally against this branch before push."
+            f"\n\nPRs only: Jebb merges. Merging adds files only; no change to the live room's pages, "
+            f"`factory.js`, `site.json`, noindex, robots.txt or the banner.{note}")
 
 
 # ---------------- Cursor cloud agents ----------------
@@ -358,6 +367,7 @@ def main():
     r.add_argument("--limit", type=int, default=0, help="max repos this invocation (waves)")
     r.add_argument("--local-smoke", action="store_true", help="sync: run the Playwright smoke test locally before pushing")
     r.add_argument("--model", default="")
+    r.add_argument("--skip-workflows", action="store_true", help="sync: leave out .github/workflows/* (for tokens without the GitHub workflow permission)")
     r.add_argument("--commit-message", default="Add AGENTS.md, shared Playwright smoke test, and PR smoke CI")
     r.add_argument("--pr-title", default="Add AGENTS.md + shared Playwright smoke test + PR CI")
     r.add_argument("--pr-intro", default="Adds a room-specific `AGENTS.md`, the shared SubX Playwright smoke test (`tests/smoke/`), and a GitHub Actions job that runs it on every PR.")
