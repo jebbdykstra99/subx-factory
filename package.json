@@ -1,0 +1,10 @@
+{
+  "name": "subx-factory",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check factory/factory.js && eslint --no-eslintrc -c .eslintrc.json factory/factory.js && node test/nest-feed.test.js",
+    "smoke": "node tools/smoke.mjs"
+  },
+  "devDependencies": { "eslint": "^8.57.0", "puppeteer-core": "^23.0.0" }
+}

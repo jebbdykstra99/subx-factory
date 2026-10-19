@@ -1,0 +1,57 @@
+[
+  {
+    "room": "gpchat",
+    "ok": true,
+    "title": "gpchat — Nothing but Grand Prix.",
+    "brand": "gpchat",
+    "feedItems": 84,
+    "railCards": 1,
+    "railText": "PorchWho are you sitting with for the Singapore GP?Pick a side. Posts to this room.DriverTeamBothDriver 0 · Team 0 · Both 0This room",
+    "watchlistVisible": true,
+    "followBtns": 2,
+    "f1Cards": true,
+    "noindex": true,
+    "banner": true,
+    "lsKeys": [],
+    "errors": [],
+    "blocked": []
+  },
+  {
+    "room": "27chat",
+    "ok": true,
+    "title": "27chat — The work didn’t stop.",
+    "brand": "27chat",
+    "feedItems": 80,
+    "railCards": 1,
+    "railText": "PorchName that barPick a side. Posts to this room.A verseA riffA verse 0 · A riff 0This room",
+    "watchlistVisible": false,
+    "followBtns": 0,
+    "f1Cards": false,
+    "noindex": true,
+    "banner": true,
+    "lsKeys": [],
+    "errors": [],
+    "blocked": []
+  },
+  {
+    "room": "311chat",
+    "ok": true,
+    "title": "311chat — Non-emergency city help. Find your 311.",
+    "brand": "311chat",
+    "feedItems": 76,
+    "railCards": 2,
+    "railText": "FACT911 saves lives. 311 fixes the city.Call 911 for crime in progress, fire, medical emergency, or immediate danger — if unsure, call 911 and let the dispatcher decide. Use 311 (or your city's non-emergency portal) for potholes, streetlights, graffiti, trash, abandoned vehicles, noise, and other non-emergency city services. This rail stays national until you locate; local handoffs never replace this FACT.National best practice · preview · noindexPorchWhat should neighbors try first?Pick a side. Posts to this room.Call / app 311Check the official portalPost in the roomCall / app 311 0 · Check the official portal 0 · Post in the room 0This room",
+    "watchlistVisible": false,
+    "followBtns": 0,
+    "f1Cards": false,
+    "noindex": true,
+    "banner": true,
+    "lsKeys": [
+      "subx.vid"
+    ],
+    "errors": [],
+    "blocked": [
+      "https://us-central1-subx-skins.cloudfunctions.net/pixel"
+    ]
+  }
+]

@@ -1,0 +1,467 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function emailVerified() {
+      return signedIn() && request.auth.token.email_verified == true;
+    }
+    function isAdmin() {
+      return signedIn() && request.auth.uid == 'o774wL9hUVSi19EkDCgLqQomP8i2';
+    }
+    // Short + long siteId forms used across live skins / posts
+    function factorySite(data) {
+      return data.siteId in [
+        'samochat', 'bartchat', '415chat', 'gpchat', '27chat', '808chat',
+        'buffettchat', 'gaichat', 'popechat', 'recruitchat', '311chat',
+        'booze', 'buffet', 'boyfriend', 'cia', 'cobra',
+        'airlines', 'airlineschat', 'ama', 'amachat', 'atm', 'atmchat',
+        'behindtheblackwall', 'btbw'
+      ];
+    }
+    function nestSlugOk(slug) {
+      return slug is string
+        && slug.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
+        && slug.size() >= 2
+        && slug.size() <= 40
+        && !(slug in [
+          'home', 'explore', 'following', 'notifications', 'chat', 'profile', 'news',
+          'about', 'terms', 'privacy', 'api', 'admin', 'watchlist', 'stories',
+          'feed', 'thoughts', 'hot', 'new'
+        ]);
+    }
+    function notKilled(sid) {
+      return !exists(/databases/$(database)/documents/sites/$(sid))
+        || get(/databases/$(database)/documents/sites/$(sid)).data.killed != true;
+    }
+    function hasPostBody(data) {
+      return (data.text is string && data.text.size() > 0)
+        || (data.keys().hasAll(['imageUrl']) && data.imageUrl is string && data.imageUrl.size() > 0)
+        || (data.keys().hasAll(['poll']) && data.poll is map)
+        || (data.keys().hasAll(['repostOf']) && data.repostOf is string && data.repostOf.size() > 0)
+        || (data.keys().hasAll(['quoteOf']) && data.quoteOf is string && data.quoteOf.size() > 0
+            && data.text is string && data.text.size() > 0);
+    }
+    function textOk(data) {
+      return !data.keys().hasAny(['text'])
+        || (data.text is string && data.text.size() <= 280);
+    }
+    function onlyReplyCountBump() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount'])
+        && request.resource.data.replyCount is int
+        && request.resource.data.replyCount == (resource.data.replyCount is int ? resource.data.replyCount : 0) + 1;
+    }
+    function onlyOwnPollVote() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['poll'])
+        && request.resource.data.poll.diff(resource.data.poll).affectedKeys().hasOnly(['votes'])
+        && request.resource.data.poll.votes.diff(resource.data.poll.votes).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.poll.votes[request.auth.uid] is int;
+    }
+    function uidMap(data, field) {
+      return data.keys().hasAny([field]) && data[field] is map ? data[field] : {};
+    }
+    function onlyOwnUidMap(field) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([field])
+        && uidMap(request.resource.data, field).diff(uidMap(resource.data, field)).affectedKeys().hasOnly([request.auth.uid])
+        && (
+          request.resource.data[field][request.auth.uid] == true
+          || !(request.auth.uid in request.resource.data[field])
+        );
+    }
+    function onlyOwnLike() {
+      return onlyOwnUidMap('likes');
+    }
+    function onlyOwnRepost() {
+      return onlyOwnUidMap('reposts');
+    }
+    function onlyOwnPostEdit() {
+      return resource.data.authorUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 280
+        && request.resource.data.authorUid == resource.data.authorUid
+        && request.resource.data.siteId == resource.data.siteId;
+    }
+    function ownEdge(targetUid) {
+      return emailVerified()
+        && request.auth.uid == uid
+        && request.auth.uid != targetUid
+        && factorySite(request.resource.data)
+        && request.resource.data.siteId is string;
+    }
+    function twoParticipants(data) {
+      return data.participants is list
+        && data.participants.size() == 2
+        && data.participants[0] is string
+        && data.participants[1] is string
+        && data.participants[0] != data.participants[1];
+    }
+    function blockedEitherWay(a, b) {
+      return exists(/databases/$(database)/documents/users/$(a)/blocks/$(b))
+        || exists(/databases/$(database)/documents/users/$(b)/blocks/$(a));
+    }
+    function dmUnreadUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['unreadCounts', 'lastMessage', 'lastMessageAt', 'lastMessageBy', 'participantNames'])
+        && request.resource.data.siteId == resource.data.siteId
+        && request.resource.data.participants == resource.data.participants;
+    }
+    function hasStoryFields(data) {
+      return data.keys().hasAll(['siteId', 'authorUid', 'type', 'createdAt', 'expiresAt'])
+        && data.siteId is string
+        && data.authorUid is string
+        && data.type in ['text', 'image', 'video']
+        && data.createdAt is timestamp
+        && data.expiresAt is timestamp
+        && data.expiresAt >= data.createdAt + duration.value(20, 'h')
+        && data.expiresAt <= data.createdAt + duration.value(28, 'h');
+    }
+
+
+    // ===== PREVIEW-LIFT GUARD (draft 2026-10-09; Jebb hand-publishes) =====
+    // Rooms whose factory.js writes rateLimits/{uid} in the same batch as a post/DM.
+    // Add a siteId here ONLY after that room's factory.js guard PR is live.
+    // PUBLISH ORDER: step 1 publish with [] (no client change needed);
+    // step 2 merge the gpchat factory.js PR; step 3 change to ['gpchat'] and republish.
+    function guardedSite(sid) {
+      return sid in [];
+    }
+    function rlPath() {
+      return /databases/$(database)/documents/rateLimits/$(request.auth.uid);
+    }
+    // The batch that creates the post must also bump rateLimits/{uid}.lastPostAt
+    // to request.time; the rateLimits rule enforces the gap and daily cap.
+    function postThrottled(sid) {
+      return isAdmin() || !guardedSite(sid)
+        || (existsAfter(rlPath()) && getAfter(rlPath()).data.lastPostAt == request.time);
+    }
+    function msgThrottled(sid) {
+      return isAdmin() || !guardedSite(sid)
+        || (existsAfter(rlPath()) && getAfter(rlPath()).data.lastMsgAt == request.time);
+    }
+    // At most 2 links per text; no common spam patterns. Severe-term list = Jebb decision D4.
+    function linksOk(t) {
+      return !t.lower().matches('(?s).*(https?://|www[.]).*(https?://|www[.]).*(https?://|www[.]).*');
+    }
+    function spamFree(t) {
+      return !t.lower().matches('(?s).*(bit[.]ly/|tinyurl[.]com|t[.]me/|wa[.]me/|onlyfans[.]com|free crypto|crypto giveaway|airdrop claim|dm me on telegram|whatsapp me).*');
+    }
+    function cleanText(t) {
+      return t is string && t.size() <= 280 && linksOk(t) && spamFree(t);
+    }
+    function nameOk(n) {
+      return n is string && n.size() > 0 && n.size() <= 50
+        && !n.lower().matches('(?s).*\\b(admin|administrator|moderator|mod team|official|staff|support team|steward)\\b.*')
+        // Practical look-alikes only. Leetspeak tokens, plus Cyrillic a/o and Greek omicron
+        // spoofs of admin/official. Rules have no confusable-normalize, so unlisted homoglyphs pass.
+        && !n.lower().matches('(?s).*(\\badm1n\\b|\\b4dmin\\b|\\b0fficial\\b|\\bst3ward\\b|аdmin|аdministrator|οfficial|оfficial).*');
+    }
+    function handleOk(h) {
+      return h is string && h.matches('^[a-z0-9_]{1,15}$')
+        && !(h in ['mod', 'mods', 'staff', 'support', 'steward', 'system', 'root', 'team'])
+        && !h.matches('^(admin|moderator|official|subx|jebb).*')
+        && !h.matches('.*(adm1n|4dmin|0fficial|st3ward).*');
+    }
+    function postKeysOk(d) {
+      return d.keys().hasOnly([
+        'siteId', 'parentId', 'authorUid', 'authorName', 'authorHandle', 'text',
+        'likes', 'likeCount', 'replyCount', 'reposts', 'repostCount', 'nestSlug',
+        'createdAt', 'imageUrl', 'poll', 'repostOf', 'quoteOf', 'topicIds',
+        'steward'
+      ]);
+    }
+    function pollOk(d) {
+      return !d.keys().hasAny(['poll'])
+        || (d.poll is map
+            && d.poll.options is list && d.poll.options.size() >= 2 && d.poll.options.size() <= 4
+            && d.poll.votes == {}
+            && d.poll.duration is int && d.poll.duration >= 1 && d.poll.duration <= 7);
+    }
+    function imageOk(d) {
+      return !d.keys().hasAny(['imageUrl'])
+        || (d.imageUrl is string && d.imageUrl.size() <= 600
+            && d.imageUrl.matches('^https://firebasestorage[.]googleapis[.]com/v0/b/subx-skins[.]firebasestorage[.]app/o/posts%2F.*'));
+    }
+    function parentOk(d) {
+      return !d.keys().hasAny(['parentId']) || d.parentId == null
+        || (d.parentId is string
+            && exists(/databases/$(database)/documents/posts/$(d.parentId))
+            && get(/databases/$(database)/documents/posts/$(d.parentId)).data.siteId == d.siteId);
+    }
+    // Member posts: server time, zero counters, sane identity, clean text.
+    // Admin (steward seeding) keeps today's behavior.
+    function memberPostOk(d) {
+      return isAdmin() || (
+        postKeysOk(d)
+        && d.createdAt == request.time
+        && (!d.keys().hasAny(['likes']) || d.likes == {})
+        && (!d.keys().hasAny(['likeCount']) || d.likeCount == 0)
+        && (!d.keys().hasAny(['replyCount']) || d.replyCount == 0)
+        && (!d.keys().hasAny(['reposts']) || d.reposts == {})
+        && (!d.keys().hasAny(['steward']) || d.steward == false)   // CLO #6: only stewards (admin) may set steward:true
+        && (!d.keys().hasAny(['repostCount']) || d.repostCount == 0)
+        && nameOk(d.authorName)
+        && handleOk(d.authorHandle)
+        && (!d.keys().hasAny(['text']) || cleanText(d.text))
+        && (!d.keys().hasAny(['nestSlug']) || (d.nestSlug is string && d.nestSlug.size() <= 40))
+        && pollOk(d)
+        && imageOk(d)
+        && parentOk(d)
+      );
+    }
+    function profileOk(d) {
+      return isAdmin() || (
+        (!d.keys().hasAny(['displayName']) || nameOk(d.displayName))
+        && (!d.keys().hasAny(['name']) || nameOk(d.name))
+        && (!d.keys().hasAny(['handle']) || handleOk(d.handle))
+        && (!d.keys().hasAny(['bio']) || (d.bio is string && d.bio.size() <= 160))
+        && !d.keys().hasAny(['role', 'admin', 'isAdmin', 'verified', 'steward'])
+      );
+    }
+    // ===== END PREVIEW-LIFT GUARD helpers =====
+
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if emailVerified()
+        && notKilled(request.resource.data.siteId)
+        && request.auth.uid == request.resource.data.authorUid
+        && factorySite(request.resource.data)
+        && hasPostBody(request.resource.data)
+        && textOk(request.resource.data)
+        && memberPostOk(request.resource.data)                 // PREVIEW-LIFT GUARD
+        && postThrottled(request.resource.data.siteId);        // PREVIEW-LIFT GUARD
+      // PREVIEW-LIFT GUARD: admin takedown from the app (was author-only).
+      allow delete: if isAdmin() || (signedIn()
+        && resource.data.authorUid == request.auth.uid);
+      allow update: if emailVerified() && notKilled(resource.data.siteId) && (
+        onlyReplyCountBump()
+        || onlyOwnPollVote()
+        || onlyOwnLike()
+        || onlyOwnRepost()
+        || onlyOwnPostEdit()
+      );
+    }
+
+    // CLO #7 PRIVACY: users/{uid} is owner + admin (steward) only, for get AND list.
+    // Verified Oct 8: public GET of users/<uid> and list both return 403 in prod.
+    // No client reads another member's users doc (names come from posts / DM participantNames),
+    // so no public profile doc is needed. Private fields (email, phone) may never be written.
+    match /users/{uid} {
+      allow get: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow list: if isAdmin();
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasAll(['siteId'])
+        && factorySite(request.resource.data)
+        && !request.resource.data.keys().hasAny(['email', 'phone', 'phoneNumber'])
+        && profileOk(request.resource.data);                       // PREVIEW-LIFT GUARD
+
+      match /blocks/{targetUid} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create, update: if emailVerified()
+          && request.auth.uid == uid
+          && request.resource.data.blockerUid == uid
+          && request.resource.data.targetUid == targetUid
+          && factorySite(request.resource.data);
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
+      match /following/{targetUid} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create, update: if ownEdge(targetUid)
+          && request.resource.data.followerUid == uid
+          && request.resource.data.targetUid == targetUid;
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
+      match /mutes/{targetUid} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create, update: if ownEdge(targetUid)
+          && request.resource.data.muterUid == uid
+          && request.resource.data.targetUid == targetUid;
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
+      match /bookmarks/{postId} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create, update: if emailVerified()
+          && request.auth.uid == uid
+          && request.resource.data.uid == uid
+          && request.resource.data.postId == postId
+          && factorySite(request.resource.data);
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
+      match /hidden/{postId} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create, update: if emailVerified()
+          && request.auth.uid == uid
+          && request.resource.data.uid == uid
+          && request.resource.data.postId == postId
+          && factorySite(request.resource.data);
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
+      // In-app notifications inbox (Chat stretch / Notifs MVP)
+      match /notifications/{notifId} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow update: if signedIn() && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+        allow delete: if signedIn() && request.auth.uid == uid;
+        allow create: if emailVerified()
+          && request.resource.data.toUid == uid
+          && request.resource.data.fromUid == request.auth.uid
+          && request.resource.data.fromUid != uid
+          && factorySite(request.resource.data)
+          && request.resource.data.type is string
+          && request.resource.data.type.size() <= 20                                    // PREVIEW-LIFT GUARD
+          && (!request.resource.data.keys().hasAny(['text'])
+              || (request.resource.data.text is string && request.resource.data.text.size() <= 280))
+          && (!request.resource.data.keys().hasAny(['createdAt'])
+              || request.resource.data.createdAt == request.time)
+          && (request.resource.data.type != 'report' || uid == 'o774wL9hUVSi19EkDCgLqQomP8i2')  // CLO #7 report alert goes to Jebb only
+          && request.resource.data.read == false;
+      }
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.reporterUid == request.auth.uid);
+      allow create: if emailVerified()
+        && request.resource.data.reporterUid == request.auth.uid
+        && factorySite(request.resource.data)
+        && request.resource.data.postId is string
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() <= 40                       // PREVIEW-LIFT GUARD
+        && (!request.resource.data.keys().hasAny(['createdAt'])
+            || request.resource.data.createdAt == request.time);           // PREVIEW-LIFT GUARD
+      allow update, delete: if isAdmin();
+    }
+
+    match /sites/{siteId} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && request.resource.data.siteId == siteId
+        && request.resource.data.killed is bool;
+      allow delete: if false;
+
+      // From factory-template/membernests.rules.snippet. Not confirmed in deployed rules; the live + button needs it.
+      match /memberNests/{uid}/rooms/{slug} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create: if emailVerified()
+          && request.auth.uid == uid
+          && factorySite({'siteId': siteId})
+          && nestSlugOk(slug)
+          && request.resource.data.siteId == siteId
+          && request.resource.data.ownerUid == uid
+          && request.resource.data.slug == slug
+          && request.resource.data.label is string
+          && request.resource.data.label.size() > 0
+          && request.resource.data.label.size() <= 40
+          && request.resource.data.nav == true
+          && request.resource.data.parent == null
+          && request.resource.data.kind == 'user';
+        allow update, delete: if signedIn()
+          && request.auth.uid == uid
+          && resource.data.ownerUid == uid;
+      }
+    }
+
+    // ===== PREVIEW-LIFT GUARD: per-user write throttle =====
+    // rateLimits/{uid}: { lastPostAt, lastMsgAt, day, dayCount }
+    // Gap: 20s between posts/replies, 2s between DMs. Daily cap: 50 posts+replies (UTC day).
+    match /rateLimits/{uid} {
+      function rlKeysOk(d) {
+        return d.keys().hasOnly(['lastPostAt', 'lastMsgAt', 'day', 'dayCount']);
+      }
+      function postBump(before, after) {
+        return after.lastPostAt == request.time
+          && (!before.keys().hasAny(['lastPostAt'])
+              || request.time > before.lastPostAt + duration.value(20, 's'))
+          && after.day == request.time.date()
+          && ((before.keys().hasAny(['day']) && before.day == request.time.date())
+                ? (after.dayCount == before.dayCount + 1 && after.dayCount <= 50)
+                : after.dayCount == 1);
+      }
+      function msgBump(before, after) {
+        return after.lastMsgAt == request.time
+          && (!before.keys().hasAny(['lastMsgAt'])
+              || request.time > before.lastMsgAt + duration.value(2, 's'));
+      }
+      function changed(before, after) {
+        return after.diff(before).affectedKeys();
+      }
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && rlKeysOk(request.resource.data)
+        && request.resource.data.keys().hasAny(['lastPostAt', 'lastMsgAt'])
+        && (!request.resource.data.keys().hasAny(['lastPostAt']) || postBump({}, request.resource.data))
+        && (!request.resource.data.keys().hasAny(['lastMsgAt']) || msgBump({}, request.resource.data));
+      allow update: if signedIn() && request.auth.uid == uid
+        && rlKeysOk(request.resource.data)
+        && (
+          (changed(resource.data, request.resource.data).hasOnly(['lastPostAt', 'day', 'dayCount'])
+            && postBump(resource.data, request.resource.data))
+          || (changed(resource.data, request.resource.data).hasOnly(['lastMsgAt'])
+            && msgBump(resource.data, request.resource.data))
+        );
+      allow delete: if isAdmin();
+    }
+    // ===== END PREVIEW-LIFT GUARD throttle =====
+
+    match /stories/{storyId} {
+      allow read: if factorySite(resource.data);
+      allow create: if emailVerified()
+        && notKilled(request.resource.data.siteId)
+        && request.auth.uid == request.resource.data.authorUid
+        && factorySite(request.resource.data)
+        && hasStoryFields(request.resource.data);
+      allow update: if false;
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.authorUid == request.auth.uid);
+    }
+
+    // Factory-wide DMs (was gpchat-only in subx-og) — block-aware
+    match /conversations/{convId} {
+      allow read: if signedIn()
+        && (!exists(/databases/$(database)/documents/conversations/$(convId))
+            || (factorySite(resource.data)
+                && request.auth.uid in resource.data.participants));
+      allow create: if emailVerified()
+        && factorySite(request.resource.data)
+        && notKilled(request.resource.data.siteId)
+        && request.auth.uid in request.resource.data.participants
+        && twoParticipants(request.resource.data)
+        && !blockedEitherWay(request.resource.data.participants[0], request.resource.data.participants[1]);
+      allow update: if emailVerified()
+        && factorySite(resource.data)
+        && request.auth.uid in resource.data.participants
+        && dmUnreadUpdate()
+        && !blockedEitherWay(resource.data.participants[0], resource.data.participants[1]);
+      allow delete: if false;
+
+      match /messages/{msgId} {
+        function conv() {
+          return get(/databases/$(database)/documents/conversations/$(convId)).data;
+        }
+        function convAfter() {
+          return getAfter(/databases/$(database)/documents/conversations/$(convId)).data;
+        }
+        allow read: if signedIn()
+          && (!exists(/databases/$(database)/documents/conversations/$(convId))
+              || (request.auth.uid in conv().participants && factorySite(conv())));
+        allow create: if emailVerified()
+          && request.resource.data.fromUid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000
+          && (isAdmin() || spamFree(request.resource.data.text))   // PREVIEW-LIFT GUARD
+          && msgThrottled(request.resource.data.siteId)            // PREVIEW-LIFT GUARD
+          && factorySite(request.resource.data)
+          && notKilled(request.resource.data.siteId)
+          && request.auth.uid in convAfter().participants
+          && factorySite(convAfter())
+          && request.resource.data.siteId == convAfter().siteId
+          && !blockedEitherWay(convAfter().participants[0], convAfter().participants[1]);
+        allow update, delete: if false;
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+name: drift
+# Nightly read-only check: live factory.js / styles.css on every room apex vs the room's FACTORY.lock and this release.
+# Needs no secrets. A failed run (DRIFT, or an unexpected fetch ERROR) is the alarm: GitHub emails the repo owner.
+on:
+  schedule: [{ cron: '17 10 * * *' }]   # 10:17 UTC = 4:17 AM MT (MDT)
+  workflow_dispatch: {}
+permissions: { contents: read }
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/drift_check.py --out drift.md
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: drift-report, path: drift.md }

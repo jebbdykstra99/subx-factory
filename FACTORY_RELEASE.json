@@ -1,0 +1,13 @@
+{
+  "version": "v1.0.1",
+  "factory.js": {
+    "sha256": "5db3afa908549bd776b862b44582f192bbeafaa35cf80941b5243015a38ec734",
+    "bytes": 289004
+  },
+  "sources": {
+    "template": "build/sources/template_factory_660144d1886e.js (T0 pin, nest-feed query edited in place)",
+    "gpchat_base": "jebbdykstra99/gpchat@7553762",
+    "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)"
+  },
+  "built": "2026-10-17 (MT)"
+}

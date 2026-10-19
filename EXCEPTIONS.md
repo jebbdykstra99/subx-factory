@@ -1,0 +1,39 @@
+# EXCEPTIONS: every room-specific difference, on purpose
+
+Rule: every room runs the **same `factory.js`**. Room differences go in `site.json` (`features`, `skin`, `rail`, `nests`, `minAge`, `pixel`) and the room's own `styles.css`, `index.html` and nest pages. Any **code** difference needs a row here **and** an entry in `rooms.json` (`keepFiles`, `allowLoss`, `status`). `tools/stamp.py` refuses to stamp over an unlisted difference. The nightly drift check is read-only.
+
+Seeded Thu Oct 8 2026 (CTO overnight) from the drift audit `CTO_codebase-and-home-room_2026-10-09.md` (A1/A3).
+
+| # | Room | File / function | Kind | Owner | Why | Since | Review / expiry | rooms.json |
+|---|---|---|---|---|---|---|---|---|
+| E1 | 311chat, atmchat | `gate.js` (sha `2e21b678c241`, identical) | code, kept | Jebb | Location gate. Location is core to these rooms | 2026-09-25 | review at master v2 | `keepFiles: ["gate.js"]` |
+| E2 | airlineschat | `gate.js` (sha `6d4a0163a52e`, a different variant) | code, pending | Jebb | Pending **airlineschat PR #3**. CTO leans remove (airline room, not location) | 2026-10-08 | decide with PR #3 | `keepFiles`, `status: blocked` |
+| E3 | popechat | Nest Listen: Kokoro TTS, ~47 room-only functions (`loadKokoro`, `floatToWavBlob`, `startNestTts`…) | code fork | Jebb | Feature, not drift. Rec D5(b): keep pope-only now; make a factory flag `nestListen` (or a `nest-listen.js` plugin) if a 2nd room wants it | 2026-10-08 | before popechat stamp | `status: blocked` |
+| E4 | boozechat | 21+ age gate | **config** | Jebb / CLO | Alcohol room. Was hardcoded "21 or older" text; now `site.json minAge: 21` | 2026-10-08 | none | `sitePatch.minAge = 21` |
+| E5 | boyfriendchat | 18+ age gate | **config** | Jebb / CLO | Lands via **boyfriendchat PR #8** (`minAge: 18`). Stamp waits for PR #8 so they don't conflict | 2026-10-08 | after PR #8 | `waitFor` |
+| E6 | 27chat | Person nests (one nest per artist) and grouped nest headers | **config** | CMO | Lives in `site.json` nests + `nestGroupLabel`, not code. Listed so nobody "fixes" it into JS | 2026-10-08 | none | none |
+| E7 | airlineschat, amachat | "+" nest store on `users/{uid}.userNests` (~14 room-only functions) | code fork, data | Jebb | Stamping deletes the store. Members' saved nests disappear unless migrated to `sites/{siteId}/memberNests/{uid}/rooms/{slug}` (R3). Read-only count first, then one admin script | 2026-09-26 | before their stamp | `status: blocked` |
+| E8 | gpchat | Watchlist, topic/people follow, notifications, F1 session seeds | **config** | Jebb | Built into factory, `site.json features` on for gpchat only. Off by default for every other room until its taxonomy is CMO-cleared (D3) | 2026-10-08 | per room | `features` |
+| E9 | gpchat | F1 rail (`rail.kind: f1-calendar`, OpenF1 cards) | **config** | CMO | Only rooms with `rail.kind: f1-calendar` get F1. No other room does | 2026-10-08 | none | none |
+| E10 | samochat | `rail.liveKeep` NWS + outbound merge, product location LOX | **config** | CMO | The room's own rail merge, now a factory branch driven by `site.json` | 2026-10-08 | none | `sitePatch.rail` |
+| E11 | 415chat, 808chat, bartchat | Pinned-first rail (`nws-forecast`, `bart-bsa`) | **config** | CMO | factory `renderTrends` branch keyed on `rail.kind` | 2026-10-08 | none | none |
+| E12 | ciachat | `earlyWelcomeCopy()` from `site.welcome`, no fallback copy | config, accepted loss | CMO | `earlyWelcome` is `false` today, so there's no behavior change. Before turning it on, set `site.json earlyWelcomeCopy` | 2026-10-08 | when cia turns welcome on | `allowLoss` |
+| E13 | 27, 808, bart, buffett, recruit, gp, pope | Visit pixel **off** (`site.json pixel: false`) | config, temporary | CLO | These rooms never had the beacon. The privacy policy has to name it first (privacy v1.1). Then flip `pixel` to true or delete the key | 2026-10-08 | privacy v1.1 | `sitePatch.pixel` |
+| E14 | 808chat | Rail overlay becomes **active** (its site.json already enables it, the old code ignored it) | config, risky | CMO | 808 is parked. Either accept or set `rail.overlay.enabled: false` in the stamp PR | 2026-10-08 | at 808 stamp | none |
+| E15 | behindtheblackwall | HTTPS cert SAN mismatch | infra | Jebb | Drift check reports ERROR without failing (`driftIgnore: ["https"]`). Fix the cert out of band | 2026-10-08 | when the cert is fixed | `driftIgnore` |
+| E16 | 415chat, samochat | Reddit crosspost flags kept | config | Jebb | Server allowlist is `['415chat','samochat']`. Every other room gets `redditCrosspost: false`, `redditSr` dropped (R8) | 2026-10-08 | none | `sitePatch` |
+
+## Cleanup, not exceptions (separate optional PR per room, never in the stamp PR)
+| Item | Rooms | Action |
+|---|---|---|
+| Dead `app.js` (no page loads it; publicly served) | 27, 415, 808, buffett, gai, gp, pope, recruit | delete |
+| Stale public rules copies (`firestore.rules`, `storage.rules`, `firebase.indexes.json`, `RULES.md`; 4 versions, none deployed) | 27, 415, 808, bart, buffett, gai, gp, pope, recruit, samo | delete. The rules source of truth is the Firebase console + `rules/` here. For gpchat, wait until PR #31 merges (it touches `firestore.rules`) |
+| `nest_stubs.py` build tool in the web root | airlines, ama | move to subx-factory `tools/` |
+| Missing `og.png` | buffet, cia | add (blank share card today) |
+| Missing favicon / apple-touch icon | booze, buffet, cobra, cia, boyfriend | add |
+| Missing `taxonomy.json` | airlines, ama, atm, btb | add when Watchlist is turned on |
+| Missing `_redirects` | ama | add (inert on GH Pages, kept for parity) |
+| Missing `about.html` | gpchat | add |
+| `https_enforced: false` (Firebase Auth rejects `http://` referrers) | airlines, ama, atm, btb, booze, boyfriend, buffet, cia, cobra | Jebb: repo Settings > Pages > Enforce HTTPS |
+| Inline `AIza` web key | 16 rooms | **fixed by the stamp** (hosted config). Ends the secret-scan emails |
+| 16 stale "factory: Watchlist tray" PRs (Sep 26), samochat #6/#7, recruitchat #4, 415chat #8 | many | close as superseded after the stamp PRs merge |

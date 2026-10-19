@@ -1,0 +1,271 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function emailVerified() {
+      return signedIn() && request.auth.token.email_verified == true;
+    }
+    function isAdmin() {
+      return signedIn() && request.auth.uid == 'o774wL9hUVSi19EkDCgLqQomP8i2';
+    }
+    // Short + long siteId forms used across live skins / posts
+    function factorySite(data) {
+      return data.siteId in [
+        'samochat', 'bartchat', '415chat', 'gpchat', '27chat', '808chat',
+        'buffettchat', 'gaichat', 'popechat', 'recruitchat', '311chat',
+        'booze', 'buffet', 'boyfriend', 'cia', 'cobra',
+        'airlines', 'airlineschat', 'ama', 'amachat', 'atm', 'atmchat',
+        'behindtheblackwall', 'btbw'
+      ];
+    }
+    function notKilled(sid) {
+      return !exists(/databases/$(database)/documents/sites/$(sid))
+        || get(/databases/$(database)/documents/sites/$(sid)).data.killed != true;
+    }
+    function hasPostBody(data) {
+      return (data.text is string && data.text.size() > 0)
+        || (data.keys().hasAll(['imageUrl']) && data.imageUrl is string && data.imageUrl.size() > 0)
+        || (data.keys().hasAll(['poll']) && data.poll is map)
+        || (data.keys().hasAll(['repostOf']) && data.repostOf is string && data.repostOf.size() > 0)
+        || (data.keys().hasAll(['quoteOf']) && data.quoteOf is string && data.quoteOf.size() > 0
+            && data.text is string && data.text.size() > 0);
+    }
+    function textOk(data) {
+      return !data.keys().hasAny(['text'])
+        || (data.text is string && data.text.size() <= 280);
+    }
+    function onlyReplyCountBump() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount'])
+        && request.resource.data.replyCount is int
+        && request.resource.data.replyCount == (resource.data.replyCount is int ? resource.data.replyCount : 0) + 1;
+    }
+    function onlyOwnPollVote() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['poll'])
+        && request.resource.data.poll.diff(resource.data.poll).affectedKeys().hasOnly(['votes'])
+        && request.resource.data.poll.votes.diff(resource.data.poll.votes).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.poll.votes[request.auth.uid] is int;
+    }
+    function uidMap(data, field) {
+      return data.keys().hasAny([field]) && data[field] is map ? data[field] : {};
+    }
+    function onlyOwnUidMap(field) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([field])
+        && uidMap(request.resource.data, field).diff(uidMap(resource.data, field)).affectedKeys().hasOnly([request.auth.uid])
+        && (
+          request.resource.data[field][request.auth.uid] == true
+          || !(request.auth.uid in request.resource.data[field])
+        );
+    }
+    function onlyOwnLike() {
+      return onlyOwnUidMap('likes');
+    }
+    function onlyOwnRepost() {
+      return onlyOwnUidMap('reposts');
+    }
+    function onlyOwnPostEdit() {
+      return resource.data.authorUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 280
+        && request.resource.data.authorUid == resource.data.authorUid
+        && request.resource.data.siteId == resource.data.siteId;
+    }
+    function ownEdge(targetUid) {
+      return emailVerified()
+        && request.auth.uid == uid
+        && request.auth.uid != targetUid
+        && factorySite(request.resource.data)
+        && request.resource.data.siteId is string;
+    }
+    function twoParticipants(data) {
+      return data.participants is list
+        && data.participants.size() == 2
+        && data.participants[0] is string
+        && data.participants[1] is string
+        && data.participants[0] != data.participants[1];
+    }
+    function blockedEitherWay(a, b) {
+      return exists(/databases/$(database)/documents/users/$(a)/blocks/$(b))
+        || exists(/databases/$(database)/documents/users/$(b)/blocks/$(a));
+    }
+    function dmUnreadUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['unreadCounts', 'lastMessage', 'lastMessageAt', 'lastMessageBy', 'participantNames'])
+        && request.resource.data.siteId == resource.data.siteId
+        && request.resource.data.participants == resource.data.participants;
+    }
+    function hasStoryFields(data) {
+      return data.keys().hasAll(['siteId', 'authorUid', 'type', 'createdAt', 'expiresAt'])
+        && data.siteId is string
+        && data.authorUid is string
+        && data.type in ['text', 'image', 'video']
+        && data.createdAt is timestamp
+        && data.expiresAt is timestamp
+        && data.expiresAt >= data.createdAt + duration.value(20, 'h')
+        && data.expiresAt <= data.createdAt + duration.value(28, 'h');
+    }
+
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if emailVerified()
+        && notKilled(request.resource.data.siteId)
+        && request.auth.uid == request.resource.data.authorUid
+        && factorySite(request.resource.data)
+        && hasPostBody(request.resource.data)
+        && textOk(request.resource.data);
+      allow delete: if signedIn()
+        && resource.data.authorUid == request.auth.uid;
+      allow update: if emailVerified() && notKilled(resource.data.siteId) && (
+        onlyReplyCountBump()
+        || onlyOwnPollVote()
+        || onlyOwnLike()
+        || onlyOwnRepost()
+        || onlyOwnPostEdit()
+      );
+    }
+
+    match /users/{uid} {
+      allow get: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow list: if isAdmin();
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasAll(['siteId'])
+        && factorySite(request.resource.data)
+        && !request.resource.data.keys().hasAny(['email']);
+
+      match /blocks/{targetUid} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create, update: if emailVerified()
+          && request.auth.uid == uid
+          && request.resource.data.blockerUid == uid
+          && request.resource.data.targetUid == targetUid
+          && factorySite(request.resource.data);
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
+      match /following/{targetUid} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create, update: if ownEdge(targetUid)
+          && request.resource.data.followerUid == uid
+          && request.resource.data.targetUid == targetUid;
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
+      match /mutes/{targetUid} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create, update: if ownEdge(targetUid)
+          && request.resource.data.muterUid == uid
+          && request.resource.data.targetUid == targetUid;
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
+      match /bookmarks/{postId} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create, update: if emailVerified()
+          && request.auth.uid == uid
+          && request.resource.data.uid == uid
+          && request.resource.data.postId == postId
+          && factorySite(request.resource.data);
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
+      match /hidden/{postId} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create, update: if emailVerified()
+          && request.auth.uid == uid
+          && request.resource.data.uid == uid
+          && request.resource.data.postId == postId
+          && factorySite(request.resource.data);
+        allow delete: if signedIn() && request.auth.uid == uid;
+      }
+      // In-app notifications inbox (Chat stretch / Notifs MVP)
+      match /notifications/{notifId} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow update: if signedIn() && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+        allow delete: if signedIn() && request.auth.uid == uid;
+        allow create: if emailVerified()
+          && request.resource.data.toUid == uid
+          && request.resource.data.fromUid == request.auth.uid
+          && request.resource.data.fromUid != uid
+          && factorySite(request.resource.data)
+          && request.resource.data.type is string
+          && request.resource.data.read == false;
+      }
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.reporterUid == request.auth.uid);
+      allow create: if emailVerified()
+        && request.resource.data.reporterUid == request.auth.uid
+        && factorySite(request.resource.data)
+        && request.resource.data.postId is string
+        && request.resource.data.reason is string;
+      allow update, delete: if isAdmin();
+    }
+
+    match /sites/{siteId} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && request.resource.data.siteId == siteId
+        && request.resource.data.killed is bool;
+      allow delete: if false;
+    }
+
+    match /stories/{storyId} {
+      allow read: if factorySite(resource.data);
+      allow create: if emailVerified()
+        && notKilled(request.resource.data.siteId)
+        && request.auth.uid == request.resource.data.authorUid
+        && factorySite(request.resource.data)
+        && hasStoryFields(request.resource.data);
+      allow update: if false;
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.authorUid == request.auth.uid);
+    }
+
+    // Factory-wide DMs (was gpchat-only in subx-og) — block-aware
+    match /conversations/{convId} {
+      allow read: if signedIn()
+        && (!exists(/databases/$(database)/documents/conversations/$(convId))
+            || (factorySite(resource.data)
+                && request.auth.uid in resource.data.participants));
+      allow create: if emailVerified()
+        && factorySite(request.resource.data)
+        && notKilled(request.resource.data.siteId)
+        && request.auth.uid in request.resource.data.participants
+        && twoParticipants(request.resource.data)
+        && !blockedEitherWay(request.resource.data.participants[0], request.resource.data.participants[1]);
+      allow update: if emailVerified()
+        && factorySite(resource.data)
+        && request.auth.uid in resource.data.participants
+        && dmUnreadUpdate()
+        && !blockedEitherWay(resource.data.participants[0], resource.data.participants[1]);
+      allow delete: if false;
+
+      match /messages/{msgId} {
+        function conv() {
+          return get(/databases/$(database)/documents/conversations/$(convId)).data;
+        }
+        function convAfter() {
+          return getAfter(/databases/$(database)/documents/conversations/$(convId)).data;
+        }
+        allow read: if signedIn()
+          && (!exists(/databases/$(database)/documents/conversations/$(convId))
+              || (request.auth.uid in conv().participants && factorySite(conv())));
+        allow create: if emailVerified()
+          && request.resource.data.fromUid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000
+          && factorySite(request.resource.data)
+          && notKilled(request.resource.data.siteId)
+          && request.auth.uid in convAfter().participants
+          && factorySite(convAfter())
+          && request.resource.data.siteId == convAfter().siteId
+          && !blockedEitherWay(convAfter().participants[0], convAfter().participants[1]);
+        allow update, delete: if false;
+      }
+    }
+  }
+}
