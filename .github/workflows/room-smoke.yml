@@ -7,7 +7,9 @@ on:
   pull_request:
   workflow_dispatch:
 permissions: { contents: read }
-concurrency: { group: room-smoke-${{ github.ref }}, cancel-in-progress: true }
+concurrency:
+  group: room-smoke-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   smoke:
     runs-on: ubuntu-latest
