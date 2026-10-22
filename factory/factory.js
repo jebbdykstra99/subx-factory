@@ -7,7 +7,6 @@
   const MOBILE_NAV_MQ = 900;
   const LS_USER = 'subx.user';
   const LS_LIKES = 'subx.likes';
-  // One-time migration from the per-room keys older stamps used (<room>.user / <room>.likes).
   try {
     if (!localStorage.getItem(LS_USER) || !localStorage.getItem(LS_LIKES)) {
       for (var lsI = 0; lsI < localStorage.length; lsI++) {
@@ -19,7 +18,7 @@
   } catch (eLs) {}
   const SITE_JSON_URL = (document.currentScript && document.currentScript.getAttribute('data-site')) || 'site.json';
 
-  let SITE_ID = '';  // set from site.json siteId in boot()
+  let SITE_ID = '';
   let site = null;
   let dmSendInFlight = false;
   let focusedTopicId = '';
@@ -37,7 +36,6 @@
   var memberNestsUnsub = null;
   var nestAddSlugDirty = false;
 
-  // Path segments that must never be a nest. Existing nest slugs are checked live.
   var NEST_RESERVED = {
     '': 1, home: 1, feed: 1, thoughts: 1, following: 1, explore: 1,
     notifications: 1, chat: 1, profile: 1, news: 1, about: 1, terms: 1,
@@ -94,8 +92,6 @@
   const ADMIN_UID = 'o774wL9hUVSi19EkDCgLqQomP8i2';
   const DM_TEXT_MAX = 1000;
 
-  // Opt-in files (factory-gp.js, factory-rail.js) push installers onto window.__subxPlugins
-  // before this file runs. A room that does not load one keeps the neutral stubs (feature-off behavior).
   var PLUGIN = {};
   var CORE = {
     activeTopics: activeTopics,
@@ -176,9 +172,6 @@
     else fbReadyPromise.then(go);
   }
 
-  // ===== PREVIEW-LIFT (guards/privacy/steward) =====
-  // Port this block plus the call sites named in the PR. A room joins guardedSite
-  // only after its factory.js carries guardedPostWrite + the DM lastMsgAt batch.
   var HANDLE_EXACT = { mod: 1, mods: 1, staff: 1, support: 1, steward: 1, system: 1, root: 1, team: 1 };
   var guardState = { rate: null, unsub: null, lastPostMs: 0, lastMsgMs: 0, sending: false };
   var guardTick = null;
@@ -859,17 +852,11 @@
       }
     });
   }
-  // ===== END PREVIEW-LIFT (guards/privacy/steward) =====
 
-  // ===== SUBX FACTORY: site.json-driven features + skin (one identical factory.js for every room) =====
-  // site.json "features": { watchlist, following, notifs, topicFollow, sessionSeeds } (all default false).
-  // DMs stay on site.json "dms" (existing). F1 rail stays on rail.kind 'f1-calendar'. Age: site.json "minAge".
   function featureOn(name) {
     var f = site && site.features;
     return !!(f && f[name] === true);
   }
-  // site.json "skin": { bioDefault, avatarInitials, profileEmpty, guestHandle, exploreEmpty, seatTag, storiesPlaceholder,
-  //   regNamePlaceholder, taglineH1:"true", keepBrandTitle:"true" } (strings). Room copy lives in site.json, never here.
   function skin(key, fallback) {
     var s = site && site.skin;
     var v = s && typeof s[key] === 'string' ? s[key] : '';
@@ -903,7 +890,6 @@
   }
 
   let currentUser = loadJSON(LS_USER, null);
-  let likes = loadJSON(LS_LIKES, {});
   let currentTab = 'foryou';
 
   function initials(name) {
@@ -1118,8 +1104,6 @@
       gateErr('This room is paused.');
       return false;
     }
-    // Chat/DM replies: signed-in + not killed is enough. Google members
-    // can send without emailVerified. Post/like/vote/report/block still gate.
     if (action !== 'chat' && !isEmailVerified()) {
       gateErr('Verify your email before you ' + (action || 'post') + '. Check your inbox, then refresh.');
       var u = fbAuth.currentUser;
@@ -1884,12 +1868,8 @@
     window.scrollTo(0, 0);
   }
 
-  function nestSlugNorm(s) {
-    return String(s || '').replace(/^#/, '').trim().toLowerCase();
-  }
-
   function slugifyNestLabel(label) {
-    return nestSlugNorm(label)
+    return nestKey(label)
       .replace(/['’]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
@@ -1901,22 +1881,22 @@
     if (!parts.length || parts.length > 1) return '';
     var first = parts[0];
     try { first = decodeURIComponent(first); } catch (e) { /* keep */ }
-    first = nestSlugNorm(first);
+    first = nestKey(first);
     if (!first || NEST_RESERVED[first]) return '';
     return first;
   }
 
   function findNest(slug) {
-    var key = nestSlugNorm(slug);
+    var key = nestKey(slug);
     if (!key) return null;
     for (var i = 0; i < NESTS.length; i++) {
-      if (nestSlugNorm(NESTS[i].slug) === key) return NESTS[i];
+      if (nestKey(NESTS[i].slug) === key) return NESTS[i];
     }
     return null;
   }
 
   function nestSlugError(slug) {
-    var key = nestSlugNorm(slug);
+    var key = nestKey(slug);
     if (!key) return 'Add a slug.';
     if (key.indexOf('/') !== -1) return 'One level only.';
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(key)) return 'Use lowercase letters, numbers, and hyphens.';
@@ -1931,10 +1911,10 @@
   }
 
   function nestHasActivity(slug) {
-    var key = nestSlugNorm(slug);
+    var key = nestKey(slug);
     if (!key) return false;
     for (var i = 0; i < livePosts.length; i++) {
-      if (nestSlugNorm(livePosts[i].nestSlug) === key) return true;
+      if (nestKey(livePosts[i].nestSlug) === key) return true;
     }
     return false;
   }
@@ -1981,7 +1961,7 @@
     var seen = {};
     function push(n) {
       if (!n || !n.slug) return;
-      var key = nestSlugNorm(n.slug);
+      var key = nestKey(n.slug);
       if (!key || seen[key]) return;
       seen[key] = true;
       built.push(n);
@@ -1998,7 +1978,7 @@
   function absorbUserNests(list) {
     userNests = list || [];
     var have = {};
-    userNests.forEach(function (n) { have[nestSlugNorm(n.slug)] = true; });
+    userNests.forEach(function (n) { have[nestKey(n.slug)] = true; });
     Object.keys(pendingUserNests).forEach(function (k) {
       if (have[k]) delete pendingUserNests[k];
     });
@@ -2024,7 +2004,7 @@
         var list = [];
         snap.forEach(function (d) {
           var data = d.data() || {};
-          var slug = nestSlugNorm(data.slug || d.id);
+          var slug = nestKey(data.slug || d.id);
           if (!slug) return;
           list.push({
             slug: slug,
@@ -2301,8 +2281,6 @@
     });
   }
 
-  // Optional site.nestGroups: [{ label, parents: [...] }] prints sub-headers in the Nests nav.
-  // A nest whose parent is another nest's slug is a sub-nest (subsubX): listed right under that parent, indented.
   function nestGroupLabel(n) {
     if (!n) return null;
     if (n.user) return 'Your rooms';
@@ -2317,13 +2295,13 @@
   function orderedNavNests(shown) {
     var bySlug = {};
     var i;
-    for (i = 0; i < shown.length; i++) bySlug[nestSlugNorm(shown[i].slug)] = shown[i];
+    for (i = 0; i < shown.length; i++) bySlug[nestKey(shown[i].slug)] = shown[i];
     var kids = {};
     var top = [];
     for (i = 0; i < shown.length; i++) {
       var n = shown[i];
-      var p = n.parent ? nestSlugNorm(n.parent) : '';
-      if (p && bySlug[p] && p !== nestSlugNorm(n.slug)) {
+      var p = n.parent ? nestKey(n.parent) : '';
+      if (p && bySlug[p] && p !== nestKey(n.slug)) {
         (kids[p] = kids[p] || []).push(n);
       } else {
         top.push(n);
@@ -2332,7 +2310,7 @@
     var out = [];
     for (i = 0; i < top.length; i++) {
       out.push({ nest: top[i], depth: 0 });
-      var ch = kids[nestSlugNorm(top[i].slug)] || [];
+      var ch = kids[nestKey(top[i].slug)] || [];
       for (var c = 0; c < ch.length; c++) out.push({ nest: ch[c], depth: 1 });
     }
     return out;
@@ -2626,7 +2604,7 @@
   function topLevelPosts() {
     return postsForFeed().filter(function (p) {
       if (p.parentId || (p.authorUid && blockedUids[p.authorUid])) return false;
-      if (currentNest) return nestSlugNorm(p.nestSlug) === nestSlugNorm(currentNest.slug);
+      if (currentNest) return nestKey(p.nestSlug) === nestKey(currentNest.slug);
       return true;
     });
   }
@@ -2636,9 +2614,6 @@
       .sort(function (a, b) { return (a.ms || 0) - (b.ms || 0); });
   }
 
-  // Grid taxonomy lives on site.taxonomy (same catalog as taxonomy.json).
-  // Left-nav nests come from site.nests plus this user's Firestore rooms.
-  // taxonomyNestsDraft is not a nav source. Topic nestSlug does not drive the watchlist click.
   function taxonomyCatalog() {
     var tax = site && site.taxonomy;
     if (!tax || typeof tax !== 'object') {
@@ -3094,7 +3069,7 @@
   }
 
   function sendPixel(eventName) {
-    if (site && site.pixel === false) return; // opt-out per room (privacy v1.1 gate); default on as in T0
+    if (site && site.pixel === false) return;
     try {
       var k = 'subx.vid';
       var v = localStorage.getItem(k);
@@ -3497,9 +3472,8 @@
       var extra = outboundCards();
       var merged;
       if (railKind() === 'f1-calendar') {
-        merged = mergeF1Rail(cards, extra);                                   // gpchat (F1 rail)
+        merged = mergeF1Rail(cards, extra);
       } else if (railCfg().liveKeep === true) {
-        // samochat: forecast/outbound first, keep at least one live card (was samochat-only code)
         var slots = railNwsSlots();
         var liveKeep = Math.max(0, slots - extra.length);
         if (!liveKeep && (cards || []).length) liveKeep = 1;
@@ -3508,7 +3482,7 @@
           : (cards || []).slice(0, liveKeep).concat(extra);
         if (merged.length) { commitRail(merged); return; }
       } else if (railKind() === 'nws-forecast' || railKind() === 'bart-bsa') {
-        merged = (extra || []).concat(cards || []);                           // 415/808 (nws-forecast), bartchat (bart-bsa): pinned first
+        merged = (extra || []).concat(cards || []);
       } else {
         merged = (cards || []).concat(extra);
       }
