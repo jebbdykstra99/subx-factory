@@ -549,6 +549,7 @@
   function guardedPostWrite(doc) {
     var msg = postGuardMessage(doc);
     if (msg) return Promise.reject(new Error(msg));
+    doc.authorType = doc.authorUid === ADMIN_UID ? 'steward' : 'human';
     if (guardState.sending) return Promise.reject(new Error('Post already sending.'));
     guardState.sending = true;
     function finishOk(ref) {
