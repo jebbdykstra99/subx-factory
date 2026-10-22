@@ -373,5 +373,70 @@ src = ed(src, "  function nestSlugNorm(s) {\n    return String(s || '').replace(
 assert len(re.findall(r'\bnestSlugNorm\b', src)) == 16, len(re.findall(r'\bnestSlugNorm\b', src))
 src = re.sub(r'\bnestSlugNorm\(', 'nestKey(', src)
 assert 'nestSlugNorm' not in src
+# ---- Notifications + reports write real docs in every room (2026-10-22, Jebb: "make sure notifications and reports
+# are created and exist"). Root cause: only replies wrote users/{to}/notifications, and only where site.json
+# features.notifs was on (and only if the bell listener had not errored). Like/follow/mention were rendered by
+# notifLine() but never written. Reports carried no status, and report errors went to the compose box, which can be
+# off-screen or missing, so a refused report looked like nothing happened.
+# sendNotif(): one writer for reply/like/follow/mention. Writes do not depend on features.notifs (the bell UI still
+# does), so every room's members get docs. Like/follow use a fixed doc id: a repeat is an update, which the rules
+# refuse (only 'read' may change), so unlike/relike or unfollow/refollow cannot spam the inbox.
+# Mentions resolve @handle against authors already loaded in this room's feed (users/{uid} is private by rules).
+src = ed(src, "  function writeReplyNotif(parentId, text) {\n", """  function sendNotif(to, type, postId, text, id) {
+    var me = liveUid();
+    if (!me || !fbDb || !to || to === me || !isEmailVerified()) return;
+    var p = { toUid: to, fromUid: me, type: type, siteId: SITE_ID, read: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+    if (postId) p.postId = postId;
+    text = String(text || '').trim().slice(0, 180);
+    if (text) p.text = text;
+    var c = fbDb.collection('users').doc(to).collection('notifications');
+    (id ? c.doc(id).set(p) : c.add(p)).catch(function (e) { console.warn(type + ' notif', e); });
+  }
+  function writeMentionNotifs(text, postId) {
+    var seen = {};
+    String(text || '').replace(/@([a-z0-9_]{2,15})/gi, function (m, h) {
+      h = h.toLowerCase();
+      for (var i = 0; i < livePosts.length; i++) {
+        var u = livePosts[i].authorUid;
+        if (u && !seen[u] && String(livePosts[i].handle || '').toLowerCase() === h) { seen[u] = 1; sendNotif(u, 'mention', postId, text); break; }
+      }
+    });
+  }
+  function writeReplyNotif(parentId, text) {
+""")
+src = ed(src, "if (!me || !fbDb || !notifsOn() || notifsError || !isEmailVerified() || !parentId) return;",
+  "if (!me || !fbDb || !isEmailVerified() || !parentId) return;")
+src = ed(src, "    }).then(function () {\n      input.value = '';\n",
+  "    }).then(function (ref) {\n      writeMentionNotifs(text, ref && ref.id);\n      input.value = '';\n")
+src = ed(src, "      patch['likes.' + uid] = true;\n    }\n    fbDb.collection('posts').doc(postId).update(patch).catch(function (err) {\n",
+  "      patch['likes.' + uid] = true;\n    }\n    fbDb.collection('posts').doc(postId).update(patch).then(function () {\n      if (!likedBy[uid] && post) sendNotif(post.authorUid, 'like', postId, '', 'like_' + postId + '_' + uid);\n    }).catch(function (err) {\n")
+src = ed(src, "    op.then(done).catch(function (e) {\n",
+  "    op.then(function () {\n      if (!on) sendNotif(target, 'follow', '', '', 'follow_' + me);\n      done();\n    }).catch(function (e) {\n")
+# Reports: status 'open' on create (admin panel + report_watch.cjs treat missing status as open, so old docs still count);
+# outcome shown as a toast, not only in the compose box; a refused write says why instead of "Post blocked".
+src = ed(src, "    for (i = 0; i < reportItems.length; i++) if (!reportItems[i].status) n++;",
+  "    for (i = 0; i < reportItems.length; i++) if (!reportItems[i].status || reportItems[i].status === 'open') n++;")
+src = ed(src, "      reason: 'abuse',\n      createdAt: firebase.firestore.FieldValue.serverTimestamp()\n",
+  "      reason: 'abuse',\n      status: 'open',\n      createdAt: firebase.firestore.FieldValue.serverTimestamp()\n", 2)
+src = ed(src, "      composeErr('Reported. Thanks.');\n", "      toast('Reported. Thanks.');\n", 2)
+src = ed(src, "      composeErr(guardPublicErr(e, 'Could not report.'));\n", "      toast(reportErr(e));\n")
+src = ed(src, "      composeErr((e && e.message) ? e.message : 'Could not report.');\n", "      toast(reportErr(e));\n")
+src = ed(src, "    if (alreadyReported(id)) { composeErr('You already reported this post.'); return; }",
+  "    if (alreadyReported(id)) { toast('You already reported this post.'); return; }")
+src = ed(src, "      else composeErr(msg);\n",
+  "      else composeErr(msg);\n      if (action === 'report' || action === 'block') toast(msg);\n")
+src = ed(src, "  function composeErr(msg) {\n", """  function toast(m) {
+    var t = document.createElement('div');
+    t.setAttribute('role', 'status');
+    t.textContent = m;
+    t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;padding:10px 16px;border-radius:8px;background:#111;color:#fff;font-size:14px';
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 4000);
+  }
+  function reportErr(e) {
+    return isPermDenied(e) ? 'Report not accepted. Verify your email, then refresh and try again.' : ((e && e.message) || 'Could not report.');
+  }
+  function composeErr(msg) {
+""")
 src = banner + src
 open('factory.js', 'w').write(src)

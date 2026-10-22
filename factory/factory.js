@@ -677,7 +677,7 @@
   function unreadReportCount() {
     var n = 0;
     var i;
-    for (i = 0; i < reportItems.length; i++) if (!reportItems[i].status) n++;
+    for (i = 0; i < reportItems.length; i++) if (!reportItems[i].status || reportItems[i].status === 'open') n++;
     return n;
   }
   function syncReportsEntry() {
@@ -1090,6 +1090,7 @@
     function gateErr(msg) {
       if (action === 'chat') chatErr(msg);
       else composeErr(msg);
+      if (action === 'report' || action === 'block') toast(msg);
     }
     if (!accountsOpen() && !isAdminUser() && action !== 'report' && action !== 'block') {
       gateErr(ACC_CLOSED);
@@ -1154,7 +1155,7 @@
     if (!requireVerified('report')) return;
     var post = findPost(id);
     if (!post || !fbDb || isSessionSeedPost(post)) return;
-    if (alreadyReported(id)) { composeErr('You already reported this post.'); return; }
+    if (alreadyReported(id)) { toast('You already reported this post.'); return; }
     var me = liveUid();
     fbDb.collection('reports').add({
       siteId: SITE_ID,
@@ -1162,13 +1163,14 @@
       targetUid: post.authorUid || '',
       reporterUid: me,
       reason: 'abuse',
+      status: 'open',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).then(function () {
       markReported(id);
-      composeErr('Reported. Thanks.');
+      toast('Reported. Thanks.');
       writeReportAlert(post, me);
     }).catch(function (e) {
-      composeErr(guardPublicErr(e, 'Could not report.'));
+      toast(reportErr(e));
     });
   }
   function blockUser(uid) {
@@ -1821,6 +1823,17 @@
   }
   /* @nest-feed-end */
 
+  function toast(m) {
+    var t = document.createElement('div');
+    t.setAttribute('role', 'status');
+    t.textContent = m;
+    t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;padding:10px 16px;border-radius:8px;background:#111;color:#fff;font-size:14px';
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 4000);
+  }
+  function reportErr(e) {
+    return isPermDenied(e) ? 'Report not accepted. Verify your email, then refresh and try again.' : ((e && e.message) || 'Could not report.');
+  }
   function composeErr(msg) {
     var el = document.getElementById('thoughts-compose-err');
     if (!el) {
@@ -3896,7 +3909,10 @@
         siteId: SITE_ID,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-    op.then(done).catch(function (e) {
+    op.then(function () {
+      if (!on) sendNotif(target, 'follow', '', '', 'follow_' + me);
+      done();
+    }).catch(function (e) {
       composeErr((e && e.message) ? e.message : 'Could not update follow.');
       done();
     });
@@ -3930,9 +3946,29 @@
     btn.disabled = !!followWriteInFlight;
   }
 
+  function sendNotif(to, type, postId, text, id) {
+    var me = liveUid();
+    if (!me || !fbDb || !to || to === me || !isEmailVerified()) return;
+    var p = { toUid: to, fromUid: me, type: type, siteId: SITE_ID, read: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+    if (postId) p.postId = postId;
+    text = String(text || '').trim().slice(0, 180);
+    if (text) p.text = text;
+    var c = fbDb.collection('users').doc(to).collection('notifications');
+    (id ? c.doc(id).set(p) : c.add(p)).catch(function (e) { console.warn(type + ' notif', e); });
+  }
+  function writeMentionNotifs(text, postId) {
+    var seen = {};
+    String(text || '').replace(/@([a-z0-9_]{2,15})/gi, function (m, h) {
+      h = h.toLowerCase();
+      for (var i = 0; i < livePosts.length; i++) {
+        var u = livePosts[i].authorUid;
+        if (u && !seen[u] && String(livePosts[i].handle || '').toLowerCase() === h) { seen[u] = 1; sendNotif(u, 'mention', postId, text); break; }
+      }
+    });
+  }
   function writeReplyNotif(parentId, text) {
     var me = liveUid();
-    if (!me || !fbDb || !notifsOn() || notifsError || !isEmailVerified() || !parentId) return;
+    if (!me || !fbDb || !isEmailVerified() || !parentId) return;
     var send = function (authorUid) {
       if (!authorUid || authorUid === me) return;
       var payload = {
@@ -5034,7 +5070,8 @@
         }
       }
       return guardedPostWrite(doc);
-    }).then(function () {
+    }).then(function (ref) {
+      writeMentionNotifs(text, ref && ref.id);
       input.value = '';
       input.placeholder = input.getAttribute('data-ph') || input.placeholder;
       resetComposeExtras();
@@ -5115,7 +5152,9 @@
     } else {
       patch['likes.' + uid] = true;
     }
-    fbDb.collection('posts').doc(postId).update(patch).catch(function (err) {
+    fbDb.collection('posts').doc(postId).update(patch).then(function () {
+      if (!likedBy[uid] && post) sendNotif(post.authorUid, 'like', postId, '', 'like_' + postId + '_' + uid);
+    }).catch(function (err) {
       composeErr((err && err.message) ? ('Like: ' + err.message) : 'Could not save like.');
       console.warn('like', err);
     });
@@ -6383,11 +6422,12 @@
       targetUid: story.authorUid || '',
       reporterUid: liveUid(),
       reason: 'abuse',
+      status: 'open',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).then(function () {
-      composeErr('Reported. Thanks.');
+      toast('Reported. Thanks.');
     }).catch(function (e) {
-      composeErr((e && e.message) ? e.message : 'Could not report.');
+      toast(reportErr(e));
     });
   }
   function deleteOwnStory(id) {
