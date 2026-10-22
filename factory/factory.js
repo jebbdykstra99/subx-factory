@@ -192,7 +192,7 @@
   }
   var ACC_CLOSED = 'Accounts are not open yet. You can read the room as a guest.';
   function accountsOpen() {
-    return !!(site && site.accountsOpen === true && site.preview !== true);
+    return !(site && (site.accountsOpen === false || site.accounts === 'closed'));
   }
   function applyAccountsGate() {
     var d = document.documentElement, o = accountsOpen(), stew = false, n = document.getElementById('cv-accounts-closed');

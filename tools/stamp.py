@@ -9,10 +9,13 @@ Writes (inside --repo-dir, never pushes, never touches git history):
   factory-rail.js       = factory/factory-rail.js, only for NWS / CWF / BART live rails
                           (opt-in files load before factory.js; index.html gets/loses their <script> tags to match)
   index.html            = factory.js?v=N+1, and site.json?v=M+1 (preload + every data-site) when site.json changes
-  site.json             = deep-merge of rooms.json features / skin / sitePatch (room copy moves out of JS)
+  site.json             = deep-merge of rooms.json features / skin / sitePatch (room copy moves out of JS),
+                          plus the room's explicit rooms.json accountsOpen (true = sign-ups open, false = closed)
   FACTORY.lock          = release version + sha256 of factory.js and the room-pinned styles.css
 
 Refuses (exit 2) when:
+  - the rooms.json entry has no explicit boolean accountsOpen (every room, including a brand-new one, must say
+    true or false; a missing value is a hard error, never a default), or sitePatch / site.json contradict it,
   - the room is status "blocked" in rooms.json (unless --force-blocked, for dry-runs only),
   - site.json siteId differs from rooms.json,
   - the room's current factory.js has functions the release lacks and they are not listed in rooms.json allowLoss
@@ -62,7 +65,18 @@ def deep_merge(dst, src):
         else: dst[k] = v
     for k in src.get('_dropKeys', []): dst.pop(k, None)
 
+class AccountsOpenMissing(Exception): pass
+
+def require_accounts_open(entry):
+    """Every rooms.json entry must carry an explicit boolean accountsOpen (Juno, 2026-10-22: no room opens by omission)."""
+    v = entry.get('accountsOpen')
+    if not isinstance(v, bool):
+        raise AccountsOpenMissing('stamp refused: rooms.json room %r has %s accountsOpen. Set "accountsOpen": true (sign-ups open) or '
+                                  'false (closed) on the room entry before stamping.' % (entry.get('room'), 'no' if v is None else 'a non-boolean (%r)' % (v,)))
+    return v
+
 def stamp(entry, release, repo, dry):
+    acc = require_accounts_open(entry)
     rep = {'room': entry['room'], 'cluster': entry['cluster'], 'status': entry['status'], 'blockers': [], 'risks': [], 'cleanup': [], 'changes': []}
     old_js = rd(os.path.join(repo, 'factory.js')).decode()
     rel_js = release['factory'].decode()
@@ -93,7 +107,13 @@ def stamp(entry, release, repo, dry):
     patch = dict(entry.get('sitePatch', {}))
     if entry.get('features'): patch['features'] = entry['features']
     if entry.get('skin'): patch['skin'] = entry['skin']
+    if 'accountsOpen' in patch and patch['accountsOpen'] is not acc:
+        rep['blockers'].append('sitePatch.accountsOpen %r contradicts rooms.json accountsOpen %r' % (patch['accountsOpen'], acc))
+    patch['accountsOpen'] = acc
+    if acc and site.get('accounts') == 'closed':
+        rep['blockers'].append("site.json accounts:'closed' contradicts rooms.json accountsOpen true (drop the key or set accountsOpen false)")
     deep_merge(new_site, patch)
+    if site.get('accountsOpen') is not acc: rep['changes'].append('accountsOpen %r -> %r (sign-ups %s)' % (site.get('accountsOpen'), acc, 'open' if acc else 'CLOSED'))
     if new_site.get('minAge') != site.get('minAge'): rep['risks'].append('minAge %s -> %s' % (site.get('minAge'), new_site.get('minAge')))
     if ('redditSr' in site) != ('redditSr' in new_site) or site.get('redditCrosspost') != new_site.get('redditCrosspost'): rep['changes'].append('Reddit flags: redditCrosspost:false, redditSr dropped (README lock R8)')
     site_changed = new_site != site
@@ -141,6 +161,8 @@ def main():
     cfg = json.load(open(os.path.join(ROOT, 'rooms.json')))
     entry = next((e for e in cfg['rooms'] if e['room'] == a.room), None)
     if not entry: sys.exit('room not in rooms.json: ' + a.room)
+    try: require_accounts_open(entry)
+    except AccountsOpenMissing as e: print('ERROR: %s' % e, file=sys.stderr); sys.exit(2)
     release = load_release(ROOT, cfg['version'])
     if a.force_blocked and not a.dry_run: sys.exit('--force-blocked is for --dry-run only')
     rep, _ = stamp(entry, release, a.repo_dir, a.dry_run)

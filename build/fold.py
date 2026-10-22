@@ -277,8 +277,10 @@ src = ed(src, 'boot({ siteId: "311chat", name: "311chat", tagline: "Non-emergenc
 src = src.replace("name: 'Grid', symbolPrefix", "name: 'Topics', symbolPrefix").replace("tax.name || 'Grid'", "tax.name || 'Topics'").replace("(taxName || 'Grid')", "(taxName || 'Topics')").replace("'Not on the Grid'", "'Not in this room'").replace("That topic is not on the Grid.", "That topic is not in this room.")
 # Jebb rule (2026-10-22): no 13+ anywhere. A room without site.json minAge gets the 18+ gate.
 src = ed(src, "    if (!isFinite(n) || n < 1) return 13;\n", "    if (!isFinite(n) || n < 1) return 18;\n")
-# Accounts gate, fail closed (2026-10-22, FACT_PREVIEW_SIGNUP_GATE). Ported from gpchat accountsOpen()/applyAccountsGate().
-# Open only when site.json accountsOpen === true AND preview !== true. Closed: no Register / Google join,
+# Accounts gate (2026-10-22). Ported from gpchat accountsOpen()/applyAccountsGate(). Re-scoped the same day after Jebb's
+# "anyone can sign up" call: a room is CLOSED only when site.json says accountsOpen:false or accounts:'closed'. A missing
+# flag is OPEN. preview:true is the banner only (static index.html markup) and never closes sign-ups. New rooms can't
+# land without a decision: tools/stamp.py requires an explicit rooms.json accountsOpen. Closed: no Register / Google join,
 # no users/{uid} profile write, no post/story/like/vote/DM from non-admin. Admin UID keeps writing.
 # localStorage subx.steward=1 shows the Google button (admin sign-in only; any other uid is signed out).
 # Works on factory markup (note injected) and gpchat markup (static #cv-accounts-closed: hidden when open, reused when
@@ -288,7 +290,7 @@ src = ed(src, "  function isAdminUser() {\n    return liveUid() === ADMIN_UID;\n
   }
   var ACC_CLOSED = 'Accounts are not open yet. You can read the room as a guest.';
   function accountsOpen() {
-    return !!(site && site.accountsOpen === true && site.preview !== true);
+    return !(site && (site.accountsOpen === false || site.accounts === 'closed'));
   }
   function applyAccountsGate() {
     var d = document.documentElement, o = accountsOpen(), stew = false, n = document.getElementById('cv-accounts-closed');

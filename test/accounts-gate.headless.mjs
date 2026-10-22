@@ -11,16 +11,22 @@ const dirs = [new URL('./fixtures/gpchat', import.meta.url).pathname, ...process
 const SIGNIN = /identitytoolkit|securetoken|accounts\.google\.com|\/__\/auth\//;
 const variant = (base, patch, drop) => { const s = Object.assign({}, base, patch); (drop || []).forEach(k => delete s[k]); return s; };
 const browser = await puppeteer.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
-let bad = 0;
+let bad = 0, n = 0;
 for (const dir of dirs) {
   const room = path.basename(dir); const base = JSON.parse(fs.readFileSync(path.join(dir, 'site.json'), 'utf8'));
+  // Re-scoped 2026-10-22 (Jebb: anyone can sign up). Closed ONLY on accountsOpen:false or accounts:'closed'.
+  // preview:true is the banner only; a missing flag is open.
   const cases = [
-    ['preview:true', variant(base, { preview: true, accountsOpen: true }), 'closed'],
-    ['accountsOpen missing', variant(base, {}, ['accountsOpen', 'preview']), 'closed'],
-    ['closed + subx.steward=1', variant(base, { preview: true }), 'steward'],
-    ['accountsOpen:true, preview:false', variant(base, { accountsOpen: true, preview: false }), 'open']
+    ['(a/b) preview:true, no accounts flag', variant(base, { preview: true }, ['accountsOpen', 'accounts']), 'open'],
+    ['(c) preview:true + accountsOpen:true', variant(base, { preview: true, accountsOpen: true }, ['accounts']), 'open'],
+    ['(d) accountsOpen:false', variant(base, { accountsOpen: false }, ['accounts']), 'closed'],
+    ['(d2) accounts:\'closed\' (no accountsOpen)', variant(base, { accounts: 'closed' }, ['accountsOpen']), 'closed'],
+    ['(e) accountsOpen:false + subx.steward=1', variant(base, { accountsOpen: false }, ['accounts']), 'steward'],
+    ['(f) preview:false + accountsOpen:true', variant(base, { accountsOpen: true, preview: false }, ['accounts']), 'open'],
+    ['no preview, no accounts flag', variant(base, {}, ['accountsOpen', 'preview', 'accounts']), 'open']
   ];
-  if (room === 'gpchat') cases.push(['live site.json as served (accountsOpen:true)', base, 'open']);
+  cases.push(['site.json as served (' + JSON.stringify({ preview: base.preview, accountsOpen: base.accountsOpen }) + ')', base,
+    base.accountsOpen === false || base.accounts === 'closed' ? 'closed' : 'open']);
   for (const [name, site, want] of cases) {
     const srv = await new Promise(res => { const s = http.createServer((q, r) => {
       const p = q.url.split('?')[0];
@@ -46,6 +52,7 @@ for (const dir of dirs) {
       const out = { closedClass: document.documentElement.classList.contains('acc-closed'),
         gateCss: !!document.getElementById('acc-gate-css'), notes: document.querySelectorAll('#cv-accounts-closed').length,
         registerTab: shown('[data-tab="register"]'), google: shown('#cv-google-login'), googleAge: shown('label[for="cv-google-age"]'),
+        hasDob: !!document.getElementById('cv-google-dob'), googleDob: shown('label[for="cv-google-dob"]'),
         note: shown('#cv-accounts-closed') ? document.getElementById('cv-accounts-closed').textContent : null };
       document.getElementById('cv-reg-email').value = 'gate-test@example.invalid';
       document.getElementById('cv-reg-pw').value = 'not-a-real-pw-123';
@@ -57,13 +64,16 @@ for (const dir of dirs) {
     st.signupAttempted = signup.length > 0; st.blocked = [...new Set(signin)];
     const closedUi = st.closedClass && st.gateCss && st.notes === 1 && !st.registerTab && !!st.note && /not open yet/.test(st.note) &&
       !st.signupAttempted && /not open/.test(st.regErr);
-    const ok = want === 'open' ? (!st.closedClass && !st.gateCss && st.registerTab && st.google && !st.note && st.signupAttempted)
+    // The Google date-of-birth label (gpchat markup) is hidden ONLY in a closed room, and not for the steward.
+    const dobOk = !st.hasDob || st.googleDob === (want !== 'closed');
+    const ok = dobOk && (want === 'open' ? (!st.closedClass && !st.gateCss && st.registerTab && st.google && st.googleAge && !st.note && st.signupAttempted)
       : want === 'steward' ? (closedUi && st.google)
-      : (closedUi && !st.google && !st.googleAge);
-    if (!ok) bad++;
+      : (closedUi && !st.google && !st.googleAge));
+    n++; if (!ok) bad++;
     console.log((ok ? 'PASS ' : 'FAIL ') + room + ' ' + name + ' -> ' + JSON.stringify(st));
     await page.close(); srv.close();
   }
 }
 await browser.close();
+console.log((n - bad) + '/' + n + ' PASS' + (process.env.FACTORY ? ' (FACTORY=' + process.env.FACTORY + ')' : ''));
 process.exit(bad ? 1 : 0);

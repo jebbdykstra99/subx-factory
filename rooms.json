@@ -10,6 +10,7 @@
       "cluster": "T0",
       "order": 1,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [
         "gate.js"
@@ -37,6 +38,7 @@
       "cluster": "T0",
       "order": 2,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [
         "gate.js"
@@ -60,6 +62,7 @@
       "cluster": "T0",
       "order": 3,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -84,6 +87,7 @@
       "cluster": "L1a",
       "order": 4,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -109,6 +113,7 @@
       "cluster": "L1a",
       "order": 5,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [
         "boyfriendchat PR #8 (18+ age gate, sets minAge 18) merged"
       ],
@@ -138,6 +143,7 @@
       "cluster": "L1b",
       "order": 6,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -159,6 +165,7 @@
       "cluster": "L1b",
       "order": 7,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -180,6 +187,7 @@
       "cluster": "L1b",
       "order": 8,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -212,6 +220,7 @@
       "cluster": "L1b",
       "order": 9,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -236,6 +245,7 @@
       "cluster": "L3",
       "order": 10,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -258,6 +268,7 @@
       "cluster": "L3",
       "order": 11,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -280,6 +291,7 @@
       "cluster": "L3",
       "order": 12,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -302,6 +314,7 @@
       "cluster": "L3",
       "order": 13,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -324,6 +337,7 @@
       "cluster": "L3",
       "order": 14,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -346,6 +360,7 @@
       "cluster": "L2",
       "order": 15,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -368,6 +383,7 @@
       "cluster": "L2",
       "order": 16,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [],
       "features": {},
@@ -392,6 +408,7 @@
       "cluster": "F-w4",
       "order": 17,
       "status": "blocked",
+      "accountsOpen": true,
       "waitFor": [
         "userNests -> memberNests migration (R3, read-only count first)",
         "airlineschat PR #3 (gate) decided"
@@ -418,6 +435,7 @@
       "cluster": "F-w4",
       "order": 18,
       "status": "blocked",
+      "accountsOpen": true,
       "waitFor": [
         "userNests -> memberNests migration (R3, read-only count first)"
       ],
@@ -441,6 +459,7 @@
       "cluster": "F-pope",
       "order": 19,
       "status": "blocked",
+      "accountsOpen": true,
       "waitFor": [
         "Nest Listen (Kokoro TTS, ~30 room-only functions) moved to a factory flag or plugin file"
       ],
@@ -465,6 +484,7 @@
       "cluster": "F-gp",
       "order": 20,
       "status": "ready",
+      "accountsOpen": true,
       "waitFor": [
         "Singapore GP over (after Sun Oct 11)",
         "gpchat PR #31 merged",
@@ -483,7 +503,6 @@
         "avatarInitials": "GP"
       },
       "sitePatch": {
-        "accountsOpen": true,
         "earlyWelcomeCopy": "You're early. This room is live but unfinished. Who do you sit with on the grid — driver, team, or both? Tell the room.",
         "pixel": false,
         "redditCrosspost": false,
