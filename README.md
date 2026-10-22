@@ -21,7 +21,7 @@ Room differences are **data**, in `site.json`:
 | `rail.kind` | `room-brief` | `f1-calendar` = F1 rail (gpchat only); `nws-forecast` / `bart-bsa` = pinned-first; `rail.liveKeep` = samo merge; `rail.productLocation` = NWS CWF office |
 | `rail.overlay.enabled` | off | rail interstitial |
 | `skin.avatarInitials, bioDefault, profileEmpty, guestHandle, exploreEmpty, seatTag, storiesPlaceholder, regNamePlaceholder, taglineH1, keepBrandTitle` | neutral | room copy that used to be hardcoded in JS |
-| `minAge` | 13 | age gate text and check (booze 21, boyfriend 18) |
+| `minAge` | 18 | age gate text and check (booze 21; no room goes below 18) |
 | `pixel` | on | `false` = no visit beacon (rooms that never had it, until privacy v1.1) |
 | `earlyWelcome`, `earlyWelcomeCopy`, `trustBlurb`, `emptyState`, `composePlaceholder` | | as before |
 | `redditCrosspost`, `redditSr` | | only 415chat/samochat keep them |
