@@ -39,6 +39,46 @@ Copy note: many rooms carried stale fallbacks from the 415/311 lineage (avatar "
 - `.github/workflows/`: `ci.yml` (node --check, eslint, no `AIza`, reproducible rebuild), `drift.yml` (nightly 4:17 AM MT, read-only), `stamp.yml` (manual dispatch only; refuses to run, including room clones, until `rules_step1_live=YES`; then one PR per room on a new branch; **no force-push, never main**).
 - `rules/`: proposed Firestore (= gpchat PR #31 final) and Storage rules, baselines, emulator tests. **Not** a source of truth for what is live: `firestore.rules.proposed` is behind the live Firestore rules, and `storage.rules.proposed` matches the live Storage rules as of 2026-10-22 (#6). The live rules are whatever Jebb last hand-published in the console.
 
+## Swapping the disclosure mark family
+`whoMark(tier, names)` renders the AI-disclosure mark (`human` | `ai` | `hybrid`). **The art is a placeholder** (`marks/placeholder-ring`, ring + H / A / H+A); the family vote is still open. Art and ids are data, so a new family is one command and nothing else: no `factory.js` edit, no per-room edit, no per-room PR.
+
+| File | Role |
+|---|---|
+| `assets/whomark/sprite.svg` | one sprite, one cached request; a `<symbol>` per tier + `-sm` small variant, `viewBox="0 0 24 24"`, `<title>` each; main stroke `currentColor` (light/dark/mono), one accent `var(--wm-accent)` |
+| `assets/whomark/config.json` | tier → `symbolId`, `symbolIdSmall`, `textLabel`, `ariaLabel`, `title`, `plainText` (X/Reddit share text), `ogBadge`, `cornerBadge`; `minSizePx` (hybrid ≥ 16), `labelRequiredAtOrBelowPx` 14, `smallBelowPx` 20 |
+| `assets/whomark/whomark.js` | `whoMark(tier, names, {size,label,cls})` → `<span class="wm"><svg role="img" aria-label><title/><use href="sprite.svg?v=<hash>#id"/></svg><span class="wm-label">…</span></span>`; `whoMarkPlain(tier, names)`; `whoMarkBadges(tier)` → `{og, corner}`. Its config block is generated |
+| `assets/whomark/og-*.png`, `corner-*.png` | og-card badge (128 px) and image-corner overlay (48 px), rendered from the sprite |
+| `build/whomark.py` | validate a family, stamp config into `whomark.js`, render PNGs (`pip install cairosvg`), `--check` |
+| `marks/<family>/` | family inputs: `sprite.svg` + `config.json` only. `placeholder-square` is a second placeholder used by the swap tests |
+
+Labels are policy and the validator refuses a family that changes them: human **Human-made**; ai **AI steward · SubX** (title "Operated by SubX using AI tools. Not a real person."); hybrid **Human + AI** (title/aria "Human + AI: <names>", names HTML-escaped). Budgets: sprite.svg ≤ 8,192 B, config.json ≤ 4,096 B, whomark.js ≤ 8,192 B, each PNG ≤ 16,384 B, folder ≤ 65,536 B, and `factory/factory.js` ≤ 255,000 B.
+
+**Rooms.** Off by default. A room opts in with site.json `"whoMark": true`; `tools/stamp.py` then copies `assets/whomark/` into the room and adds `<script src="/assets/whomark/whomark.js?v=<hash>">` before `factory.js` (flag off = tag and folder removed). `factory.js` is **not changed** (0 B; once the accounts gate lands the core has ~20 B of headroom, too little for even a one-line hook). Instead `whomark.js` replaces the factory's AI steward text pill (`stewardPillHtml()`, matched by its "Operated by SubX using AI tools" title) with `whoMark('ai')` as posts render, including posts added later (MutationObserver). The Sample and Steward pills are left alone. Without the flag, or if `whomark.js` did not load, the room shows today's text pill.
+
+**Swap a family (the 3 steps):**
+1. Make a folder with the new `sprite.svg` + `config.json` (copy `marks/placeholder-ring/` as the template; keep the labels, change ids, art, accent, badge colours).
+2. `./swap-marks.sh marks/<family> --dry-run` — validates and prints the file/size diff; writes and pushes nothing.
+3. `./swap-marks.sh marks/<family>` — copies sprite + config into `assets/whomark/`, regenerates `whomark.js` config + PNGs, rebuilds `factory/` (`build/rebuild.sh` → `build/fold.py`), runs every test, commits as Cursor Agent on a new branch, pushes, and opens **one draft PR** here for two-key CLEAR. Never merges. Rooms pick it up on their next normal stamp.
+
+`--no-pr` does step 3 on a local branch without pushing (used to prove the flow). Tests: `node test/whomark.test.js` (3 tiers, escaping, sizes, swap, dry-run, refusal of an incomplete family, the pill upgrade in a fake DOM and in headless Chrome when available) and `python3 build/whomark.py --check`.
+
+```
+usage: ./swap-marks.sh <family-dir> [--dry-run] [--no-pr] [--base <ref>] [--branch <name>]
+
+  <family-dir>   folder with exactly the two family inputs: sprite.svg + config.json (e.g. marks/placeholder-square)
+  --dry-run      validate + print the diff (files and sizes) against assets/whomark/; writes nothing, pushes nothing
+  --no-pr        do the real swap on a new local branch (build, tests, commit) but do not push or open a PR
+  --base <ref>   branch point for the swap branch (default: origin/main)
+  --branch <n>   branch name (default: cursor/whomark-family-<family>-<YYYYMMDD-HHMM>)
+
+Steps: (1) validate the family: human/ai/hybrid + -sm symbols, every <symbol> parses with viewBox 0 0 24 24 and
+<title>, config fields complete, policy labels unchanged, asset byte budgets, factory/factory.js <= 255,000 B;
+(2) copy sprite.svg + config.json into assets/whomark/, regenerate whomark.js config + og/corner PNGs, rebuild
+factory/ via build/rebuild.sh (build/fold.py), run every test; (3) commit as Cursor Agent on a new branch, push with
+the gh credential helper and open ONE draft PR in subx-factory for two-key CLEAR. Never merges, never stamps rooms
+(rooms pick the new family up on their next normal stamp). Needs: python3 + cairosvg, node + npm install, gh.
+```
+
 ## Stamping (Jebb)
 1. **First publish Firestore rules step 1** (`RULES_PASTE_for_Jebb.txt`). The new factory.js writes `rateLimits` in the same batch as every post. On the old rules, posting breaks.
 2. Add the Actions secret `ROOMS_TOKEN`: a fine-grained PAT with access to the room repos only, Contents: write + Pull requests: write.
