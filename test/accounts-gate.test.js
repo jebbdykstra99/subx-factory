@@ -63,7 +63,7 @@ for (const [name, s] of guards) assert.strictEqual(src.split(s).length - 1, 1, '
 assert.ok(!/document\.getElementById\('cv-accounts-closed'\)\) return/.test(src), 'gate must not short-circuit on the static note');
 
 // Share menu (gpchat PR #73): x.com Web Intent and neutral labels in every factory output.
-for (const f of ['factory.js', 'factory-gp.js', 'factory-rail.js']) {
+for (const f of ['factory.js', 'factory-gp.js', 'factory-rail.js', 'factory-reports.js']) {
   const t = fs.readFileSync(path.join(root, 'factory', f), 'utf8');
   for (const bad of ['twitter.com/intent/tweet', 'Post on X', 'Post on Reddit']) assert.ok(!t.includes(bad), f + ' still has ' + bad);
 }

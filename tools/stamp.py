@@ -7,6 +7,7 @@ Writes (inside --repo-dir, never pushes, never touches git history):
   factory.js            = factory/factory.js (identical bytes in every room; core, byte budget tools/check_budget.sh)
   factory-gp.js         = factory/factory-gp.js, only when site.json asks for gp features or the F1 rail (see needed_optins)
   factory-rail.js       = factory/factory-rail.js, only for NWS / CWF / BART live rails
+  factory-reports.js    = factory/factory-reports.js, only when site.json features.reportLoop is true (A9 report loop)
                           (opt-in files load before factory.js; index.html gets/loses their <script> tags to match)
   index.html            = factory.js?v=N+1, and site.json?v=M+1 (preload + every data-site) when site.json changes
   site.json             = deep-merge of rooms.json features / skin / sitePatch (room copy moves out of JS),
@@ -31,7 +32,7 @@ from fnsplit import split
 def sha(b): return hashlib.sha256(b).hexdigest()
 def rd(p): return open(p, 'rb').read()
 def fns(src): return [k for k, _ in split(src) if not k.startswith('#')]
-OPTIN = ('factory-gp.js', 'factory-rail.js')
+OPTIN = ('factory-gp.js', 'factory-rail.js', 'factory-reports.js')
 GP_FEATURES = ('watchlist', 'topicFollow', 'sessionSeeds')
 
 def needed_optins(site):
@@ -41,6 +42,7 @@ def needed_optins(site):
     if any(feats.get(k) is True for k in GP_FEATURES) or kind == 'f1-calendar': need.append('factory-gp.js')
     if kind in ('nws-forecast', 'nws-cwf', 'bart-bsa') or rail.get('forecastUrl') or (rail.get('lat') is not None and rail.get('lon') is not None):
         need.append('factory-rail.js')
+    if feats.get('reportLoop') is True: need.append('factory-reports.js')
     return need
 
 def load_release(root, version):
@@ -50,7 +52,7 @@ def load_release(root, version):
 
 def wire_optins(idx, need, fv):
     """Drop old opt-in <script> lines, then put the needed ones right before factory.js (same indent, same ?v=)."""
-    idx = re.sub(r'[ \t]*<script src="factory-(?:gp|rail)\.js[^"]*"></script>\n', '', idx)
+    idx = re.sub(r'[ \t]*<script src="factory-(?:gp|rail|reports)\.js[^"]*"></script>\n', '', idx)
     m = re.search(r'^([ \t]*)<script src="factory\.js\?v=', idx, re.M)
     if not m or not need: return idx
     tags = ''.join('%s<script src="%s?v=%s"></script>\n' % (m.group(1), f, fv) for f in need)

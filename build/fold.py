@@ -452,5 +452,133 @@ src = ed(src, "  function composeErr(msg) {\n", """  function toast(m) {
   }
   function composeErr(msg) {
 """)
+# ---- A9 pieces 2+3: report loop (2026-10-22, Jebb: "report status, My reports and triage; report_update notification").
+# Lifecycle open -> reviewing -> actioned | dismissed. Admin triage writes status + reviewedBy/reviewedAt (+ optional
+# resolution note, history entry) and sends the reporter a 'report_update' notif. Reporters get "My reports" (status of
+# each report they filed in this room). Code lives in the opt-in factory-reports.js (site.json features.reportLoop), so
+# core only grows by two stubs, the CORE accessors and one overlay id (budget 255,000 B). Without the file the admin
+# panel is the v1.2.2 one (Remove post / Dismiss). Rules: reports update is admin-only (live L400); the reporter reads
+# only their own (L390-391, hence the reporterUid filter); live notifications create accepts 'report_update' (type
+# <= 20 chars, text <= 280); the pending NOTIFS_REPORTS paste needs RULES_ADDENDUM_REPORT_UPDATE (type enum).
+src = ed(src, "        '<button type=\"button\" class=\"post-action\" data-report-dismiss=\"' + escapeHtml(r.id) + '\">Dismiss</button>' +\n",
+  "        reportTriage(r) +\n")
+src = ed(src, "    var rows = reportItems.filter(function (r) { return r.status !== 'dismissed'; }).slice(0, 50);",
+  "    var rows = reportItems.filter(function (r) { return r.status !== 'dismissed' && r.status !== 'actioned'; }).slice(0, 50);")
+src = ed(src, "  function syncReportsEntry() {\n", "  function syncReportsEntry() {\n    syncMyReports();\n")
+src = ed(src, "'profile-overlay', 'reports-overlay'].forEach(", "'profile-overlay', 'reports-overlay', 'myreports-overlay'].forEach(")
+src = ed(src, "  function stopPreviewLift() {\n", """  // Report loop (factory-reports.js): status labels shown to the admin and to the reporter.
+  var REPORT_STATUS = { open: 'Received', reviewing: 'Under review', actioned: 'Action taken', dismissed: 'Reviewed, no action' };
+  var reportLoopWired = false;
+  function reportTriage(r) {
+    var b = function (st, label) {
+      return '<button type="button" class="post-action" data-report-status="' + st + '" data-report-id="' + escapeHtml(r.id) +
+        '" data-report-uid="' + escapeHtml(r.reporterUid) + '">' + label + '</button> ';
+    };
+    return '<p>' + escapeHtml(REPORT_STATUS[r.status || 'open'] || r.status) + '</p>' +
+      (r.status === 'reviewing' ? '' : b('reviewing', 'Reviewing')) + b('actioned', 'Action taken') + b('dismissed', 'Dismiss');
+  }
+  function reportUpdateText(status, note) {
+    var t = status === 'reviewing' ? 'Your report is under review.' :
+      status === 'actioned' ? 'We reviewed your report and took action.' : 'We reviewed your report. No action was needed.';
+    return t + (note ? ' ' + note : '');
+  }
+  function setReportStatus(id, status, reporterUid) {
+    var me = liveUid();
+    if (me !== ADMIN_UID || !fbDb || !id || !REPORT_STATUS[status] || status === 'open') return;
+    var note = '';
+    if (status !== 'reviewing') {
+      note = window.prompt('Note to the reporter (optional, 120 chars):', '');
+      if (note === null) return;
+      note = String(note).replace(/\\s+/g, ' ').trim().slice(0, 120);
+    }
+    var patch = {
+      status: status,
+      reviewedBy: me,
+      reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      history: firebase.firestore.FieldValue.arrayUnion({ status: status, by: me, ms: Date.now() })
+    };
+    if (note) patch.resolution = note;
+    fbDb.collection('reports').doc(id).update(patch).then(function () {
+      if (reporterUid) sendNotif(reporterUid, 'report_update', '', reportUpdateText(status, note));
+      toast('Report: ' + REPORT_STATUS[status]);
+    }).catch(function (e) {
+      console.warn('report status', e);
+      toast('Could not update that report. Try again.');
+    });
+  }
+  function syncMyReports() {
+    wireReportLoop();
+    var nav = document.querySelector('#sidebar nav ul');
+    var link = document.getElementById('nav-myreports');
+    if (!isLiveUser() || liveUid() === ADMIN_UID) {
+      if (link && link.parentNode) link.parentNode.remove();
+      closeMyReports();
+      return;
+    }
+    if (!link && nav) {
+      var li = document.createElement('li');
+      li.innerHTML = '<button type="button" class="nav-social-link" id="nav-myreports" data-myreports="1" ' +
+        'style="cursor:pointer;width:100%;background:none;border:0;font:inherit;text-align:left">My reports</button>';
+      nav.appendChild(li);
+    }
+  }
+  function openMyReports() {
+    var me = liveUid();
+    if (!me || !fbDb) return;
+    closeSocialOverlays();
+    var el = document.getElementById('myreports-overlay');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'myreports-overlay';
+      el.className = 'notif-overlay';
+      el.innerHTML = '<button class="view-back" id="myreports-back" type="button">Back</button>' +
+        '<div class="notif-header"><div class="notif-title">My reports</div></div>' +
+        '<div class="notif-list" id="myreports-list"></div>';
+      document.body.appendChild(el);
+    }
+    el.classList.add('active');
+    var list = document.getElementById('myreports-list');
+    list.innerHTML = '<div class="soon-panel">Loading...</div>';
+    fbDb.collection('reports').where('siteId', '==', SITE_ID).where('reporterUid', '==', me).get().then(function (snap) {
+      list.innerHTML = myReportsHtml(snap.docs.map(function (d) { var x = d.data() || {}; x.id = d.id; return x; }));
+    }).catch(function (e) {
+      console.warn('my reports', e);
+      list.innerHTML = '<div class="soon-panel">Could not load your reports. Try again.</div>';
+    });
+  }
+  function myReportsHtml(rows) {
+    rows.sort(function (a, b) { return tsMillis(b.createdAt) - tsMillis(a.createdAt); });
+    if (!rows.length) return '<div class="soon-panel"><strong>You have not reported anything in this room.</strong></div>';
+    return rows.slice(0, 50).map(function (r) {
+      var post = findPost(r.postId);
+      var snip = (post && post.text) ? String(post.text).replace(/\\s+/g, ' ').trim().slice(0, 140) : '(post no longer shown)';
+      return '<div class="notif-item"><p>' + escapeHtml(snip) + '</p><p><strong>' +
+        escapeHtml(REPORT_STATUS[r.status || 'open'] || 'Received') + '</strong> · ' + escapeHtml(notifWhen(tsMillis(r.createdAt))) + '</p>' +
+        (r.resolution ? '<p>' + escapeHtml(r.resolution) + '</p>' : '') + '</div>';
+    }).join('');
+  }
+  function closeMyReports() {
+    var el = document.getElementById('myreports-overlay');
+    if (el) el.classList.remove('active');
+  }
+  function wireReportLoop() {
+    if (reportLoopWired) return;
+    reportLoopWired = true;
+    document.addEventListener('click', function (e) {
+      var t = e.target && e.target.closest ? e.target : null;
+      if (!t) return;
+      var st = t.closest('[data-report-status]');
+      if (st) {
+        setReportStatus(st.getAttribute('data-report-id'), st.getAttribute('data-report-status'), st.getAttribute('data-report-uid'));
+        return;
+      }
+      if (t.closest('[data-myreports]')) { e.preventDefault(); openMyReports(); return; }
+      if (t.closest('#myreports-back')) { closeMyReports(); return; }
+      // report_update notifs carry no postId, so the core notif handler only marks them read; then show My reports.
+      if (t.closest('[data-notif-type="report_update"]')) setTimeout(openMyReports, 0);
+    });
+  }
+  function stopPreviewLift() {
+""")
 src = banner + src
 open('factory.js', 'w').write(src)
