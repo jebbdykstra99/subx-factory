@@ -95,19 +95,27 @@
   var PLUGIN = {};
   var CORE = {
     activeTopics: activeTopics,
+    closeSocialOverlays: closeSocialOverlays,
     composeErr: composeErr,
     escapeHtml: escapeHtml,
     featureOn: featureOn,
+    findPost: findPost,
     isLiveUser: isLiveUser,
     liveUid: liveUid,
     loadJSON: loadJSON,
+    notifWhen: notifWhen,
     openAuth: openAuth,
     railCfg: railCfg,
     railNwsSlots: railNwsSlots,
     saveJSON: saveJSON,
+    sendNotif: sendNotif,
     taxonomyCatalog: taxonomyCatalog,
+    toast: toast,
     topicById: topicById,
+    tsMillis: tsMillis,
+    get ADMIN_UID() { return ADMIN_UID; },
     get SITE_ID() { return SITE_ID; },
+    get fbDb() { return fbDb; },
     get focusedTopicId() { return focusedTopicId; },
     get site() { return site; },
     get watchlistPickerOpen() { return watchlistPickerOpen; },
@@ -681,6 +689,7 @@
     return n;
   }
   function syncReportsEntry() {
+    syncMyReports();
     var nav = document.querySelector('#sidebar nav ul');
     var link = document.getElementById('nav-reports');
     var admin = isLiveUser() && liveUid() === ADMIN_UID;
@@ -766,7 +775,7 @@
   function renderReports() {
     var el = document.getElementById('reports-list');
     if (!el) return;
-    var rows = reportItems.filter(function (r) { return r.status !== 'dismissed'; }).slice(0, 50);
+    var rows = reportItems.filter(function (r) { return r.status !== 'dismissed' && r.status !== 'actioned'; }).slice(0, 50);
     if (!rows.length) {
       el.innerHTML = '<div class="soon-panel"><strong>No open reports.</strong></div>';
       return;
@@ -779,7 +788,7 @@
         '<p>' + escapeHtml(snippet) + '</p>' +
         '<p>' + count + ' reporter' + (count === 1 ? '' : 's') + '</p>' +
         '<button type="button" class="post-action" data-report-remove="' + escapeHtml(r.postId) + '">Remove post</button> ' +
-        '<button type="button" class="post-action" data-report-dismiss="' + escapeHtml(r.id) + '">Dismiss</button>' +
+        reportTriage(r) +
         '</div>';
     }).join('');
   }
@@ -788,6 +797,13 @@
     fbDb.collection('reports').doc(id).update({ status: 'dismissed' }).catch(function (e) {
       composeErr(guardPublicErr(e, 'Could not dismiss that report.'));
     });
+  }
+  function reportTriage(r) { // factory-reports.js
+    if (PLUGIN.reportTriage) return PLUGIN.reportTriage.apply(null, arguments);
+    return '<button type="button" class="post-action" data-report-dismiss="' + escapeHtml(r.id) + '">Dismiss</button>';
+  }
+  function syncMyReports() { // factory-reports.js
+    if (PLUGIN.syncMyReports) return PLUGIN.syncMyReports.apply(null, arguments);
   }
   function stopPreviewLift() {
     if (guardState.unsub) { guardState.unsub(); guardState.unsub = null; }
@@ -1869,7 +1885,7 @@
   }
 
   function closeSocialOverlays() {
-    ['explore-overlay', 'notif-overlay', 'chat-overlay', 'profile-overlay', 'reports-overlay'].forEach(function (id) {
+    ['explore-overlay', 'notif-overlay', 'chat-overlay', 'profile-overlay', 'reports-overlay', 'myreports-overlay'].forEach(function (id) {
       const el = document.getElementById(id);
       if (el) el.classList.remove('active', 'thread-open');
     });

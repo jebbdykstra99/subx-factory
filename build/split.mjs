@@ -1,6 +1,7 @@
 // Split opt-in feature code out of the folded factory.js (core byte budget, lean audit 2026-10-22).
 //   in : factory.js (output of fold.py, the single-file build)
-//   out: factory.js (core, every room), factory-gp.js (gpchat only), factory-rail.js (NWS/CWF/BART live rails)
+//   out: factory.js (core, every room), factory-gp.js (gpchat only), factory-rail.js (NWS/CWF/BART live rails),
+//        factory-reports.js (report loop, features.reportLoop)
 // Moved functions keep their exact source. Inside an opt-in file, core functions are bound once by name
 // (function declarations never get reassigned) and core variables are read/written through live accessors
 // (core.site, core.SITE_ID, ...), so behavior is identical to the single-file build when the file is loaded.
@@ -59,6 +60,20 @@ const GROUPS = [
       fetchBartCards: "return Promise.reject(new Error('factory-rail.js not loaded'));"
     },
     stubParams: {}
+  },
+  {
+    file: 'factory-reports.js',
+    title: 'report loop (A9): report status + admin triage with audit fields, "My reports", report_update notif (site.json features.reportLoop)',
+    fns: [
+      'reportTriage', 'reportUpdateText', 'setReportStatus', 'syncMyReports', 'openMyReports', 'myReportsHtml', 'closeMyReports',
+      'wireReportLoop'
+    ],
+    vars: ['REPORT_STATUS', 'reportLoopWired'],
+    stubs: {
+      reportTriage: "return '<button type=\"button\" class=\"post-action\" data-report-dismiss=\"' + escapeHtml(r.id) + '\">Dismiss</button>';",
+      syncMyReports: ''
+    },
+    stubParams: { reportTriage: 'r' }
   }
 ];
 const INSTALL_AFTER = '  const DM_TEXT_MAX = 1000;\n';

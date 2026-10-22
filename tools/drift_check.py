@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Nightly drift check (read-only, no token needed). For every room in rooms.json:
   live https://<domain>/factory.js and /styles.css sha256  vs  the room repo's FACTORY.lock (raw.githubusercontent.com, main)
-  and vs this repo's factory/factory.js (the release). Opt-in files (factory-gp.js, factory-rail.js) get the same
+  and vs this repo's factory/factory.js (the release). Opt-in files (factory-gp.js, factory-rail.js, factory-reports.js) get the same
   live-vs-lock-vs-release check for every room whose FACTORY.lock lists them.
 States: OK, DRIFT (live != lock), STALE (lock != release: stamp PR not merged yet), UNSTAMPED (no FACTORY.lock yet),
 ERROR (fetch failed, e.g. btb cert). Exit 1 on any DRIFT, or on ERROR for rooms without driftIgnore ["https"].
@@ -15,7 +15,7 @@ def h(b): return hashlib.sha256(b).hexdigest()
 ap = argparse.ArgumentParser(); ap.add_argument('--out'); a = ap.parse_args()
 cfg = json.load(open(os.path.join(ROOT, 'rooms.json')))
 release = h(open(os.path.join(ROOT, 'factory/factory.js'), 'rb').read())
-OPTIN = ('factory-gp.js', 'factory-rail.js')
+OPTIN = ('factory-gp.js', 'factory-rail.js', 'factory-reports.js')
 release_optin = {f: h(open(os.path.join(ROOT, 'factory', f), 'rb').read()) for f in OPTIN if os.path.exists(os.path.join(ROOT, 'factory', f))}
 rows, fail = [], False
 for e in sorted(cfg['rooms'], key=lambda e: e['order']):

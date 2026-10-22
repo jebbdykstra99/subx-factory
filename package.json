@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check factory/factory.js && eslint --no-eslintrc -c .eslintrc.json factory/factory.js factory/factory-gp.js factory/factory-rail.js && tools/check_budget.sh && node test/nest-feed.test.js && node test/accounts-gate.test.js",
+    "check": "node --check factory/factory.js && eslint --no-eslintrc -c .eslintrc.json factory/factory.js factory/factory-gp.js factory/factory-rail.js factory/factory-reports.js && tools/check_budget.sh && node test/nest-feed.test.js && node test/accounts-gate.test.js && node test/notifs-reports.test.js && node test/report-loop.test.js",
     "smoke": "node tools/smoke.mjs"
   },
   "devDependencies": { "eslint": "^8.57.0", "eslint-scope": "^7.2.2", "espree": "^9.6.1", "puppeteer-core": "^23.0.0" }
