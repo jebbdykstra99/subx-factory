@@ -171,9 +171,9 @@ const ia = src.indexOf(INSTALL_AFTER);
 if (ia < 0 || src.indexOf(INSTALL_AFTER, ia + 1) >= 0) fail('installer anchor');
 const members = [...coreFns].sort().map((n) => '    ' + n + ': ' + n)
   .concat([...coreVars.keys()].sort().map((n) => '    get ' + n + '() { return ' + n + '; }' + (coreVars.get(n) ? ',\n    set ' + n + '(v) { ' + n + ' = v; }' : '')));
-const installer = '\n  // Opt-in files (' + GROUPS.map((g) => g.file).join(', ') + ') push installers onto window.__subxPlugins\n' +
-  '  // before this file runs. A room that does not load one keeps the neutral stubs (feature-off behavior).\n' +
-  '  var PLUGIN = {};\n  var CORE = {\n' + members.join(',\n') + '\n  };\n' +
+// Opt-in files push installers onto window.__subxPlugins before factory.js runs. A room that does not load one keeps
+// the neutral stubs (feature-off behavior). (No comment in the emitted core; lean trim 2026-10-22.)
+const installer = '\n  var PLUGIN = {};\n  var CORE = {\n' + members.join(',\n') + '\n  };\n' +
   '  (window.__subxPlugins || []).forEach(function (install) {\n' +
   '    var api = install(CORE) || {};\n    Object.keys(api).forEach(function (k) { PLUGIN[k] = api[k]; });\n  });\n';
 cuts.push([ia + INSTALL_AFTER.length, ia + INSTALL_AFTER.length, installer]);

@@ -127,12 +127,14 @@ css = ed(css, "    document.head.appendChild(st);\n",
 R['ensureRailCss'] = css
 R['paintRail'] = ed(T['paintRail'], "(items || []).map(renderTrendCard).join('') + porchCardHtml();", "(items || []).map(renderTrendCard).join('') + (currentNest ? '' : porchCardHtml());")
 R['fallbackTrendCards'] = ed(T['fallbackTrendCards'], "if (extra.length) return extra.slice(0, 1);", "if (extra.length) return extra.slice(0, railKind() === 'f1-calendar' ? railNwsSlots() : 1);")
+# renderTrends rail merge by rail.kind: f1-calendar = gpchat F1 rail; rail.liveKeep = samochat (forecast/outbound first,
+# keep at least one live card; was samochat-only code); nws-forecast (415/808) and bart-bsa (bartchat) = pinned first.
+# (These notes used to ship as JS comments; lean trim 2026-10-22 keeps them here, out of factory.js.)
 R['renderTrends'] = ed(T['renderTrends'], """      var merged = (cards || []).concat(extra);
       if (merged.length) commitRail(merged.slice(0, railNwsSlots()));""", """      var merged;
       if (railKind() === 'f1-calendar') {
-        merged = mergeF1Rail(cards, extra);                                   // gpchat (F1 rail)
+        merged = mergeF1Rail(cards, extra);
       } else if (railCfg().liveKeep === true) {
-        // samochat: forecast/outbound first, keep at least one live card (was samochat-only code)
         var slots = railNwsSlots();
         var liveKeep = Math.max(0, slots - extra.length);
         if (!liveKeep && (cards || []).length) liveKeep = 1;
@@ -141,7 +143,7 @@ R['renderTrends'] = ed(T['renderTrends'], """      var merged = (cards || []).co
           : (cards || []).slice(0, liveKeep).concat(extra);
         if (merged.length) { commitRail(merged); return; }
       } else if (railKind() === 'nws-forecast' || railKind() === 'bart-bsa') {
-        merged = (extra || []).concat(cards || []);                           // 415/808 (nws-forecast), bartchat (bart-bsa): pinned first
+        merged = (extra || []).concat(cards || []);
       } else {
         merged = (cards || []).concat(extra);
       }
@@ -209,7 +211,7 @@ R['storiesComposePlaceholder'] = """  function storiesComposePlaceholder() {
     return skin('storiesPlaceholder', (site && site.composePlaceholder) || 'What is happening right now?');
   }"""
 R['paintProfile'] = ed(R['paintProfile'], "escapeHtml(skin('profileEmpty', 'No posts yet.'))", "escapeHtml(skin('profileEmpty', (site && site.emptyState) || 'No posts yet.'))")
-R['sendPixel'] = ed(T['sendPixel'], "  function sendPixel(eventName) {\n", "  function sendPixel(eventName) {\n    if (site && site.pixel === false) return; // opt-out per room (privacy v1.1 gate); default on as in T0\n")
+R['sendPixel'] = ed(T['sendPixel'], "  function sendPixel(eventName) {\n", "  function sendPixel(eventName) {\n    if (site && site.pixel === false) return;\n")  # opt-out per room (privacy v1.1 gate); default on as in T0
 # ---- assemble
 out = []
 seen = set()
@@ -233,16 +235,15 @@ for k in missing:
     seen.add(k)
 print('re-inserted', len(missing), missing)
 # helpers: features + skin + one identical file for every room
+# site.json "features": { watchlist, following, notifs, topicFollow, sessionSeeds } (all default false).
+# DMs stay on site.json "dms" (existing). F1 rail stays on rail.kind 'f1-calendar'. Age: site.json "minAge".
+# site.json "skin": { bioDefault, avatarInitials, profileEmpty, guestHandle, exploreEmpty, seatTag, storiesPlaceholder,
+#   regNamePlaceholder, taglineH1:"true", keepBrandTitle:"true" } (strings). Room copy lives in site.json, never here.
 helpers = """
-  // ===== SUBX FACTORY: site.json-driven features + skin (one identical factory.js for every room) =====
-  // site.json "features": { watchlist, following, notifs, topicFollow, sessionSeeds } (all default false).
-  // DMs stay on site.json "dms" (existing). F1 rail stays on rail.kind 'f1-calendar'. Age: site.json "minAge".
   function featureOn(name) {
     var f = site && site.features;
     return !!(f && f[name] === true);
   }
-  // site.json "skin": { bioDefault, avatarInitials, profileEmpty, guestHandle, exploreEmpty, seatTag, storiesPlaceholder,
-  //   regNamePlaceholder, taglineH1:"true", keepBrandTitle:"true" } (strings). Room copy lives in site.json, never here.
   function skin(key, fallback) {
     var s = site && site.skin;
     var v = s && typeof s[key] === 'string' ? s[key] : '';
@@ -252,10 +253,10 @@ helpers = """
 anchor = "  const hamburger = document.getElementById('hamburger');"
 src = ed(src, anchor, helpers.lstrip('\n') + '\n' + anchor)
 # one file for all rooms: neutral constants; localStorage is per-origin so a fixed prefix is safe.
+# The try block is a one-time migration from the per-room keys older stamps used (<room>.user / <room>.likes).
 src = ed(src, "  const LS_USER = '311chat.user';\n  const LS_LIKES = '311chat.likes';\n",
 """  const LS_USER = 'subx.user';
   const LS_LIKES = 'subx.likes';
-  // One-time migration from the per-room keys older stamps used (<room>.user / <room>.likes).
   try {
     if (!localStorage.getItem(LS_USER) || !localStorage.getItem(LS_LIKES)) {
       for (var lsI = 0; lsI < localStorage.length; lsI++) {
@@ -338,5 +339,39 @@ src = ed(src, "    wireEvents();\n    document.addEventListener('subx-auth-land'
 src = ed(src, "data-share=\"x\">Post on X</button>", "data-share=\"x\">Share to x.com</button>")
 src = ed(src, "data-share=\"reddit\">Post on Reddit</button>", "data-share=\"reddit\">Share to Reddit</button>")
 src = ed(src, "'https://twitter.com/intent/tweet?text='", "'https://x.com/intent/post?text='")
+# ---- lean trim (2026-10-22): same code, fewer bytes. No behavior change; see the trim PR for grep evidence.
+# Comments that came in from the template / gpchat merge. Their content (kept here for the record):
+#   NEST_RESERVED = path segments that must never be a nest; existing nest slugs are checked live.
+#   PREVIEW-LIFT block (guards/privacy/steward): a room joins guardedSite only after its factory.js carries
+#     guardedPostWrite + the DM lastMsgAt batch.
+#   requireVerified: chat/DM replies need signed-in + not killed; Google members can send without emailVerified;
+#     post/like/vote/report/block still gate.
+#   nestGroupLabel: optional site.nestGroups [{ label, parents }] prints Nests-nav sub-headers; a nest whose parent is
+#     another nest's slug is a sub-nest (subsubX), listed under that parent, indented.
+#   taxonomyCatalog: Grid taxonomy lives on site.taxonomy (same catalog as taxonomy.json); left-nav nests come from
+#     site.nests plus the user's Firestore rooms; taxonomyNestsDraft is not a nav source; topic nestSlug does not drive
+#     the watchlist click.
+#   SITE_ID is set from site.json siteId in boot().
+for c in ["  // Path segments that must never be a nest. Existing nest slugs are checked live.\n",
+          "  // ===== PREVIEW-LIFT (guards/privacy/steward) =====\n"
+          "  // Port this block plus the call sites named in the PR. A room joins guardedSite\n"
+          "  // only after its factory.js carries guardedPostWrite + the DM lastMsgAt batch.\n",
+          "  // ===== END PREVIEW-LIFT (guards/privacy/steward) =====\n",
+          "    // Chat/DM replies: signed-in + not killed is enough. Google members\n"
+          "    // can send without emailVerified. Post/like/vote/report/block still gate.\n",
+          "  // Optional site.nestGroups: [{ label, parents: [...] }] prints sub-headers in the Nests nav.\n"
+          "  // A nest whose parent is another nest's slug is a sub-nest (subsubX): listed right under that parent, indented.\n",
+          "  // Grid taxonomy lives on site.taxonomy (same catalog as taxonomy.json).\n"
+          "  // Left-nav nests come from site.nests plus this user's Firestore rooms.\n"
+          "  // taxonomyNestsDraft is not a nav source. Topic nestSlug does not drive the watchlist click.\n"]:
+    src = ed(src, c, '')
+src = ed(src, "  let SITE_ID = '';  // set from site.json siteId in boot()\n", "  let SITE_ID = '';\n")
+# Dead: `likes` (template) is read from localStorage once and never used (likes state lives in the posts + LS_LIKES writes).
+src = ed(src, "  let likes = loadJSON(LS_LIKES, {});\n", '')
+# Duplicate helper: nestSlugNorm(s) has the same body as nestKey(s) in the @nest-feed block. Call nestKey.
+src = ed(src, "  function nestSlugNorm(s) {\n    return String(s || '').replace(/^#/, '').trim().toLowerCase();\n  }\n\n", '')
+assert len(re.findall(r'\bnestSlugNorm\b', src)) == 16, len(re.findall(r'\bnestSlugNorm\b', src))
+src = re.sub(r'\bnestSlugNorm\(', 'nestKey(', src)
+assert 'nestSlugNorm' not in src
 src = banner + src
 open('factory.js', 'w').write(src)
