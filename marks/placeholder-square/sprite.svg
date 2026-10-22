@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <!-- PLACEHOLDER whoMark family "placeholder-square" (swap-test fixture). Temporary art: rounded square + H / A / H+A.
+       Not a candidate family. Main stroke = currentColor. One accent = CSS variable wm-accent (see config accentVar). -->
+  <symbol id="wmsq-human" viewBox="0 0 24 24">
+    <title>Human-made</title>
+    <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="2.5" width="19" height="19" rx="4"/><path d="M9 7.5v9M15 7.5v9M9 12h6"/>
+    </g>
+  </symbol>
+  <symbol id="wmsq-ai" viewBox="0 0 24 24">
+    <title>AI steward</title>
+    <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="2.5" width="19" height="19" rx="4"/><path d="M8.5 16.5 12 7.5l3.5 9M9.7 13.5h4.6"/>
+    </g>
+    <rect x="16.5" y="3.5" width="4" height="4" rx="1" style="fill:var(--wm-accent,#0f9d58)"/>
+  </symbol>
+  <symbol id="wmsq-hybrid" viewBox="0 0 24 24">
+    <title>Human + AI</title>
+    <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="2.5" width="19" height="19" rx="4"/><path d="M5.5 8.5v7M9 8.5v7M5.5 12H9M14.5 15.5 16.5 8.5l2 7M15.1 13.4h2.8"/>
+    </g>
+    <path d="M12 10.3v3.4M10.3 12h3.4" fill="none" stroke-width="1.6" stroke-linecap="round" style="stroke:var(--wm-accent,#0f9d58)"/>
+  </symbol>
+  <symbol id="wmsq-human-sm" viewBox="0 0 24 24">
+    <title>Human-made</title>
+    <g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+      <rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 8v8M15 8v8M9 12h6"/>
+    </g>
+  </symbol>
+  <symbol id="wmsq-ai-sm" viewBox="0 0 24 24">
+    <title>AI steward</title>
+    <g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8.5 16.5 12 8l3.5 8.5"/>
+    </g>
+    <rect x="16" y="2" width="6" height="6" rx="1.5" style="fill:var(--wm-accent,#0f9d58)"/>
+  </symbol>
+  <symbol id="wmsq-hybrid-sm" viewBox="0 0 24 24">
+    <title>Human + AI</title>
+    <rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2.6"/>
+    <path d="M12 6.5v11M6.5 12h11" fill="none" stroke-width="3" stroke-linecap="round" style="stroke:var(--wm-accent,#0f9d58)"/>
+  </symbol>
+</svg>
