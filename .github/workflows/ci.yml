@@ -14,6 +14,7 @@ jobs:
       - name: Core byte budget (<= 255 KB; lean audit 2026-10-22)
         run: tools/check_budget.sh
       - run: node test/nest-feed.test.js
+      - run: node test/notifs-reports.test.js
       - name: No inline Firebase web key (Sep 25 secret-scan lock)
         run: "! grep -n 'AIza' factory/factory.js factory/factory-gp.js factory/factory-rail.js"
       - name: Rebuild is reproducible

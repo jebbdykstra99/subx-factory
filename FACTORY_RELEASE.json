@@ -1,8 +1,8 @@
 {
-  "version": "v1.2.1",
+  "version": "v1.2.2",
   "factory.js": {
-    "sha256": "7e6ed4de130f71ac185a366ebceefa3646cf9cda3f2f7c1c3abb30685b179dc9",
-    "bytes": 252518
+    "sha256": "df017c0cd1977dbb71b554f1dc874fc6bb034b0745a0d93b3670e3df3db4e7a4",
+    "bytes": 254052
   },
   "sources": {
     "template": "build/sources/template_factory_660144d1886e.js (T0 pin, nest-feed query edited in place)",
@@ -13,12 +13,12 @@
   "built": "2026-10-22 (MT)",
   "optIn": {
     "factory-gp.js": {
-      "sha256": "d2922b722cab2e00ede1cc360b8476639524771fa48d2ce7f817bd40252e4005",
+      "sha256": "ef2eb22da568ac52e7c5fa2d79da9d66b686d29431c04a6dacb3617fca63ae69",
       "bytes": 31358,
       "loadWhen": "site.json features.watchlist|topicFollow|sessionSeeds true, or rail.kind f1-calendar (gpchat only today)"
     },
     "factory-rail.js": {
-      "sha256": "b19224295cf655f78814060d77d8861aeb68677ad48ee0d47e4572b231148da5",
+      "sha256": "78e6db8d8397f5e01f8cd4026a4866e0192fea46f6a8627086c62fc5a90fd4ec",
       "bytes": 10231,
       "loadWhen": "site.json rail.kind nws-forecast|nws-cwf|bart-bsa, or rail.forecastUrl / rail.lat+lon (415, 808, samo, bart)"
     }
