@@ -1,5 +1,5 @@
 {
-  "version": "v1.1.0",
+  "version": "v1.2.0",
   "owner": "jebbdykstra99",
   "rooms": [
     {
@@ -483,6 +483,7 @@
         "avatarInitials": "GP"
       },
       "sitePatch": {
+        "accountsOpen": true,
         "earlyWelcomeCopy": "You're early. This room is live but unfinished. Who do you sit with on the grid — driver, team, or both? Tell the room.",
         "pixel": false,
         "redditCrosspost": false,

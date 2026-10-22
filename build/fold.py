@@ -277,5 +277,56 @@ src = ed(src, 'boot({ siteId: "311chat", name: "311chat", tagline: "Non-emergenc
 src = src.replace("name: 'Grid', symbolPrefix", "name: 'Topics', symbolPrefix").replace("tax.name || 'Grid'", "tax.name || 'Topics'").replace("(taxName || 'Grid')", "(taxName || 'Topics')").replace("'Not on the Grid'", "'Not in this room'").replace("That topic is not on the Grid.", "That topic is not in this room.")
 # Jebb rule (2026-10-22): no 13+ anywhere. A room without site.json minAge gets the 18+ gate.
 src = ed(src, "    if (!isFinite(n) || n < 1) return 13;\n", "    if (!isFinite(n) || n < 1) return 18;\n")
+# Accounts gate, fail closed (2026-10-22, FACT_PREVIEW_SIGNUP_GATE). Ported from gpchat accountsOpen()/applyAccountsGate().
+# Open only when site.json accountsOpen === true AND preview !== true. Closed: no Register / Google join,
+# no users/{uid} profile write, no post/story/like/vote/DM from non-admin. Admin UID keeps writing.
+# localStorage subx.steward=1 shows the Google button (admin sign-in only; any other uid is signed out).
+src = ed(src, "  function isAdminUser() {\n    return liveUid() === ADMIN_UID;\n  }\n", """  function isAdminUser() {
+    return liveUid() === ADMIN_UID;
+  }
+  var ACC_CLOSED = 'Accounts are not open yet. You can read the room as a guest.';
+  function accountsOpen() {
+    return !!(site && site.accountsOpen === true && site.preview !== true);
+  }
+  function applyAccountsGate() {
+    var d = document.documentElement, stew = false;
+    try { stew = localStorage.getItem('subx.steward') === '1'; } catch (e) {}
+    d.classList.toggle('acc-closed', !accountsOpen());
+    d.classList.toggle('acc-stew', stew);
+    if (accountsOpen() || document.getElementById('cv-accounts-closed')) return;
+    var g = document.getElementById('cv-google-age'), c = '.acc-closed:not(.acc-stew) ';
+    g = g && g.closest('label');
+    if (g) g.classList.add('acc-g');
+    var st = document.createElement('style');
+    st.textContent = '.acc-closed [data-tab="register"],.acc-closed #cv-panel-register,.acc-closed #cv-goto-register,.acc-closed #cv-goto-join,' +
+      c + '#cv-google-login,' + c + '.acc-g,' + c + '#cv-panel-login .conv-modal-divider{display:none!important}';
+    document.head.appendChild(st);
+    var p = document.getElementById('cv-panel-login'), t = document.getElementById('auth-title');
+    if (t) t.textContent = 'Sign in to ' + (site && site.name || 'this room');
+    if (!p) return;
+    var n = document.createElement('p');
+    n.className = 'conv-modal-note';
+    n.id = 'cv-accounts-closed';
+    n.textContent = ACC_CLOSED;
+    p.insertBefore(n, p.firstChild);
+  }
+""")
+src = ed(src, "    if (!fbDb || !user) return Promise.resolve();\n",
+  "    if (!fbDb || !user) return Promise.resolve();\n    if (!accountsOpen() && user.uid !== ADMIN_UID) return Promise.reject(new Error(ACC_CLOSED));\n")
+src = ed(src, "  function guardedPostWrite(doc) {\n",
+  "  function guardedPostWrite(doc) {\n    if (!accountsOpen() && doc.authorUid !== ADMIN_UID) return Promise.reject(new Error(ACC_CLOSED));\n")
+src = ed(src, "      else composeErr(msg);\n    }\n    if (!isLiveUser()) {\n",
+  "      else composeErr(msg);\n    }\n    if (!accountsOpen() && !isAdminUser() && action !== 'report' && action !== 'block') {\n      gateErr(ACC_CLOSED);\n      return false;\n    }\n    if (!isLiveUser()) {\n")
+src = ed(src, "    var mode = tab || 'join';\n", "    var mode = tab || 'join';\n    if (mode === 'register' && !accountsOpen()) mode = 'join';\n")
+src = ed(src, "        const age = document.getElementById('cv-reg-age');\n",
+  "        const age = document.getElementById('cv-reg-age');\n        if (!accountsOpen()) { err.textContent = ACC_CLOSED; err.classList.add('show'); return; }\n")
+src = ed(src, "      var age = document.getElementById('cv-google-age');\n",
+  "      if (!accountsOpen() && !document.documentElement.classList.contains('acc-stew')) { err.textContent = ACC_CLOSED; err.classList.add('show'); return; }\n      var age = document.getElementById('cv-google-age');\n")
+src = ed(src, "      function finishGoogle(cred) {\n        var u = cred && cred.user;\n",
+  "      function finishGoogle(cred) {\n        var u = cred && cred.user;\n        if (u && !accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut().then(function () { throw new Error(ACC_CLOSED); });\n")
+src = ed(src, "        fbAuth.getRedirectResult().then(function (cred) {\n          var u = cred && cred.user;\n",
+  "        fbAuth.getRedirectResult().then(function (cred) {\n          var u = cred && cred.user;\n          if (u && !accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut();\n")
+src = ed(src, "    wireEvents();\n    document.addEventListener('subx-auth-land'",
+  "    wireEvents();\n    applyAccountsGate();\n    document.addEventListener('subx-auth-land'")
 src = banner + src
 open('factory.js', 'w').write(src)
