@@ -75,4 +75,13 @@ const reportAdds = src.split("collection('reports').add({").slice(1).map((s) => 
 assert.strictEqual(reportAdds.length, 2);
 reportAdds.forEach((b) => assert.ok(b.includes("status: 'open'"), 'report status open'));
 assert.ok(!src.includes("composeErr('Reported. Thanks.')"), 'report outcome is a toast');
+// reportErr: never shows raw e.message (Iris); permission-denied keeps its own line
+const rctx = { isPermDenied: (e) => !!(e && e.code === 'permission-denied') };
+vm.createContext(rctx);
+vm.runInContext(fnSrc('reportErr'), rctx);
+assert.strictEqual(rctx.reportErr({ code: 'unavailable', message: 'RAW internal detail' }), 'Could not report. Try again.');
+assert.strictEqual(rctx.reportErr(null), 'Could not report. Try again.');
+assert.strictEqual(rctx.reportErr({ code: 'permission-denied', message: 'RAW' }), 'Report not accepted. Verify your email, then refresh and try again.');
+// gate message for report/block is toasted only when the compose error line is not visible
+assert.ok(src.includes("if ((action === 'report' || action === 'block') && !(ce && ce.offsetParent)) toast(msg);"), 'no double report/block message');
 console.log('notifs-reports: like/follow/mention/reply write in every room; mentions capped at 5, no mention when the reply notif covers it; reports carry status open');

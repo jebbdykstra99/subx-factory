@@ -438,7 +438,7 @@ src = ed(src, "      composeErr((e && e.message) ? e.message : 'Could not report
 src = ed(src, "    if (alreadyReported(id)) { composeErr('You already reported this post.'); return; }",
   "    if (alreadyReported(id)) { toast('You already reported this post.'); return; }")
 src = ed(src, "      else composeErr(msg);\n",
-  "      else composeErr(msg);\n      if (action === 'report' || action === 'block') toast(msg);\n")
+  "      else composeErr(msg);\n      var ce = document.getElementById('thoughts-compose-err');\n      if ((action === 'report' || action === 'block') && !(ce && ce.offsetParent)) toast(msg);\n")
 src = ed(src, "  function composeErr(msg) {\n", """  function toast(m) {
     var t = document.createElement('div');
     t.setAttribute('role', 'status');
@@ -448,7 +448,7 @@ src = ed(src, "  function composeErr(msg) {\n", """  function toast(m) {
     setTimeout(function () { t.remove(); }, 4000);
   }
   function reportErr(e) {
-    return isPermDenied(e) ? 'Report not accepted. Verify your email, then refresh and try again.' : ((e && e.message) || 'Could not report.');
+    return isPermDenied(e) ? 'Report not accepted. Verify your email, then refresh and try again.' : 'Could not report. Try again.';
   }
   function composeErr(msg) {
 """)
