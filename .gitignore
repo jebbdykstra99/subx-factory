@@ -1,10 +1,9 @@
+node_modules
+work/
+build/*.js
 !build/sources/*.js
 *.log
-__pycache__/
-build/*.js
-node_modules
-node_modules/
-package-lock.json
 rules/tests/firestore.rules
 rules/tests/storage.rules
-work/
+package-lock.json
+__pycache__/
