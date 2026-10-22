@@ -387,13 +387,13 @@ ORIG_REPLY = "  function writeReplyNotif(parentId, text) {\n    var me = liveUid
 # writeReplyNotif() runs for every new post: it resolves the parent author (if any), sends the reply notif, then mentions.
 src = ed(src, ORIG_REPLY, """  function sendNotif(to, type, postId, text, id) {
     var me = liveUid();
-    if (!me || !fbDb || !to || to === me || !isEmailVerified()) return;
+    if (!me || !fbDb || !to || to === me || !isEmailVerified()) return Promise.resolve(false);
     var p = { toUid: to, fromUid: me, type: type, siteId: SITE_ID, read: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
     if (postId) p.postId = postId;
     text = String(text || '').trim().slice(0, 180);
     if (text) p.text = text;
     var c = fbDb.collection('users').doc(to).collection('notifications');
-    (id ? c.doc(id).set(p) : c.add(p)).catch(function (e) { console.warn(type + ' notif', e); });
+    return (id ? c.doc(id).set(p) : c.add(p)).then(function () { return true; }).catch(function (e) { console.warn(type + ' notif', e); return false; });
   }
   function writeMentionNotifs(text, postId, skip) {
     var seen = {}, n = 0;
@@ -479,7 +479,7 @@ src = ed(src, "  function stopPreviewLift() {\n", """  // Report loop (factory-r
   }
   function reportUpdateText(status, note) {
     var t = status === 'reviewing' ? 'Your report is under review.' :
-      status === 'actioned' ? 'We reviewed your report and took action.' : 'We reviewed your report. No action was needed.';
+      (status === 'actioned' || status === 'action_taken') ? 'We reviewed and took action on your report.' : 'We reviewed your report. No action was needed.';
     return t + (note ? ' ' + note : '');
   }
   function setReportStatus(id, status, reporterUid) {
@@ -499,8 +499,10 @@ src = ed(src, "  function stopPreviewLift() {\n", """  // Report loop (factory-r
     };
     if (note) patch.resolution = note;
     fbDb.collection('reports').doc(id).update(patch).then(function () {
-      if (reporterUid) sendNotif(reporterUid, 'report_update', '', reportUpdateText(status, note));
-      toast('Report: ' + REPORT_STATUS[status]);
+      if (!reporterUid) { toast('Report: ' + REPORT_STATUS[status]); return; }
+      return Promise.resolve(sendNotif(reporterUid, 'report_update', '', reportUpdateText(status, note), 'report_update_' + id + '_' + status)).then(function (ok) {
+        toast(ok === false ? 'Report updated; notification could not be sent.' : 'Report: ' + REPORT_STATUS[status]);
+      });
     }).catch(function (e) {
       console.warn('report status', e);
       toast('Could not update that report. Try again.');
@@ -551,7 +553,7 @@ src = ed(src, "  function stopPreviewLift() {\n", """  // Report loop (factory-r
     if (!rows.length) return '<div class="soon-panel"><strong>You have not reported anything in this room.</strong></div>';
     return rows.slice(0, 50).map(function (r) {
       var post = findPost(r.postId);
-      var snip = (post && post.text) ? String(post.text).replace(/\\s+/g, ' ').trim().slice(0, 140) : '(post no longer shown)';
+      var snip = (post && post.text) ? String(post.text).replace(/\\s+/g, ' ').trim().slice(0, 140) : '(post not loaded)';
       return '<div class="notif-item"><p>' + escapeHtml(snip) + '</p><p><strong>' +
         escapeHtml(REPORT_STATUS[r.status || 'open'] || 'Received') + '</strong> · ' + escapeHtml(notifWhen(tsMillis(r.createdAt))) + '</p>' +
         (r.resolution ? '<p>' + escapeHtml(r.resolution) + '</p>' : '') + '</div>';
@@ -609,13 +611,60 @@ src = ed(src, "  function isAdminUser() {\n    return liveUid() === ADMIN_UID;\n
       renderReports();
     }, function () {});
   }
-  function pickReportReason() {
-    if (typeof window === 'undefined' || typeof window.prompt !== 'function') return 'ncii';
-    var r = window.prompt('Report reason (1-5):\\n1=NCII (auto-hide)\\n2=Copyright (auto-hide)\\n3=Violent/offensive (auto-hide)\\n4=Hate/harassment (auto-hide)\\n5=Other abuse/spam', '1');
-    if (r === null) return '';
-    var m = { '1': 'ncii', '2': 'copyright', '3': 'violent_offensive', '4': 'hate', '5': 'abuse' };
-    var s = String(r || '').trim().toLowerCase();
-    return m[s] || (HIDE_REASONS[s] || s === 'abuse' ? s : 'ncii');
+  function pickReportReason(done) {
+    if (pickReportReason._open) return;
+    pickReportReason._open = true;
+    var ov = document.createElement('div'), box = document.createElement('div'), h = document.createElement('h2'), note = document.createElement('p'), more = document.createElement('p'), a = document.createElement('a');
+    ov.className = 'conv-modal-overlay open';
+    ov.setAttribute('role', 'dialog');
+    ov.setAttribute('aria-modal', 'true');
+    ov.setAttribute('aria-label', 'Report');
+    box.className = 'conv-modal';
+    h.textContent = 'Report';
+    note.className = 'conv-modal-note';
+    note.textContent = 'Why are you reporting this?';
+    box.appendChild(h);
+    box.appendChild(note);
+    function onKey(e) { if (e && e.key === 'Escape') { if (e.preventDefault) e.preventDefault(); close(null); } }
+    function close(reason) {
+      if (!pickReportReason._open) return;
+      pickReportReason._open = false;
+      document.removeEventListener('keydown', onKey, true);
+      if (ov.parentNode) ov.parentNode.removeChild(ov);
+      if (done) done(reason || null);
+    }
+    function btn(label, cls, reason) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = cls;
+      if (reason) b.setAttribute('data-reason', reason);
+      b.textContent = label;
+      b.addEventListener('click', function () { close(reason); });
+      box.appendChild(b);
+      return b;
+    }
+    var opts = [
+      { code: 'ncii', label: 'Intimate image without consent' },
+      { code: 'copyright', label: 'Copyright or trademark (DMCA)' },
+      { code: 'violent_offensive', label: 'Violent or graphic image' },
+      { code: 'hate', label: 'Hateful or racist image' },
+      { code: 'other', label: 'Other abuse or rule-breaking' }
+    ];
+    var first = null;
+    opts.forEach(function (o, i) { var b = btn(o.label, 'conv-modal-submit', o.code); if (!i) first = b; });
+    btn('Cancel', 'conv-guest-btn', null);
+    more.className = 'conv-modal-note';
+    a.href = 'report.html';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = 'How reports work, and how to send a removal request';
+    more.appendChild(a);
+    box.appendChild(more);
+    ov.addEventListener('click', function (e) { if (e && e.target === ov) close(null); });
+    document.addEventListener('keydown', onKey, true);
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    try { if (first) first.focus(); } catch (e) {}
   }
   function commitAutoHideReport(postId, targetUid, storyId, reason, fallbackAdd) {
     var me = liveUid(), rRef = fbDb.collection('reports').doc(), ts = firebase.firestore.FieldValue.serverTimestamp();
@@ -626,7 +675,8 @@ src = ed(src, "  function isAdminUser() {\n    return liveUid() === ADMIN_UID;\n
     if (typeof renderStoriesTray === 'function') renderStoriesTray();
     var b = fbDb.batch();
     b.set(rRef, rDoc);
-    b.set(fbDb.collection('hides').doc(SITE_ID + '_' + postId), { siteId: SITE_ID, postId: postId, reportId: rRef.id, reporterUid: me, reason: reason, hiddenAt: ts });
+    b.set(fbDb.collection('hides').doc(SITE_ID + '_' + postId), { siteId: SITE_ID, postId: postId, reportId: rRef.id, reporterUid: me, createdAt: ts });
+    b.set(fbDb.collection('rateLimits').doc(me), { lastHideAt: ts }, { merge: true });
     return b.commit().catch(function (e) {
       if (isPermDenied(e) && fallbackAdd) return fallbackAdd();
       throw e;
@@ -655,9 +705,8 @@ src = ed(src, "  function reportPost(id) {\n    if (!requireVerified('report')) 
     var post = findPost(id);
     if (!post || !fbDb || isSessionSeedPost(post)) return;
     if (alreadyReported(id)) { toast('You already reported this post.'); return; }
-    var reason = optReason || pickReportReason();
-    if (!reason) return;
-    var me = liveUid();
+    if (!optReason) { pickReportReason(function (r) { if (r) reportPost(id, r); }); return; }
+    var reason = optReason, me = liveUid();
     var addOnly = function () {
       return fbDb.collection('reports').add({
         siteId: SITE_ID,
@@ -669,7 +718,7 @@ src = ed(src, "  function reportPost(id) {\n    if (!requireVerified('report')) 
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     };
-    var op = (HIDE_REASONS[reason] || isAdminUser()) ? commitAutoHideReport(id, post.authorUid || '', '', reason, addOnly) : addOnly();
+    var op = HIDE_REASONS[reason] ? commitAutoHideReport(id, post.authorUid || '', '', reason, addOnly) : addOnly();
     op.then(function () {
       markReported(id);
       toast(HIDE_REASONS[reason] ? 'Reported and hidden pending review.' : 'Reported. Thanks.');
@@ -683,9 +732,8 @@ src = ed(src, "  function reportStory(id) {\n    if (!requireVerified('report'))
     if (!requireVerified('report')) return;
     var story = findStory(id);
     if (!story || !fbDb) return;
-    var reason = optReason || pickReportReason();
-    if (!reason) return;
-    var me = liveUid(), pid = 'story:' + id;
+    if (!optReason) { pickReportReason(function (r) { if (r) reportStory(id, r); }); return; }
+    var reason = optReason, me = liveUid(), pid = 'story:' + id;
     var addOnly = function () {
       return fbDb.collection('reports').add({
         siteId: SITE_ID,
@@ -698,7 +746,7 @@ src = ed(src, "  function reportStory(id) {\n    if (!requireVerified('report'))
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     };
-    var op = (HIDE_REASONS[reason] || isAdminUser()) ? commitAutoHideReport(pid, story.authorUid || '', id, reason, addOnly) : addOnly();
+    var op = HIDE_REASONS[reason] ? commitAutoHideReport(pid, story.authorUid || '', id, reason, addOnly) : addOnly();
     op.then(function () {
       toast(HIDE_REASONS[reason] ? 'Reported and hidden pending review.' : 'Reported. Thanks.');
       writeReportAlert({ id: pid, text: story.text || '' }, me, reason);
@@ -739,7 +787,7 @@ src = ed(src, "    el.innerHTML = rows.map(function (r) {\n      var post = find
       var isHid = !!(hiddenIds[r.postId] || HIDE_REASONS[r.reason]);
       var post = isHid ? null : findPost(r.postId);
       var snippet = isHid ? ('[Hidden — ' + (r.reason || 'reported') + ' · ' + r.postId + ']') :
-        ((post && post.text) ? String(post.text).replace(/\\s+/g, ' ').trim().slice(0, 180) : '(post unavailable)');
+        ((post && post.text) ? String(post.text).replace(/\\s+/g, ' ').trim().slice(0, 180) : '(post not loaded)');
       var count = reporterCount(r.postId);
       return '<div class="notif-item"' + (isHid ? ' style="opacity:0.65"' : '') + '>' +
         '<p>' + escapeHtml(snippet) + '</p>' +
@@ -780,7 +828,7 @@ src = ed(src, "  function reportTriage(r) {\n    var b = function (st, label) {\
       if (!r.postId) return;
       hiddenIds[r.postId] = true;
       b.set(fbDb.collection('hides').doc(SITE_ID + '_' + r.postId), {
-        siteId: SITE_ID, postId: r.postId, reportId: r.id, reporterUid: me, reason: r.reason || 'ncii', hiddenAt: ts
+        siteId: SITE_ID, postId: r.postId, reportId: r.id, reporterUid: me, reason: r.reason || 'ncii', createdAt: ts
       });
     });
     renderFeed();
@@ -801,11 +849,17 @@ src = ed(src, "  function reportTriage(r) {\n    var b = function (st, label) {\
 src = ed(src, "      if (t.closest('[data-myreports]')) { e.preventDefault(); openMyReports(); return; }\n",
   "      var rb = t.closest('[data-report-restore]');\n      if (rb) { restoreHiddenReport(rb.getAttribute('data-report-restore'), rb.getAttribute('data-report-id')); return; }\n      if (t.closest('[data-mass-hide]')) { adminMassHide(t.closest('[data-mass-hide]').getAttribute('data-mass-hide')); return; }\n      if (t.closest('[data-myreports]')) { e.preventDefault(); openMyReports(); return; }\n")
 # Lean CSS whitespace trim for core byte budget (255,000 B):
-for css_fn in ['ensureRailCss', 'ensurePreviewLiftCss', 'ensureDmCss', 'ensureEarlyWelcomeCss', 'ensureJoinAuthCss', 'ensureShareSheet', 'ensureStoriesComposer', 'ensureStoriesViewer', 'ensureStoriesTray', 'paintStoryViewer', 'renderStoriesTray', 'initStories', 'openDisplayNamePrompt', 'renderSidebarAuth', 'renderThreads', 'ensureNestNav']:
-    m = re.search(r'  function ' + css_fn + r'\(\) \{[\s\S]*?\n  \}\n', src)
+for css_fn in ['ensureRailCss', 'ensurePreviewLiftCss', 'ensureDmCss', 'ensureEarlyWelcomeCss', 'ensureJoinAuthCss', 'ensureShareSheet', 'ensureStoriesComposer', 'ensureStoriesViewer', 'ensureStoriesTray', 'paintStoryViewer', 'renderStoriesTray', 'initStories', 'openDisplayNamePrompt', 'renderSidebarAuth', 'renderThreads', 'ensureNestNav', 'renderPostMedia', 'renderPost', 'renderTrendCard', 'factCardHtml', 'porchCardHtml', 'showRailOverlay', 'renderExplore', 'renderNotifs', 'openAdminPicker', 'fillExploreNests', 'ensureReportsPanel']:
+    m = re.search(r'  function ' + css_fn + r'\([^)]*\) \{[\s\S]*?\n  \}\n', src)
     assert m, css_fn
     blk = m.group(0)
     blk2 = re.sub(r"' \+\n\s+'", "", blk)
+    src = src.replace(blk, blk2, 1)
+for ind_fn in ['wireEvents', 'wireComposeToolbar', 'sendDm', 'ensureShareSheet', 'ensureStoriesComposer', 'paintStoryViewer']:
+    m = re.search(r'  (?:async )?function ' + ind_fn + r'\([^)]*\) \{[\s\S]*?\n  \}\n', src)
+    assert m, ind_fn
+    blk = m.group(0)
+    blk2 = re.sub(r'\n    ', '\n   ', blk)
     src = src.replace(blk, blk2, 1)
 src = banner + src
 open('factory.js', 'w').write(src)

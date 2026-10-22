@@ -431,10 +431,17 @@ service cloud.firestore {
     // batch as a /reports/{reportId} doc whose reason is in ['ncii', 'copyright', 'violent_offensive', 'hate', 'impersonation', 'csam'].
     // ONLY Jebb (isAdmin, uid o774wL9hUVSi19EkDCgLqQomP8i2) can restore by deleting the hide doc.
     match /hides/{hideId} {
+      function hideTargetExists(d) {
+        return !d.postId.matches('^uid:.*')
+          && (d.postId.matches('^story:.*')
+            ? exists(/databases/$(database)/documents/stories/$(d.postId[6:]))
+            : exists(/databases/$(database)/documents/posts/$(d.postId)));
+      }
       function hideReportOk(d) {
         return d.reportId is string
           && d.reportId.size() > 0
           && d.reportId.size() <= 120
+          && hideTargetExists(d)
           && existsAfter(/databases/$(database)/documents/reports/$(d.reportId))
           && getAfter(/databases/$(database)/documents/reports/$(d.reportId)).data.reporterUid == request.auth.uid
           && getAfter(/databases/$(database)/documents/reports/$(d.reportId)).data.siteId == d.siteId
@@ -442,9 +449,8 @@ service cloud.firestore {
           && getAfter(/databases/$(database)/documents/reports/$(d.reportId)).data.reason in ['ncii', 'copyright', 'violent_offensive', 'hate', 'impersonation', 'csam'];
       }
       function hideRateOk() {
-        return !existsAfter(rlPath())
-          || !getAfter(rlPath()).data.keys().hasAny(['lastHideAt'])
-          || getAfter(rlPath()).data.lastHideAt == request.time;
+        return existsAfter(rlPath())
+          && getAfter(rlPath()).data.lastHideAt == request.time;
       }
       allow read: if true;
       allow create: if (isAdmin() || emailVerified())
@@ -512,10 +518,12 @@ service cloud.firestore {
         return after.lastHideAt == request.time
           && (!before.keys().hasAny(['lastHideAt'])
               || request.time > before.lastHideAt + duration.value(60, 's'))
-          && after.hideDay == request.time.date()
-          && ((before.keys().hasAny(['hideDay']) && before.hideDay == request.time.date())
-                ? (after.hideDayCount == before.hideDayCount + 1 && after.hideDayCount <= 5)
-                : after.hideDayCount == 1);
+          && (!after.keys().hasAny(['hideDay', 'hideDayCount']) || (
+            after.hideDay == request.time.date()
+            && ((before.keys().hasAny(['hideDay']) && before.hideDay == request.time.date())
+                  ? (after.hideDayCount == before.hideDayCount + 1 && after.hideDayCount <= 5)
+                  : after.hideDayCount == 1)
+          ));
       }
       function burstOk(before, after) {
         return (before.keys().hasAll(['burstStart', 'burstCount'])

@@ -1,4 +1,4 @@
-// node test/autohide.test.js — auto-hide on report + greyed-out report rows + admin-only restore.
+// node test/autohide.test.js — auto-hide on report + DOM reason chooser + atomic 3-write batch + greyed-out report rows + admin-only restore.
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert';
@@ -22,40 +22,80 @@ assert.ok(
   'HIDE_REASONS must include ncii, copyright, violent_offensive, hate, impersonation, csam'
 );
 
-// 2. Verify pickReportReason maps 1-5 and passes through string reasons
+// 2. Verify pickReportReason(done) renders accessible DOM modal (no window.prompt) with 5 reason buttons + Cancel + report.html link
 {
-  let promptReply = '1';
-  const ctx = {
-    HIDE_REASONS: { ncii: 1, copyright: 1, violent_offensive: 1, hate: 1, impersonation: 1, csam: 1 },
-    window: { prompt: () => promptReply }
+  let modalEl = null;
+  const fakeDoc = {
+    createElement: (tag) => {
+      const el = {
+        tag,
+        id: '',
+        className: '',
+        type: '',
+        href: '',
+        target: '',
+        rel: '',
+        textContent: '',
+        innerHTML: '',
+        style: {},
+        attrs: {},
+        children: [],
+        parentNode: null,
+        _click: null,
+        setAttribute(k, v) { this.attrs[k] = v; },
+        getAttribute(k) { return this.attrs[k]; },
+        appendChild(ch) { ch.parentNode = this; this.children.push(ch); return ch; },
+        removeChild(ch) { this.children = this.children.filter((x) => x !== ch); if (ch === modalEl) modalEl = null; },
+        addEventListener(ev, fn) { if (ev === 'click') this._click = fn; },
+        focus() {},
+        findBtn(pred) {
+          for (const ch of this.children) {
+            if (pred(ch)) return ch;
+            const f = ch.findBtn && ch.findBtn(pred);
+            if (f) return f;
+          }
+          return null;
+        }
+      };
+      return el;
+    },
+    addEventListener() {},
+    removeEventListener() {},
+    body: {
+      appendChild(el) { el.parentNode = this; modalEl = el; return el; },
+      removeChild(el) { if (el === modalEl) modalEl = null; }
+    }
   };
+  const ctx = { document: fakeDoc };
   vm.createContext(ctx);
   vm.runInContext(fnSrc(core, 'pickReportReason'), ctx);
 
-  const expectedMap = {
-    '1': 'ncii',
-    '2': 'copyright',
-    '3': 'violent_offensive',
-    '4': 'hate',
-    '5': 'abuse',
-    'ncii': 'ncii',
-    'copyright': 'copyright',
-    'violent_offensive': 'violent_offensive',
-    'hate': 'hate',
-    'impersonation': 'impersonation',
-    'csam': 'csam',
-    'abuse': 'abuse',
-    'unknown': 'ncii'
-  };
-  for (const [input, expected] of Object.entries(expectedMap)) {
-    promptReply = input;
-    assert.strictEqual(ctx.pickReportReason(), expected, 'input ' + input);
+  for (const reason of ['ncii', 'copyright', 'violent_offensive', 'hate', 'other']) {
+    let chosen = 'unset';
+    ctx.pickReportReason((r) => { chosen = r; });
+    assert.ok(modalEl, 'modal mounted for ' + reason);
+    assert.strictEqual(modalEl.attrs.role, 'dialog');
+    const btn = modalEl.findBtn((el) => el.attrs && el.attrs['data-reason'] === reason);
+    assert.ok(btn, 'button present for ' + reason);
+    const link = modalEl.findBtn((el) => el.href === 'report.html');
+    assert.ok(link, 'formal report.html link present');
+    btn._click();
+    assert.strictEqual(chosen, reason, 'callback received ' + reason);
+    assert.strictEqual(modalEl, null, 'modal removed after selection');
   }
-  promptReply = null;
-  assert.strictEqual(ctx.pickReportReason(), '', 'cancelled prompt returns empty string');
+
+  // Cancel button returns null and closes modal without reporting
+  let cancelledVal = 'unset';
+  ctx.pickReportReason((r) => { cancelledVal = r; });
+  assert.ok(modalEl, 'modal mounted before cancel');
+  const cancelBtn = modalEl.findBtn((el) => el.textContent === 'Cancel');
+  assert.ok(cancelBtn, 'Cancel button present');
+  cancelBtn._click();
+  assert.strictEqual(cancelledVal, null, 'Cancel passes null');
+  assert.strictEqual(modalEl, null, 'modal removed on cancel');
 }
 
-// 3. Verify reportPost + commitAutoHideReport writes reports + hides in a batch for hide-eligible reasons, and falls back to reports-only on permission-denied
+// 3. Verify reportPost + commitAutoHideReport writes reports + hides + rateLimits in a 3-write batch for hide-eligible reasons
 {
   const batches = [];
   const standaloneReports = [];
@@ -63,6 +103,7 @@ assert.ok(
   const alerts = [];
   let batchShouldRejectWith = null;
   let currentUid = 'uReporter';
+  let modalPick = 'ncii';
 
   const makeFakeDb = () => ({
     collection: (c) => ({
@@ -78,7 +119,7 @@ assert.ok(
     batch: () => {
       const ops = [];
       return {
-        set: (ref, payload) => { ops.push([ref._path, payload]); },
+        set: (ref, payload, opts) => { ops.push([ref._path, payload, opts || null]); },
         commit: () => {
           batches.push(ops);
           if (batchShouldRejectWith) return Promise.reject(batchShouldRejectWith);
@@ -97,7 +138,7 @@ assert.ok(
     firebase: { firestore: { FieldValue: { serverTimestamp: () => 'TS' } } },
     requireVerified: () => true,
     liveUid: () => currentUid,
-    pickReportReason: () => 'ncii',
+    pickReportReason: (done) => done(modalPick),
     findPost: (id) => (id === 'p100' ? { id: 'p100', authorUid: 'uAuthor', text: 'secret text' } : null),
     isSessionSeedPost: () => false,
     alreadyReported: () => false,
@@ -119,7 +160,7 @@ assert.ok(
     ctx
   );
 
-  // 3a. Hide-eligible reasons ('ncii', 'copyright', 'violent_offensive', 'hate', 'impersonation', 'csam') write both reports/{id} and hides/gpchat_p100
+  // 3a. Hide-eligible reasons ('ncii', 'copyright', 'violent_offensive', 'hate', 'impersonation', 'csam') write reports/{id}, hides/gpchat_p100 (createdAt: ts, no reason, no hiddenAt), and rateLimits/{me}
   for (const hr of ['ncii', 'copyright', 'violent_offensive', 'hate', 'impersonation', 'csam']) {
     ctx.hiddenIds = {};
     batches.length = 0;
@@ -129,27 +170,35 @@ assert.ok(
     await new Promise((r) => setImmediate(r));
     assert.strictEqual(ctx.hiddenIds.p100, true, 'immediately hidden locally for ' + hr);
     assert.strictEqual(batches.length, 1, 'batch committed for ' + hr);
-    assert.strictEqual(batches[0].length, 2, 'batch has 2 writes (report + hide) for ' + hr);
+    assert.strictEqual(batches[0].length, 3, 'batch has 3 writes (report + hide + rateLimits) for ' + hr);
     assert.strictEqual(batches[0][0][0], 'reports/genReportId');
     assert.strictEqual(batches[0][0][1].reason, hr);
     assert.strictEqual(batches[0][1][0], 'hides/gpchat_p100');
-    assert.strictEqual(batches[0][1][1].reason, hr);
-    assert.strictEqual(batches[0][1][1].reportId, 'genReportId');
+    assert.deepStrictEqual(
+      JSON.parse(JSON.stringify(batches[0][1][1])),
+      { siteId: 'gpchat', postId: 'p100', reportId: 'genReportId', reporterUid: 'uReporter', createdAt: 'TS' },
+      'exact /hides payload with createdAt: ts and no reason/hiddenAt for ' + hr
+    );
+    assert.strictEqual(batches[0][2][0], 'rateLimits/uReporter');
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(batches[0][2][1])), { lastHideAt: 'TS' });
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(batches[0][2][2])), { merge: true });
     assert.ok(toasts[0].includes('hidden pending review'), 'toast confirms hidden for ' + hr);
   }
 
-  // 3b. Non-hide reason ('abuse') writes only reports collection and does NOT auto-hide for non-admin
-  ctx.hiddenIds = {};
-  batches.length = 0;
-  standaloneReports.length = 0;
-  toasts.length = 0;
-  ctx.reportPost('p100', 'abuse');
-  await new Promise((r) => setImmediate(r));
-  assert.strictEqual(Boolean(ctx.hiddenIds.p100), false, 'abuse does not auto-hide');
-  assert.strictEqual(batches.length, 0, 'no batch hide write for abuse');
-  assert.strictEqual(standaloneReports.length, 1, 'standalone report added for abuse');
-  assert.strictEqual(standaloneReports[0][1].reason, 'abuse');
-  assert.strictEqual(toasts[0], 'Reported. Thanks.');
+  // 3b. Non-hide reasons ('other', 'abuse') write only reports collection and do NOT auto-hide for non-admin
+  for (const nr of ['other', 'abuse']) {
+    ctx.hiddenIds = {};
+    batches.length = 0;
+    standaloneReports.length = 0;
+    toasts.length = 0;
+    ctx.reportPost('p100', nr);
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(Boolean(ctx.hiddenIds.p100), false, nr + ' does not auto-hide');
+    assert.strictEqual(batches.length, 0, 'no batch hide write for ' + nr);
+    assert.strictEqual(standaloneReports.length, 1, 'standalone report added for ' + nr);
+    assert.strictEqual(standaloneReports[0][1].reason, nr);
+    assert.strictEqual(toasts[0], 'Reported. Thanks.');
+  }
 
   // 3c. Fallback when hides rules are not yet live (batch rejects with permission-denied -> falls back to standalone report add)
   ctx.hiddenIds = {};
@@ -210,7 +259,7 @@ assert.ok(
   assert.strictEqual(ctx.isStoryHidden({ id: 'sOk', authorUid: 'u1' }), false, 'isStoryHidden allows visible story');
 }
 
-// 5. Verify greyed-out report rows (no text snippet shown) and admin-only Restore in factory-reports.js
+// 5. Verify greyed-out report rows (no text snippet shown) and admin-only Restore + adminMassHide in factory-reports.js
 {
   let listHtml = '';
   const ctx = {
@@ -243,7 +292,10 @@ assert.ok(
   assert.ok(listHtml.includes('style="opacity:0.65"'), 'hidden report row is greyed out');
   assert.ok(listHtml.includes('SENSITIVE TEXT THAT MUST NEVER RENDER FOR HIDDEN POSTS (p2)'), 'non-hidden abuse report still shows snippet');
 
-  // Verify factory-reports.js plugin includes Restore button and enforces admin-only restore
+  // Verify factory-reports.js plugin includes Restore button, enforces admin-only restore, and uses createdAt in adminMassHide
+  assert.ok(reportsPlug.includes('createdAt: ts'), 'factory-reports.js adminMassHide uses createdAt: ts');
+  assert.ok(!reportsPlug.includes('hiddenAt'), 'factory-reports.js does not use hiddenAt');
+
   let clickHandler = null;
   const deletedDocs = [];
   const updatedReports = [];
@@ -306,4 +358,4 @@ assert.ok(
   assert.strictEqual(updatedReports[0][1].resolution, 'Restored by admin');
 }
 
-console.log('autohide: reason picker (6 auto-hide + abuse), atomic batch + fallback, multi-surface filtering, greyed-out report rows, admin-only restore ok');
+console.log('autohide: DOM reason chooser (4 auto-hide + other + cancel), 3-write atomic batch (reports + hides + rateLimits) + fallback, multi-surface filtering, greyed-out report rows, admin-only restore ok');

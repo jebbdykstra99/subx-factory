@@ -1,94 +1,58 @@
 rules_version = '2';
-
-//SubX Factory — Firebase Storage Security Rules (AUTOHIDE-ON-REPORT DRAFT, 2026-10-22)
-//Project: subx-skins (shared across all rooms)
-//Base: live storage.live.rules (verified 2026-10-22) + cross-service firestore.exists() hide check.
-//
-//IMPORTANT — WHY DOWNLOAD-TOKEN URLS STILL RESOLVE UNTIL TOKEN ROTATION:
-//  1. Firebase Storage `allow read` rules govern requests through the Firebase Storage SDK (`getDownloadURL()`,
-//     `getBlob()`, `getBytes()`) and un-tokened REST requests (`GET /v0/b/<bucket>/o/<object>?alt=media`).
-//  2. However, `post.imageUrl` and `story.mediaUrl` stored in Firestore are `getDownloadURL()` URLs containing
-//     `?alt=media&token=<firebaseStorageDownloadTokens UUID>`. In Google Cloud / Firebase Storage, presenting a
-//     valid download token in the query string BYPASSES Storage Security Rules at the edge and serves the object
-//     directly (and CDN/browser caches may hold it for `Cache-Control` duration).
-//  3. Therefore, stopping image rendering requires TWO layers:
-//     - Layer A (Instant, v1 free-tier, 0 Cloud Functions): Every client subscribes to `/hides` and strips hidden
-//       posts/stories before `renderPostMedia` / `renderPost` / `sharePost` / `paintStoryViewer` ever emit an
-//       `<img src>` or `<video src>` tag. And `/posts/{postId}` single-doc `get` is denied in Firestore rules so
-//       no uncached client can fetch the `imageUrl` token of a hidden post.
-//     - Layer B (Token revocation for someone who already copied the raw `firebasestorage.googleapis.com` URL):
-//       Delete or rotate the object's `metadata.firebaseStorageDownloadTokens` via Admin SDK (in `hide_content.cjs`
-//       or the `report-alert` Cloud Function's `revokeHiddenPostMediaToken` helper). Once `firebaseStorageDownloadTokens`
-//       is cleared/rotated on the GCS object, the old `?token=...` URL immediately returns HTTP 403 Forbidden, and
-//       any new `getDownloadURL()` call is blocked by the `firestore.exists(.../hides/...)` rule below!
-//
-//NOTE ON PATH NAMING FOR `firestore.exists()`:
-//  Current client uploads write to `posts/{siteId}/{uid}/{ts}_{rand}.{ext}` (filename is NOT `postId`).
-//  Therefore, path-level `firestore.exists` on `/posts/{siteId}/{uid}/{fileName}` can check a hide marker keyed by
-//  `{siteId}_{fileName}` when future uploads name the object `{postId}.{ext}`, OR check an author-level suspension/hide
-//  marker `/hides/{siteId}_uid:{uid}`. Both checks are included below.
-
 service firebase.storage {
   match /b/{bucket}/o {
-
-    function signedIn() {
-      return request.auth != null;
+    // siteIds = each room's site.json "siteId" (the factory.js upload path is posts/<siteId>/<uid>/...).
+    // 2026-10-09 draft: + 311chat and the four wave-four rooms (airlineschat, amachat, atmchat,
+    // behindtheblackwall), which were missing, so image/story uploads there were denied.
+    // Same size/type limits as every other room (posts: image/*, < 5 MB; stories: image/* or mp4/webm, < 8 MB).
+    function factorySiteId(siteId) {
+      return siteId in [
+        'samochat', 'bartchat', '415chat', 'gpchat', '27chat', '808chat',
+        'buffettchat', 'gaichat', 'popechat', 'recruitchat',
+        'booze', 'buffet', 'boyfriend', 'cia', 'cobra',
+        '311chat', 'airlineschat', 'amachat', 'atmchat', 'behindtheblackwall'
+      ];
     }
-    function emailVerified() {
-      return signedIn() && request.auth.token.email_verified == true;
-    }
-    function isAdmin() {
-      return signedIn() && request.auth.uid == 'o774wL9hUVSi19EkDCgLqQomP8i2';
-    }
-    function isImage() {
-      return request.resource.contentType.matches('image/(jpeg|png|webp|gif)');
-    }
-    function isStoryMedia() {
-      return request.resource.contentType.matches('image/(jpeg|png|webp|gif)')
-        || request.resource.contentType.matches('video/(mp4|webm|quicktime)');
-    }
-    // GPCHAT LIFT U3 (2026-10-18): no user uploads or stories in gpchat.
+    // 2026-10-12 (Jebb-approved): rooms with uploads OFF. gpchat: no member photo/story uploads
+    // (site.json imageUploads false, stories off). Read and own-file delete still work.
+    // 2026-10-22: 3-room upload pause ('311chat', 'booze', 'popechat') enforced server-side alongside 'gpchat'.
+    // Note on hidden media: Firebase Storage rules cannot inspect a post's reportId/hide state when a
+    // download-token URL is fetched, so media URL revocation on hide/takedown is handled by revoking
+    // metadata.firebaseStorageDownloadTokens via Admin SDK (hide_content.cjs --revoke-token --object-path <path>).
     function uploadsAllowed(siteId) {
-      return !(siteId in ['gpchat']);
+      return factorySiteId(siteId) && !(siteId in ['gpchat', '311chat', 'booze', 'popechat']);
     }
-    // AUTOHIDE-ON-REPORT (2026-10-22): block SDK/un-tokened reads when a hide marker exists for the object name or author.
-    function notHiddenObject(siteId, uid, fileName) {
-      return isAdmin() || (
-        !firestore.exists(/databases/(default)/documents/hides/$(siteId + '_' + fileName))
-        && !firestore.exists(/databases/(default)/documents/hides/$(siteId + '_uid:' + uid))
-      );
+    function uploadSiteId(siteId) {
+      return uploadsAllowed(siteId);
     }
 
-    // Post images: 5 MB max, owner path, verified email, room allows uploads
-    match /posts/{siteId}/{uid}/{fileName} {
-      allow read: if notHiddenObject(siteId, uid, fileName);
-      allow create, update: if emailVerified()
+    match /posts/{siteId}/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.token.email_verified == true
         && request.auth.uid == uid
-        && uploadsAllowed(siteId)
-        && isImage()
+        && uploadSiteId(siteId)
+        && request.resource.contentType.matches('image/.*')
         && request.resource.size < 5 * 1024 * 1024;
-      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow delete: if request.auth != null
+        && request.auth.uid == uid
+        && factorySiteId(siteId);
     }
 
-    // Story media: 15 MB max (image or short video), owner path, verified email, room allows uploads
-    match /stories/{siteId}/{uid}/{fileName} {
-      allow read: if notHiddenObject(siteId, uid, fileName);
-      allow create, update: if emailVerified()
-        && request.auth.uid == uid
-        && uploadsAllowed(siteId)
-        && isStoryMedia()
-        && request.resource.size < 15 * 1024 * 1024;
-      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid);
-    }
-
-    // Avatars: 2 MB max, owner path, verified email
-    match /avatars/{siteId}/{uid}/{fileName} {
-      allow read: if notHiddenObject(siteId, uid, fileName);
-      allow create, update: if emailVerified()
-        && request.auth.uid == uid
-        && isImage()
-        && request.resource.size < 2 * 1024 * 1024;
-      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid);
+    match /stories/{siteId}/{userId}/{fileName} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && uploadSiteId(siteId)
+        && request.resource.size < 8 * 1024 * 1024
+        && (
+          request.resource.contentType.matches('image/.*')
+          || request.resource.contentType == 'video/mp4'
+          || request.resource.contentType == 'video/webm'
+        );
+      allow delete: if request.auth != null
+        && request.auth.uid == userId
+        && factorySiteId(siteId);
     }
   }
 }

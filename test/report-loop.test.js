@@ -24,6 +24,7 @@ assert.ok(core.includes("return r.status !== 'dismissed' && r.status !== 'action
 assert.ok(core.includes("    syncMyReports();\n    var nav = document.querySelector('#sidebar nav ul');\n    var link = document.getElementById('nav-reports');"), 'My reports synced with the admin entry');
 assert.ok(core.includes("'reports-overlay', 'myreports-overlay'].forEach("), 'My reports overlay closes with the others');
 assert.ok(core.includes('        reportTriage(r) +\n'), 'admin row uses reportTriage');
+assert.ok(core.includes("'(post not loaded)'"), 'core renderReports fallback uses (post not loaded)');
 assert.ok(Buffer.byteLength(core) <= 255000, 'core budget');
 
 // ---- fake DOM
@@ -60,7 +61,7 @@ const click = (attrs) => clickHandler({ target: target(attrs), preventDefault() 
 // ---- fake core + Firestore
 const updates = [], notifs = [], toasts = [], queries = [];
 let promptAnswer = '';
-let me = ADMIN, live = true;
+let me = ADMIN, live = true, notifOk = true;
 let reportDocs = [];
 const fbDb = { collection: (c) => {
   const q = { wh: [], where(f, op, v) { this.wh.push([f, op, v]); return this; },
@@ -72,7 +73,7 @@ const coreApi = {
   liveUid: () => me, isLiveUser: () => live, escapeHtml: (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
   closeSocialOverlays: () => {}, findPost: (id) => (id === 'p1' ? { text: 'spam   post' } : null),
   notifWhen: (ms) => (ms ? '2h' : ''), tsMillis: (t) => (t && t.ms) || 0, toast: (m) => toasts.push(m),
-  sendNotif: (to, type, postId, text) => notifs.push({ to, type, postId, text }),
+  sendNotif: (to, type, postId, text, id) => { notifs.push({ to, type, postId, text, id }); return Promise.resolve(notifOk); },
   get ADMIN_UID() { return ADMIN; }, get SITE_ID() { return 'airlineschat'; }, get fbDb() { return fbDb; }
 };
 const win = { prompt: () => promptAnswer };
@@ -95,7 +96,7 @@ api.syncMyReports();
 assert.ok(clickHandler, 'listener wired');
 assert.strictEqual(navUl.children.length, 0);
 
-// actioned with a note -> audit fields, resolution, report_update notif to the reporter
+// actioned with a note -> audit fields, resolution, report_update notif to the reporter (L1 copy + L3 deterministic id)
 promptAnswer = '  Removed   the post.  ';
 click({ 'data-report-status': 'actioned', 'data-report-id': 'r1', 'data-report-uid': 'uR' });
 await new Promise((r) => setImmediate(r));
@@ -104,14 +105,30 @@ const p = updates[0][1];
 assert.strictEqual(p.status, 'actioned'); assert.strictEqual(p.reviewedBy, ADMIN); assert.strictEqual(p.reviewedAt, 'TS');
 assert.strictEqual(p.resolution, 'Removed the post.');
 assert.deepStrictEqual(Object.keys(p.history.arrayUnion).sort(), ['by', 'ms', 'status']);
-assert.deepStrictEqual(notifs[0], { to: 'uR', type: 'report_update', postId: '', text: 'We reviewed your report and took action. Removed the post.' });
-assert.ok(toasts[0] === 'Report: Action taken');
+assert.deepStrictEqual(notifs[0], {
+  to: 'uR',
+  type: 'report_update',
+  postId: '',
+  text: 'We reviewed and took action on your report. Removed the post.',
+  id: 'report_update_r1_actioned'
+});
+assert.strictEqual(toasts[0], 'Report: Action taken');
+
+// L4: when notification write fails, do NOT claim reporter was notified
+notifOk = false;
+promptAnswer = '';
+click({ 'data-report-status': 'dismissed', 'data-report-id': 'r1b', 'data-report-uid': 'uR' });
+await new Promise((r) => setImmediate(r));
+assert.strictEqual(toasts[1], 'Report updated; notification could not be sent.');
+notifOk = true;
+
 // reviewing: no prompt, no resolution
 win.prompt = () => { throw new Error('no prompt for reviewing'); };
 click({ 'data-report-status': 'reviewing', 'data-report-id': 'r2', 'data-report-uid': 'uR' });
 await new Promise((r) => setImmediate(r));
-assert.strictEqual(updates[1][1].status, 'reviewing'); assert.ok(!('resolution' in updates[1][1]));
-assert.strictEqual(notifs[1].text, 'Your report is under review.');
+assert.strictEqual(updates[2][1].status, 'reviewing'); assert.ok(!('resolution' in updates[2][1]));
+assert.strictEqual(notifs[2].text, 'Your report is under review.');
+assert.strictEqual(notifs[2].id, 'report_update_r2_reviewing');
 win.prompt = () => promptAnswer;
 // prompt cancelled -> nothing; bogus status -> nothing; 'open' -> nothing; non-admin -> nothing
 promptAnswer = null;
@@ -122,7 +139,7 @@ click({ 'data-report-status': 'open', 'data-report-id': 'r3', 'data-report-uid':
 me = 'uR';
 click({ 'data-report-status': 'dismissed', 'data-report-id': 'r3', 'data-report-uid': 'uR' });
 await new Promise((r) => setImmediate(r));
-assert.strictEqual(updates.length, 2); assert.strictEqual(notifs.length, 2);
+assert.strictEqual(updates.length, 3); assert.strictEqual(notifs.length, 3);
 // notif text always fits sendNotif (180) and the rules (280)
 assert.ok('We reviewed your report. No action was needed. '.length + 120 <= 180);
 
@@ -140,7 +157,7 @@ click({ 'data-myreports': '1' });
 await new Promise((r) => setImmediate(r));
 assert.deepStrictEqual(queries[0], ['reports', [['siteId', '==', 'airlineschat'], ['reporterUid', '==', 'uR']]]);
 const html = els['myreports-list'].innerHTML;
-assert.ok(html.indexOf('(post no longer shown)') < html.indexOf('spam post'), 'newest first');
+assert.ok(html.indexOf('(post not loaded)') < html.indexOf('spam post'), 'newest first + L2 (post not loaded) fallback');
 assert.ok(html.includes('<strong>Received</strong>') && html.includes('<strong>Action taken</strong>') && html.includes('Removed &lt;spam&gt;'));
 // a report_update notif opens My reports
 click({ 'data-notif-type': 'report_update', 'data-notif-id': 'n1' });
@@ -150,13 +167,26 @@ assert.strictEqual(queries.length, 2);
 live = false; api.syncMyReports();
 assert.strictEqual(navUl.children.length, 0);
 
-// report_update payload fits the NOTIFS_REPORTS paste (hasOnly keys) and the live rule (type <= 20)
-const sctx = { fbDb: { collection: () => ({ doc: () => ({ collection: () => ({ add: (x) => { sctx.out = x; return Promise.resolve(); } }) }) }) },
-  SITE_ID: 'airlineschat', console, firebase: { firestore: { FieldValue: { serverTimestamp: () => 'TS' } } } };
+// report_update payload fits the NOTIFS_REPORTS paste (hasOnly keys), deterministic doc id (L3), and returns boolean promise (L4)
+const sctx = {
+  fbDb: {
+    collection: () => ({
+      doc: () => ({
+        collection: () => ({
+          doc: (id) => ({ set: (x) => { sctx.docId = id; sctx.out = x; return Promise.resolve(); } }),
+          add: (x) => { sctx.out = x; return Promise.resolve(); }
+        })
+      })
+    })
+  },
+  SITE_ID: 'airlineschat', console, firebase: { firestore: { FieldValue: { serverTimestamp: () => 'TS' } } }
+};
 vm.createContext(sctx);
 vm.runInContext('function liveUid(){return "' + ADMIN + '";} function isEmailVerified(){return true;}\n' + fnSrc(core, 'sendNotif'), sctx);
-sctx.sendNotif('uR', 'report_update', '', 'We reviewed your report and took action.');
+const okRes = await sctx.sendNotif('uR', 'report_update', '', 'We reviewed and took action on your report.', 'report_update_r1_actioned');
+assert.strictEqual(okRes, true);
+assert.strictEqual(sctx.docId, 'report_update_r1_actioned');
 const allowed = ['toUid', 'fromUid', 'type', 'siteId', 'postId', 'read', 'text', 'createdAt'];
 assert.ok(Object.keys(sctx.out).every((k) => allowed.includes(k)), Object.keys(sctx.out).join());
 assert.ok('report_update'.length <= 20);
-console.log('report-loop: triage writes status/reviewedBy/reviewedAt/history(+resolution) and notifies the reporter; My reports scoped to me+room; core stubs keep v1.2.2 behavior; core ' + Buffer.byteLength(core) + ' B');
+console.log('report-loop: triage writes status/reviewedBy/reviewedAt/history(+resolution) and notifies the reporter (L1-L4); My reports scoped to me+room; core stubs keep v1.2.2 behavior; core ' + Buffer.byteLength(core) + ' B');
