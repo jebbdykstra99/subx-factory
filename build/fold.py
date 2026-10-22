@@ -267,6 +267,10 @@ src = ed(src, "  const LS_USER = '311chat.user';\n  const LS_LIKES = '311chat.li
   } catch (eLs) {}
 """)
 src = ed(src, "  let site = null;\n", "  let site = null;\n  const LS_TOPIC_FOLLOWS = 'subx.topicFollows';\n  let dmSendInFlight = false;\n  let focusedTopicId = '';\n  let watchlistPickerOpen = false;\n  let watchlistQuery = '';\n")
+# Growth console (2026-10-22): every post carries authorType so the console can tell real members from stewards.
+# Admin UID (steward seeds / AI personas) -> 'steward'; everyone else -> 'human'. Rules: only the admin may write 'steward'.
+src = ed(src, "    var msg = postGuardMessage(doc);\n    if (msg) return Promise.reject(new Error(msg));\n",
+  "    var msg = postGuardMessage(doc);\n    if (msg) return Promise.reject(new Error(msg));\n    doc.authorType = doc.authorUid === ADMIN_UID ? 'steward' : 'human';\n")
 src = ed(src, "  let SITE_ID = '311chat';", "  let SITE_ID = '';  // set from site.json siteId in boot()")
 banner = """/* SubX factory.js (subx-factory master). DO NOT EDIT IN A ROOM REPO.
  * Source: github.com/jebbdykstra99/subx-factory  (version + sha256 in the room's FACTORY.lock)
