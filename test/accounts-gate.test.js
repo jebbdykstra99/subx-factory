@@ -30,7 +30,19 @@ const guards = [
   ["google click", "if (!accountsOpen() && !document.documentElement.classList.contains('acc-stew'))"],
   ["finishGoogle", "if (u && !accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut().then("],
   ["redirect", "if (u && !accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut();"],
-  ["boot", "wireEvents();\n    applyAccountsGate();"]
+  ["boot", "wireEvents();\n    applyAccountsGate();"],
+  ["static note hidden when open", "if (n) n.style.display = o ? 'none' : '';"],
+  ["once-guard on style id", "if (o || document.getElementById('acc-gate-css')) return;"],
+  ["style id", "st.id = 'acc-gate-css';"],
+  ["no duplicate note", "if (n || !p) return;"]
 ];
 for (const [name, s] of guards) assert.strictEqual(src.split(s).length - 1, 1, 'guard missing or duplicated: ' + name);
-console.log('accounts-gate: ok (' + guards.length + ' guards, 8 cases)');
+assert.ok(!/document\.getElementById\('cv-accounts-closed'\)\) return/.test(src), 'gate must not short-circuit on the static note');
+
+// Share menu (gpchat PR #73): x.com Web Intent and neutral labels in every factory output.
+for (const f of ['factory.js', 'factory-gp.js', 'factory-rail.js']) {
+  const t = fs.readFileSync(path.join(root, 'factory', f), 'utf8');
+  for (const bad of ['twitter.com/intent/tweet', 'Post on X', 'Post on Reddit']) assert.ok(!t.includes(bad), f + ' still has ' + bad);
+}
+for (const s of ["'https://x.com/intent/post?text='", '>Share to x.com</button>', '>Share to Reddit</button>']) assert.strictEqual(src.split(s).length - 1, 1, 'share menu missing: ' + s);
+console.log('accounts-gate: ok (' + guards.length + ' guards, 8 cases, share menu)');

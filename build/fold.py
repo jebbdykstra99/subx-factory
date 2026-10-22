@@ -281,6 +281,8 @@ src = ed(src, "    if (!isFinite(n) || n < 1) return 13;\n", "    if (!isFinite(
 # Open only when site.json accountsOpen === true AND preview !== true. Closed: no Register / Google join,
 # no users/{uid} profile write, no post/story/like/vote/DM from non-admin. Admin UID keeps writing.
 # localStorage subx.steward=1 shows the Google button (admin sign-in only; any other uid is signed out).
+# Works on factory markup (note injected) and gpchat markup (static #cv-accounts-closed: hidden when open, reused when
+# closed). The once-guard is the injected style id (acc-gate-css), so a static note never skips the hiding CSS.
 src = ed(src, "  function isAdminUser() {\n    return liveUid() === ADMIN_UID;\n  }\n", """  function isAdminUser() {
     return liveUid() === ADMIN_UID;
   }
@@ -289,22 +291,24 @@ src = ed(src, "  function isAdminUser() {\n    return liveUid() === ADMIN_UID;\n
     return !!(site && site.accountsOpen === true && site.preview !== true);
   }
   function applyAccountsGate() {
-    var d = document.documentElement, stew = false;
+    var d = document.documentElement, o = accountsOpen(), stew = false, n = document.getElementById('cv-accounts-closed');
     try { stew = localStorage.getItem('subx.steward') === '1'; } catch (e) {}
-    d.classList.toggle('acc-closed', !accountsOpen());
+    d.classList.toggle('acc-closed', !o);
     d.classList.toggle('acc-stew', stew);
-    if (accountsOpen() || document.getElementById('cv-accounts-closed')) return;
+    if (n) n.style.display = o ? 'none' : '';
+    if (o || document.getElementById('acc-gate-css')) return;
     var g = document.getElementById('cv-google-age'), c = '.acc-closed:not(.acc-stew) ';
     g = g && g.closest('label');
     if (g) g.classList.add('acc-g');
     var st = document.createElement('style');
+    st.id = 'acc-gate-css';
     st.textContent = '.acc-closed [data-tab="register"],.acc-closed #cv-panel-register,.acc-closed #cv-goto-register,.acc-closed #cv-goto-join,' +
-      c + '#cv-google-login,' + c + '.acc-g,' + c + '#cv-panel-login .conv-modal-divider{display:none!important}';
+      c + '#cv-google-login,' + c + '.acc-g,' + c + '[for=cv-google-dob],' + c + '#cv-panel-login .conv-modal-divider{display:none!important}';
     document.head.appendChild(st);
     var p = document.getElementById('cv-panel-login'), t = document.getElementById('auth-title');
     if (t) t.textContent = 'Sign in to ' + (site && site.name || 'this room');
-    if (!p) return;
-    var n = document.createElement('p');
+    if (n || !p) return;
+    n = document.createElement('p');
     n.className = 'conv-modal-note';
     n.id = 'cv-accounts-closed';
     n.textContent = ACC_CLOSED;
@@ -328,5 +332,9 @@ src = ed(src, "        fbAuth.getRedirectResult().then(function (cred) {\n      
   "        fbAuth.getRedirectResult().then(function (cred) {\n          var u = cred && cred.user;\n          if (u && !accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut();\n")
 src = ed(src, "    wireEvents();\n    document.addEventListener('subx-auth-land'",
   "    wireEvents();\n    applyAccountsGate();\n    document.addEventListener('subx-auth-land'")
+# Share menu (port gpchat PR #73 @ 1638eb69, 2026-10-22): x.com Web Intent, neutral labels.
+src = ed(src, "data-share=\"x\">Post on X</button>", "data-share=\"x\">Share to x.com</button>")
+src = ed(src, "data-share=\"reddit\">Post on Reddit</button>", "data-share=\"reddit\">Share to Reddit</button>")
+src = ed(src, "'https://twitter.com/intent/tweet?text='", "'https://x.com/intent/post?text='")
 src = banner + src
 open('factory.js', 'w').write(src)

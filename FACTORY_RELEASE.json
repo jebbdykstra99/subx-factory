@@ -1,8 +1,8 @@
 {
   "version": "v1.2.0",
   "factory.js": {
-    "sha256": "5279bef4de169b202d5691592efad0a16fd32b2b3eb1fce5fbb38d0276aa8374",
-    "bytes": 254766
+    "sha256": "6b4e99332354d32fe6eeb1541e97f7cda0746e9d20b5bc00928be315eeac3f4c",
+    "bytes": 254908
   },
   "sources": {
     "template": "build/sources/template_factory_660144d1886e.js (T0 pin, nest-feed query edited in place)",

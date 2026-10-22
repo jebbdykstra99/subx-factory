@@ -2,7 +2,7 @@
 
 The single source for every SubX room's `factory.js`. Rooms stay self-contained GitHub Pages repos. This repo **stamps** them by pull request and **checks nightly** that they haven't drifted.
 
-- Release: `v1.2.0`. Core `factory/factory.js` 254,766 B (budget 255,000 B, `tools/check_budget.sh`, CI fails above it), plus two opt-in files (see `FACTORY_RELEASE.json` for sha256):
+- Release: `v1.2.0`. Core `factory/factory.js` 254,908 B (budget 255,000 B, `tools/check_budget.sh`, CI fails above it), plus two opt-in files (see `FACTORY_RELEASE.json` for sha256):
   - `factory/factory-gp.js` (31,358 B): Watchlist, topic follow, session seeds, F1/OpenF1 rail. Loaded only when site.json turns on `features.watchlist|topicFollow|sessionSeeds` or `rail.kind: f1-calendar` (gpchat only today).
   - `factory/factory-rail.js` (10,231 B): NWS forecast/alerts, NWS CWF, BART BSA live rails. Loaded only for `rail.kind nws-forecast|nws-cwf|bart-bsa` or a rail with `forecastUrl`/`lat`+`lon` (415, 808, samo, bart).
   - Opt-in files load **before** `factory.js` (`<script src="factory-gp.js?v=N"></script>`); `tools/stamp.py` adds/removes the tags and files from the stamped site.json. A room without the file runs neutral core stubs (feature-off behavior; a live rail falls back to the room's fallback cards). `build/split.mjs` generates all three from the single-file build, so `build/rebuild.sh --check` stays byte-reproducible.
@@ -36,6 +36,7 @@ Copy note: many rooms carried stale fallbacks from the 415/311 lineage (avatar "
 - `tools/stamp.py`: stamp one room clone (factory.js, `?v=` bumps, site.json merge, `FACTORY.lock`). It refuses unlisted differences.
 - `tools/dry_run.py`: stamp all 20 in temp copies and write the table (`reports/STAMP_DRYRUN.md`).
 - `tools/smoke.mjs`: headless load of stamped folders. Read-only; the pixel and Cloud Functions are blocked.
+- `test/accounts-gate.headless.mjs [room-dir ...]`: Chrome headless gate check on live gpchat markup (`test/fixtures/gpchat`, open + closed + steward) and any room dir passed. Sign-in and Firestore writes are aborted in the browser.
 - `tools/drift_check.py`: live hashes vs `FACTORY.lock` vs the release.
 - `.github/workflows/`: `ci.yml` (node --check, eslint, no `AIza`, reproducible rebuild), `drift.yml` (nightly 4:17 AM MT, read-only), `stamp.yml` (manual dispatch only; refuses to run, including room clones, until `rules_step1_live=YES`; then one PR per room on a new branch; **no force-push, never main**).
 - `rules/`: proposed Firestore (= gpchat PR #31 final) and Storage rules, baselines, emulator tests. **Not** a source of truth for what is live: `firestore.rules.proposed` is behind the live Firestore rules, and `storage.rules.proposed` matches the live Storage rules as of 2026-10-22 (#6). The live rules are whatever Jebb last hand-published in the console.

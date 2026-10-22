@@ -195,22 +195,24 @@
     return !!(site && site.accountsOpen === true && site.preview !== true);
   }
   function applyAccountsGate() {
-    var d = document.documentElement, stew = false;
+    var d = document.documentElement, o = accountsOpen(), stew = false, n = document.getElementById('cv-accounts-closed');
     try { stew = localStorage.getItem('subx.steward') === '1'; } catch (e) {}
-    d.classList.toggle('acc-closed', !accountsOpen());
+    d.classList.toggle('acc-closed', !o);
     d.classList.toggle('acc-stew', stew);
-    if (accountsOpen() || document.getElementById('cv-accounts-closed')) return;
+    if (n) n.style.display = o ? 'none' : '';
+    if (o || document.getElementById('acc-gate-css')) return;
     var g = document.getElementById('cv-google-age'), c = '.acc-closed:not(.acc-stew) ';
     g = g && g.closest('label');
     if (g) g.classList.add('acc-g');
     var st = document.createElement('style');
+    st.id = 'acc-gate-css';
     st.textContent = '.acc-closed [data-tab="register"],.acc-closed #cv-panel-register,.acc-closed #cv-goto-register,.acc-closed #cv-goto-join,' +
-      c + '#cv-google-login,' + c + '.acc-g,' + c + '#cv-panel-login .conv-modal-divider{display:none!important}';
+      c + '#cv-google-login,' + c + '.acc-g,' + c + '[for=cv-google-dob],' + c + '#cv-panel-login .conv-modal-divider{display:none!important}';
     document.head.appendChild(st);
     var p = document.getElementById('cv-panel-login'), t = document.getElementById('auth-title');
     if (t) t.textContent = 'Sign in to ' + (site && site.name || 'this room');
-    if (!p) return;
-    var n = document.createElement('p');
+    if (n || !p) return;
+    n = document.createElement('p');
     n.className = 'conv-modal-note';
     n.id = 'cv-accounts-closed';
     n.textContent = ACC_CLOSED;
@@ -1012,8 +1014,8 @@
         '<img class="share-sheet-preview" id="share-sheet-preview" alt="" hidden>' +
         '<h3>Share</h3>' +
         '<button type="button" data-share="copy">Copy link</button>' +
-        '<button type="button" data-share="x">Post on X</button>' +
-        '<button type="button" data-share="reddit">Post on Reddit</button>' +
+        '<button type="button" data-share="x">Share to x.com</button>' +
+        '<button type="button" data-share="reddit">Share to Reddit</button>' +
         '<button type="button" class="share-cancel" data-share="close">Cancel</button>' +
       '</div>';
     document.body.appendChild(ov);
@@ -1041,7 +1043,7 @@
         return;
       }
       if (act === 'x') {
-        var xUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(slice) +
+        var xUrl = 'https://x.com/intent/post?text=' + encodeURIComponent(slice) +
           '&url=' + encodeURIComponent(permalink);
         window.open(xUrl, '_blank', 'noopener,noreferrer');
         closeShareSheet();

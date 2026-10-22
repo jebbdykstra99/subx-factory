@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="ref.js?v=1"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>gpchat — Nothing but Grand Prix.</title>
+  <meta name="description" content="Fan chat for Formula 1 and Grand Prix racing. Race-weekend talk, sourced facts, labeled opinions. Not official F1. Not a news feed. Not live timing.">
+  <link rel="canonical" href="https://gpchat.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://gpchat.com/">
+  <meta property="og:title" content="gpchat — Nothing but Grand Prix.">
+  <meta property="og:description" content="Fan chat for F1 and Grand Prix racing. Race-weekend talk with sourced facts. Not official F1.">
+  <meta property="og:image" content="https://gpchat.com/og.png">
+  <meta name="twitter:image" content="https://gpchat.com/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="gpchat — Nothing but Grand Prix.">
+  <meta name="twitter:description" content="Fan chat for F1 and Grand Prix racing. Race-weekend talk with sourced facts. Not official F1.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Titillium+Web:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=18">
+  <link rel="preload" href="site.json?v=62" as="fetch" crossorigin="anonymous">
+  <style>
+    .race-strip{padding:.7rem 1.3rem .65rem;border-bottom:1px solid var(--border);background:var(--surface);font-size:.82rem;line-height:1.45;color:var(--text-muted)}
+    .race-strip a{color:var(--text);text-decoration:none}
+    .race-strip a:hover{color:var(--accent);text-decoration:underline}
+    .race-strip .race-strip-hub{font-weight:600}
+    .race-strip .race-strip-hub span{color:var(--accent)}
+    .race-strip-more{margin-top:.25rem}
+    .race-strip-more strong{color:var(--text-muted);font-weight:600}
+    @media (max-width:900px){.race-strip{padding-left:3.8rem}}
+  </style>
+</head>
+<body>
+<div class="preview-banner" role="status">Beta: early and a bit unfinished. Not official F1.</div>
+
+<button class="hamburger" id="hamburger" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">
+  <span></span><span></span><span></span>
+</button>
+
+<div class="nav-overlay" id="nav-overlay"></div>
+
+<!-- ── Left nav ─────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+
+  <div class="sidebar-brand">
+    <button class="sidebar-search-btn" id="sidebar-search-btn" title="Search" aria-label="Search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+    <a href="#home" class="brand-mark" data-social="home" aria-label="gpchat home">
+      <svg class="brand-icon" width="44" height="44" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="#0a0a0c"/>
+        <rect x="4" y="5" width="3.2" height="3.2" fill="#f2f2f2"/>
+        <rect x="10.4" y="5" width="3.2" height="3.2" fill="#f2f2f2"/>
+        <rect x="16.8" y="5" width="3.2" height="3.2" fill="#f2f2f2"/>
+        <rect x="23.2" y="5" width="3.2" height="3.2" fill="#f2f2f2"/>
+        <rect x="7.2" y="8.2" width="3.2" height="3.2" fill="#f2f2f2"/>
+        <rect x="13.6" y="8.2" width="3.2" height="3.2" fill="#f2f2f2"/>
+        <rect x="20" y="8.2" width="3.2" height="3.2" fill="#f2f2f2"/>
+        <rect x="26.4" y="8.2" width="3.2" height="3.2" fill="#f2f2f2"/>
+        <text x="16" y="25.5" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="13" font-weight="700" fill="#e10600" letter-spacing="0.5">GP</text>
+      </svg>
+    </a>
+    <div class="brand-title">gpchat</div>
+    <div class="brand-sub">Nothing but Grand Prix.</div>
+  </div>
+
+  <div class="sidebar-rule"></div>
+
+  <nav aria-label="Main navigation">
+    <ul>
+      <li>
+        <a href="#home" class="nav-social-link active" id="nav-home" data-social="home">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 10v10h14V10"/></svg>
+          Home
+        </a>
+      </li>
+      <li>
+        <a href="#following" class="nav-social-link" id="nav-following" data-social="following" data-soon>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Following
+        </a>
+      </li>
+      <li>
+        <a href="#explore" class="nav-social-link" id="nav-explore" data-social="explore">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Explore
+        </a>
+      </li>
+      <li>
+        <a href="#notifications" class="nav-social-link" id="nav-notifications" data-social="notifications" data-soon>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          Notifications
+          <span class="nav-badge" id="notif-badge" hidden></span>
+        </a>
+      </li>
+      <li>
+        <a href="#chat" class="nav-social-link" id="nav-chat" data-social="chat">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Chat
+        </a>
+      </li>
+      <li>
+        <a href="#profile" class="nav-social-link" id="nav-profile" data-social="profile">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profile
+        </a>
+      </li>
+      <li>
+        <a href="#news" class="nav-social-link" id="nav-news" data-social="news">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 0-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
+          News
+        </a>
+      </li>
+    </ul>
+
+    <section class="watchlist" id="watchlist" aria-labelledby="watchlist-heading">
+      <div class="watchlist-head">
+        <div>
+          <div class="watchlist-kicker" id="watchlist-kicker">Grid</div>
+          <h2 id="watchlist-heading">Watchlist</h2>
+        </div>
+        <button type="button" class="watchlist-add-btn" id="watchlist-add" hidden aria-expanded="false" aria-controls="watchlist-picker">Add</button>
+      </div>
+      <ul class="watchlist-list" id="watchlist-list"></ul>
+      <p class="watchlist-note" id="watchlist-note" hidden></p>
+      <div class="watchlist-picker" id="watchlist-picker" hidden>
+        <input type="search" class="watchlist-search" id="watchlist-search" placeholder="Search topics" autocomplete="off" aria-label="Search topics to follow">
+        <ul class="watchlist-catalog" id="watchlist-catalog"></ul>
+      </div>
+    </section>
+
+    <div class="sidebar-post-wrap">
+      <button class="sidebar-post-btn" id="sidebar-post-btn">Post</button>
+    </div>
+
+    <div class="sidebar-auth" id="sidebar-auth"></div>
+
+    <div class="nav-legal">
+      <a href="about.html">About</a>
+      <span>&middot;</span>
+      <a href="terms.html">Terms</a>
+      <span>&middot;</span>
+      <a href="privacy.html">Privacy</a>
+      <span>&middot;</span>
+      <a href="report.html">Report</a>
+      <span>&middot;</span>
+      <span>Not official F1</span>
+    </div>
+  </nav>
+</aside>
+
+<!-- ── Center ───────────────────────────────────────── -->
+<main class="main">
+
+  <section class="page active" id="page-thoughts">
+    <nav class="race-strip" aria-label="Race weekend">
+      <a class="race-strip-hub" href="/us-grand-prix">United States Grand Prix, Austin: race weekend hub <span aria-hidden="true">&rarr;</span></a>
+      <div class="race-strip-more"><strong>More for race weekend:</strong> <a href="/us-grand-prix-race-time">Race time</a> &middot; <a href="/us-grand-prix-qualifying-time">Qualifying time</a> &middot; <a href="/us-grand-prix-practice-times">Practice times</a> &middot; <a href="/articles/usgp-austin-2026-pre-race/">Pre-race preview</a></div>
+    </nav>
+    <div class="thoughts-tabs" role="tablist">
+      <button class="thoughts-tab active" data-thoughts-tab="foryou" role="tab">For You</button>
+      <button class="thoughts-tab" data-thoughts-tab="following" role="tab">Following <span class="tab-soon">Soon</span></button>
+      <button class="thoughts-tab" data-thoughts-tab="hot" role="tab">Hot</button>
+      <button class="thoughts-tab" data-thoughts-tab="new" role="tab">New</button>
+    </div>
+
+    <div class="thoughts-compose-wrap" id="thoughts-compose-wrap">
+      <div class="thoughts-compose-row">
+        <div class="thoughts-compose-avatar" id="thoughts-compose-avatar">GP</div>
+        <div class="thoughts-compose-right">
+          <textarea class="thoughts-compose-input" id="thoughts-compose-input" placeholder="Say something. This is a work in progress." rows="2" maxlength="280"></textarea>
+        </div>
+      </div>
+      <div class="compose-poll" id="compose-poll" hidden>
+        <div class="compose-poll-option">
+          <input class="compose-poll-input" placeholder="Choice 1" maxlength="60" data-poll-opt="0">
+        </div>
+        <div class="compose-poll-option">
+          <input class="compose-poll-input" placeholder="Choice 2" maxlength="60" data-poll-opt="1">
+        </div>
+        <div class="compose-poll-footer">
+          <button type="button" class="compose-poll-add" id="compose-poll-add">+ Add choice</button>
+          <select class="compose-poll-duration" id="compose-poll-duration">
+            <option value="1">1 day</option>
+            <option value="3" selected>3 days</option>
+            <option value="7">7 days</option>
+          </select>
+        </div>
+      </div>
+      <div class="thoughts-compose-divider"></div>
+      <div class="thoughts-compose-footer">
+        <div class="thoughts-toolbar">
+          <button class="thoughts-toolbar-btn" type="button" id="compose-btn-poll" title="Add poll">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </button>
+          <button class="thoughts-toolbar-btn" type="button" id="compose-btn-emoji" title="Add emoji">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </button>
+        </div>
+        <button class="thoughts-post-btn" id="thoughts-post-btn" disabled>Post</button>
+      </div>
+    </div>
+
+    <div class="thoughts-feed" id="thoughts-feed"></div>
+  </section>
+
+  <section class="page" id="page-news">
+    <div class="page-header">
+      <div class="page-kicker">What's happening on the grid</div>
+      <h1>Trending in the paddock</h1>
+      <div class="page-rule"></div>
+    </div>
+    <div class="page-body news-page-list" id="news-page-list"></div>
+  </section>
+
+</main>
+
+<!-- ── Profile overlay ──────────────────────────────── -->
+<div class="profile-overlay" id="profile-overlay">
+  <div class="view-topbar">
+    <button class="view-back" id="profile-back" type="button">Back</button>
+    <div>
+      <div class="view-topbar-title" id="profile-topbar-name">Profile</div>
+      <div class="view-topbar-sub" id="profile-topbar-posts">gpchat · Nothing but Grand Prix</div>
+    </div>
+  </div>
+  <div class="profile-signin-prompt" id="profile-signin-prompt">
+    <h2>See your paddock profile</h2>
+    <p>Continue with Google to post about the Grand Prix. Guest is browse-only. Not official F1.</p>
+    <button class="accent-btn" id="profile-signin-prompt-btn" type="button">Join</button>
+  </div>
+  <div class="profile-content" id="profile-content" hidden>
+    <div class="profile-banner" id="profile-banner"></div>
+    <div class="profile-header-row">
+      <div class="profile-avatar" id="profile-avatar">G</div>
+      <div class="profile-header-actions">
+        <button class="ghost-btn" id="profile-edit-btn" type="button">Edit profile</button>
+        <button class="accent-btn" id="profile-follow-btn" type="button" hidden>Follow</button>
+        <button class="accent-btn" id="profile-message-btn" type="button" hidden>Message</button>
+      </div>
+    </div>
+    <div class="profile-id">
+      <div class="profile-display-name" id="profile-display-name">Guest</div>
+      <div class="profile-handle" id="profile-handle">@guestgp</div>
+      <p class="profile-bio" id="profile-bio">Just watching. Nothing but Grand Prix.</p>
+      <div class="profile-meta" id="profile-meta">Formula 1 fan chat — unofficial</div>
+      <div class="profile-counts">
+        <button type="button" class="count-btn" disabled><strong>—</strong> Following <span class="tab-soon">Soon</span></button>
+        <button type="button" class="count-btn" disabled><strong>—</strong> Followers <span class="tab-soon">Soon</span></button>
+      </div>
+    </div>
+    <div class="profile-posts" id="profile-pane-posts">
+      <div class="empty-note" id="profile-posts-empty">No posts yet. Hit Post when the safety car comes out.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Chat overlay ─────────────────────────────────── -->
+<div class="chat-overlay" id="chat-overlay">
+  <div class="chat-threads" id="chat-threads">
+    <div class="chat-threads-header">
+      <div class="chat-threads-title-row">
+        <div class="chat-threads-title">Chat</div>
+        <button class="chat-new-btn" id="chat-new-btn" type="button" title="New message" hidden>New</button>
+      </div>
+      <div class="chat-search-bar">
+        <input type="text" class="chat-search-input" id="chat-search-input" placeholder="Search chats" autocomplete="off">
+      </div>
+    </div>
+    <div class="chat-thread-list" id="chat-thread-list"></div>
+  </div>
+  <div class="chat-active-pane" id="chat-active-pane">
+    <div class="chat-placeholder" id="chat-placeholder">
+      <div class="chat-placeholder-title">Join to chat</div>
+      <div class="chat-placeholder-sub">Sign in to send and receive direct messages. Guest cannot chat.</div>
+      <button class="accent-btn" id="chat-placeholder-new" type="button">Join</button>
+    </div>
+    <div class="chat-thread-view" id="chat-thread-view" hidden>
+      <div class="chat-thread-header">
+        <div class="chat-thread-header-name" id="chat-active-name"></div>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-compose">
+        <textarea class="chat-compose-input" id="chat-compose-input" placeholder="Message about the grid…" rows="1" maxlength="1000"></textarea>
+        <button class="chat-send-btn" id="chat-send-btn" type="button" disabled>Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Notifications overlay ────────────────────────── -->
+<div class="notif-overlay" id="notif-overlay">
+  <button class="view-back" id="notif-back" type="button">Back</button>
+  <div class="notif-header">
+    <div class="notif-header-row">
+      <div class="notif-title">Notifications</div>
+      <button class="ghost-btn" id="notif-mark-read" type="button" disabled>Soon</button>
+    </div>
+    <div class="thoughts-tabs notif-tabs">
+      <button class="thoughts-tab active" data-notif-tab="all">All</button>
+      <button class="thoughts-tab" data-notif-tab="mentions">Mentions</button>
+    </div>
+  </div>
+  <div class="notif-list" id="notif-list"></div>
+</div>
+
+<!-- ── Explore overlay ──────────────────────────────── -->
+<div class="explore-overlay" id="explore-overlay">
+  <button class="view-back" id="explore-back" type="button">Back</button>
+  <div class="explore-search-wrap">
+    <div class="explore-search-bar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" class="explore-search-input" id="explore-search-input" placeholder="Search circuits, quali, safety cars…" autocomplete="off">
+    </div>
+  </div>
+  <div class="explore-tabs thoughts-tabs">
+    <button class="thoughts-tab active" data-explore-tab="places">Places</button>
+    <button class="thoughts-tab" data-explore-tab="topics">Topics</button>
+  </div>
+  <div class="explore-pane active" id="explore-pane-places"></div>
+  <div class="explore-pane" id="explore-pane-topics"></div>
+</div>
+
+<!-- ── Right rail ───────────────────────────────────── -->
+<aside class="right-panel" id="right-panel">
+  <div class="right-panel-header">
+    <div class="right-panel-kicker">What's happening on the grid</div>
+    <div class="right-panel-title">Room Brief</div>
+  </div>
+  <div class="right-panel-body" id="news-feed"></div>
+  <div class="right-panel-footer">
+    <p>Race calendar via Jolpica F1 API (Ergast). Not a news ingest. Not official FIA.</p>
+  </div>
+</aside>
+
+<button class="right-panel-tab" id="right-panel-tab" title="Toggle room brief" aria-label="Toggle room brief">
+  <svg width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="7,2 2,8 7,14"/>
+  </svg>
+</button>
+
+<!-- ── Sign-in modal (Firebase Auth Google-first + local guest) ─ -->
+<div class="conv-modal-overlay" id="cv-auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+  <div class="conv-modal">
+    <button type="button" class="conv-modal-close" id="cv-modal-close" aria-label="Close sign in">&times;</button>
+    <h2 id="auth-title">Sign in to gpchat</h2>
+    <p class="conv-modal-note">Members sign in here. Guest is browse-only.</p>
+    <div class="conv-modal-tabs is-join-hidden">
+      <button class="conv-modal-tab active" data-tab="login" type="button">Sign In</button>
+      <button class="conv-modal-tab" data-tab="register" type="button" data-accounts="join">Register</button>
+    </div>
+    <div id="cv-panel-login">
+      <div class="conv-modal-err" id="cv-login-err"></div>
+      <label class="conv-modal-dob" for="cv-google-dob"><span>Date of birth</span> <input type="date" id="cv-google-dob" autocomplete="bday" required></label>
+      <label class="conv-modal-check" for="cv-google-age">
+        <input type="checkbox" id="cv-google-age">
+        <span>I am 18 or older and I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span>
+      </label>
+      <p class="conv-modal-note legal-consent">By continuing you agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. You must be 18 or older.</p>
+      <p class="conv-modal-note accounts-closed-note" id="cv-accounts-closed">Accounts are not open yet. You can read the room as a guest.</p>
+      <button class="conv-google-btn" id="cv-google-login" type="button" data-accounts="join"><svg width="17" height="17" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/></svg> Continue with Google</button>
+      <div class="conv-modal-divider">or use email</div>
+      <button type="button" class="conv-email-toggle" id="cv-use-email-btn">Use email</button>
+      <div id="cv-email-signin" class="cv-email-signin" hidden>
+        <div class="conv-modal-field"><label>Email</label><input type="email" id="cv-login-email" autocomplete="email" placeholder="you@email.com"></div>
+        <div class="conv-modal-field"><label>Password</label><input type="password" id="cv-login-pw" autocomplete="current-password" placeholder="••••••••"></div>
+        <button class="conv-modal-submit" id="cv-login-btn" type="button">Sign In</button>
+        <button type="button" class="conv-guest-btn" id="cv-goto-register" data-accounts="join">Create an account</button>
+      </div>
+      <button class="conv-guest-btn" id="cv-guest-login" type="button">Continue as guest (browse only)</button>
+    </div>
+    <div id="cv-panel-register" style="display:none">
+      <div class="conv-modal-err" id="cv-reg-err"></div>
+      <button type="button" class="conv-guest-btn" id="cv-goto-join">Continue with Google instead</button>
+      <div class="conv-modal-field"><label>Display Name</label><input type="text" id="cv-reg-name" autocomplete="nickname" placeholder="A paddock handle"></div>
+      <div class="conv-modal-field"><label>Email</label><input type="email" id="cv-reg-email" autocomplete="email" placeholder="you@email.com"></div>
+      <div class="conv-modal-field"><label>Password</label><input type="password" id="cv-reg-pw" autocomplete="new-password" placeholder="At least 6 characters"></div>
+      <label class="conv-modal-dob" for="cv-reg-dob"><span>Date of birth</span> <input type="date" id="cv-reg-dob" autocomplete="bday" required></label>
+      <label class="conv-modal-check" for="cv-reg-age">
+        <input type="checkbox" id="cv-reg-age">
+        <span>I am 18 or older and I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span>
+      </label>
+      <p class="conv-modal-note legal-consent">By continuing you agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. You must be 18 or older.</p>
+      <button class="conv-modal-submit" id="cv-reg-btn" type="button">Create Account</button>
+    </div>
+  </div>
+</div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+  <script src="factory.js?v=57" data-site="site.json?v=62"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js"></script>
+<footer class="legal-footer" role="contentinfo" aria-label="Legal">
+  <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a> ·
+  <a href="/report.html">Report</a> · <a href="/guidelines.html">Guidelines</a>
+</footer>
+<style>
+  .legal-footer{position:fixed;left:0;right:0;bottom:0;z-index:2147483000;display:block!important;visibility:visible!important;
+    padding:6px 10px;text-align:center;font:12px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:rgba(10,14,20,.92);color:#c8d3dc;border-top:1px solid rgba(255,255,255,.12)}
+  .legal-footer a{color:inherit;text-decoration:underline}
+  body{padding-bottom:34px}
+  @media (max-width:900px){.legal-footer{display:block!important;transform:none!important}}
+</style>
+</body>
+</html>
+
+

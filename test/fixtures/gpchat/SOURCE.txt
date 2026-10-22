@@ -1,0 +1,2 @@
+Live gpchat.com markup, fetched 2026-10-22 10:27 MDT from https://gpchat.com/ , /site.json and /styles.css (gpchat main after PR #73, 1638eb69).
+Used by test/accounts-gate.headless.mjs: the static #cv-accounts-closed note must hide when open and the gate CSS must apply when closed.
