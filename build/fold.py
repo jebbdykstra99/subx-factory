@@ -580,5 +580,232 @@ src = ed(src, "  function stopPreviewLift() {\n", """  // Report loop (factory-r
   }
   function stopPreviewLift() {
 """)
+# ---- Auto-hide on report + instant alert (2026-10-22, Jebb: "Even having an image up for an hour, could cause irreparable harm").
+# Client batch-writes reports/{autoId} + hides/{siteId}_{postId} for ncii/copyright/violent_offensive/hate/impersonation/csam
+# (falling back to report-only if the hides rule is not published yet). Every feed/story/profile/notif ingress point filters
+# hidden postIds so neither text nor imageUrl/mediaUrl renders on any client. Only Jebb (ADMIN_UID) can restore by deleting hides/{id}.
+src = ed(src, "  var reportItems = [];\n  var reportsUnsub = null;\n  var reportedMem = {};\n",
+  "  var reportItems = [];\n  var reportsUnsub = null;\n  var reportedMem = {};\n  var hiddenIds = {};\n  var hidesUnsub = null;\n  var HIDE_REASONS = { ncii: 1, copyright: 1, violent_offensive: 1, hate: 1, impersonation: 1, csam: 1 };\n")
+src = ed(src, "  function isAdminUser() {\n    return liveUid() === ADMIN_UID;\n  }\n", """  function isAdminUser() {
+    return liveUid() === ADMIN_UID;
+  }
+  function isPostHidden(p) {
+    return !!(p && (hiddenIds[p.id] || (p.parentId && hiddenIds[p.parentId]) || (p.authorUid && hiddenIds['uid:' + p.authorUid])));
+  }
+  function isStoryHidden(s) {
+    return !!(s && (hiddenIds['story:' + s.id] || hiddenIds[s.id] || (s.authorUid && hiddenIds['uid:' + s.authorUid])));
+  }
+  function listenHides() {
+    if (hidesUnsub) { hidesUnsub(); hidesUnsub = null; }
+    if (!fbDb || !SITE_ID) return;
+    hidesUnsub = fbDb.collection('hides').where('siteId', '==', SITE_ID).onSnapshot(function (snap) {
+      var next = {};
+      snap.forEach(function (d) { d = d.data() || {}; if (d.postId) next[d.postId] = true; });
+      hiddenIds = next;
+      renderFeed();
+      if (typeof renderStoriesTray === 'function') renderStoriesTray();
+      if (currentUser) syncProfile();
+      renderNotifs();
+      renderReports();
+    }, function () {});
+  }
+  function pickReportReason() {
+    if (typeof window === 'undefined' || typeof window.prompt !== 'function') return 'ncii';
+    var r = window.prompt('Report reason (1-5):\\n1=NCII (auto-hide)\\n2=Copyright (auto-hide)\\n3=Violent/offensive (auto-hide)\\n4=Hate/harassment (auto-hide)\\n5=Other abuse/spam', '1');
+    if (r === null) return '';
+    var m = { '1': 'ncii', '2': 'copyright', '3': 'violent_offensive', '4': 'hate', '5': 'abuse' };
+    var s = String(r || '').trim().toLowerCase();
+    return m[s] || (HIDE_REASONS[s] || s === 'abuse' ? s : 'ncii');
+  }
+  function commitAutoHideReport(postId, targetUid, storyId, reason, fallbackAdd) {
+    var me = liveUid(), rRef = fbDb.collection('reports').doc(), ts = firebase.firestore.FieldValue.serverTimestamp();
+    var rDoc = { siteId: SITE_ID, postId: postId, targetUid: targetUid || '', reporterUid: me, reason: reason, status: 'open', createdAt: ts };
+    if (storyId) rDoc.storyId = storyId;
+    hiddenIds[postId] = true;
+    renderFeed();
+    if (typeof renderStoriesTray === 'function') renderStoriesTray();
+    var b = fbDb.batch();
+    b.set(rRef, rDoc);
+    b.set(fbDb.collection('hides').doc(SITE_ID + '_' + postId), { siteId: SITE_ID, postId: postId, reportId: rRef.id, reporterUid: me, reason: reason, hiddenAt: ts });
+    return b.commit().catch(function (e) {
+      if (isPermDenied(e) && fallbackAdd) return fallbackAdd();
+      throw e;
+    });
+  }
+""")
+src = ed(src, "  function writeReportAlert(post, me) {\n    if (!me || me === ADMIN_UID || !fbDb || !post) return;\n    var snippet = String(post.text || '').replace(/\\s+/g, ' ').trim().slice(0, 180);\n    fbDb.collection('users').doc(ADMIN_UID).collection('notifications').add({\n      toUid: ADMIN_UID,\n      fromUid: me,\n      type: 'report',\n      siteId: SITE_ID,\n      postId: post.id,\n      read: false,\n      text: 'Report: ' + snippet,\n      createdAt: firebase.firestore.FieldValue.serverTimestamp()\n    }).catch(function (e) { console.warn('report alert', e); });\n  }",
+  """  function writeReportAlert(post, me, reason) {
+    if (!me || me === ADMIN_UID || !fbDb || !post) return;
+    var hide = HIDE_REASONS[reason] || isPostHidden(post);
+    var snippet = hide ? ('[' + (reason || 'hidden') + ' · auto-hidden]') : String(post.text || '').replace(/\\s+/g, ' ').trim().slice(0, 180);
+    fbDb.collection('users').doc(ADMIN_UID).collection('notifications').add({
+      toUid: ADMIN_UID,
+      fromUid: me,
+      type: 'report',
+      siteId: SITE_ID,
+      postId: post.id,
+      read: false,
+      text: 'Report: ' + snippet,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function (e) { console.warn('report alert', e); });
+  }""")
+src = ed(src, "  function reportPost(id) {\n    if (!requireVerified('report')) return;\n    var post = findPost(id);\n    if (!post || !fbDb || isSessionSeedPost(post)) return;\n    if (alreadyReported(id)) { toast('You already reported this post.'); return; }\n    var me = liveUid();\n    fbDb.collection('reports').add({\n      siteId: SITE_ID,\n      postId: id,\n      targetUid: post.authorUid || '',\n      reporterUid: me,\n      reason: 'abuse',\n      status: 'open',\n      createdAt: firebase.firestore.FieldValue.serverTimestamp()\n    }).then(function () {\n      markReported(id);\n      toast('Reported. Thanks.');\n      writeReportAlert(post, me);\n    }).catch(function (e) {\n      toast(reportErr(e));\n    });\n  }",
+  """  function reportPost(id, optReason) {
+    if (!requireVerified('report')) return;
+    var post = findPost(id);
+    if (!post || !fbDb || isSessionSeedPost(post)) return;
+    if (alreadyReported(id)) { toast('You already reported this post.'); return; }
+    var reason = optReason || pickReportReason();
+    if (!reason) return;
+    var me = liveUid();
+    var addOnly = function () {
+      return fbDb.collection('reports').add({
+        siteId: SITE_ID,
+        postId: id,
+        targetUid: post.authorUid || '',
+        reporterUid: me,
+        reason: reason,
+        status: 'open',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    };
+    var op = (HIDE_REASONS[reason] || isAdminUser()) ? commitAutoHideReport(id, post.authorUid || '', '', reason, addOnly) : addOnly();
+    op.then(function () {
+      markReported(id);
+      toast(HIDE_REASONS[reason] ? 'Reported and hidden pending review.' : 'Reported. Thanks.');
+      writeReportAlert(post, me, reason);
+    }).catch(function (e) {
+      toast(reportErr(e));
+    });
+  }""")
+src = ed(src, "  function reportStory(id) {\n    if (!requireVerified('report')) return;\n    var story = findStory(id);\n    if (!story || !fbDb) return;\n    fbDb.collection('reports').add({\n      siteId: SITE_ID,\n      storyId: id,\n      postId: 'story:' + id,\n      targetUid: story.authorUid || '',\n      reporterUid: liveUid(),\n      reason: 'abuse',\n      status: 'open',\n      createdAt: firebase.firestore.FieldValue.serverTimestamp()\n    }).then(function () {\n      toast('Reported. Thanks.');\n    }).catch(function (e) {\n      toast(reportErr(e));\n    });\n  }",
+  """  function reportStory(id, optReason) {
+    if (!requireVerified('report')) return;
+    var story = findStory(id);
+    if (!story || !fbDb) return;
+    var reason = optReason || pickReportReason();
+    if (!reason) return;
+    var me = liveUid(), pid = 'story:' + id;
+    var addOnly = function () {
+      return fbDb.collection('reports').add({
+        siteId: SITE_ID,
+        storyId: id,
+        postId: pid,
+        targetUid: story.authorUid || '',
+        reporterUid: me,
+        reason: reason,
+        status: 'open',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    };
+    var op = (HIDE_REASONS[reason] || isAdminUser()) ? commitAutoHideReport(pid, story.authorUid || '', id, reason, addOnly) : addOnly();
+    op.then(function () {
+      toast(HIDE_REASONS[reason] ? 'Reported and hidden pending review.' : 'Reported. Thanks.');
+      writeReportAlert({ id: pid, text: story.text || '' }, me, reason);
+    }).catch(function (e) {
+      toast(reportErr(e));
+    });
+  }""")
+src = ed(src, "  function findPost(id) {\n    var i;\n    for (i = 0; i < livePosts.length; i++) if (livePosts[i].id === id) return livePosts[i];\n    for (i = 0; i < nestPosts.length; i++) if (nestPosts[i].id === id) return nestPosts[i];\n",
+  "  function findPost(id) {\n    if (hiddenIds[id]) return null;\n    var i;\n    for (i = 0; i < livePosts.length; i++) if (livePosts[i].id === id && !isPostHidden(livePosts[i])) return livePosts[i];\n    for (i = 0; i < nestPosts.length; i++) if (nestPosts[i].id === id && !isPostHidden(nestPosts[i])) return nestPosts[i];\n")
+src = ed(src, "  function topLevelPosts() {\n    return postsForFeed().filter(function (p) {\n      if (p.parentId || (p.authorUid && blockedUids[p.authorUid])) return false;\n",
+  "  function topLevelPosts() {\n    return postsForFeed().filter(function (p) {\n      if (p.parentId || isPostHidden(p) || (p.authorUid && blockedUids[p.authorUid])) return false;\n")
+src = ed(src, "  function repliesFor(parentId) {\n    return postsForFeed().filter(function (p) { return p.parentId === parentId && !(p.authorUid && blockedUids[p.authorUid]); })\n",
+  "  function repliesFor(parentId) {\n    if (hiddenIds[parentId]) return [];\n    return postsForFeed().filter(function (p) { return p.parentId === parentId && !isPostHidden(p) && !(p.authorUid && blockedUids[p.authorUid]); })\n")
+src = ed(src, "    var posts = livePosts.filter(function (p) {\n      if (!p || p.parentId) return false;\n      if (p.authorUid && blockedUids[p.authorUid]) return false;\n",
+  "    var posts = livePosts.filter(function (p) {\n      if (!p || p.parentId || isPostHidden(p)) return false;\n      if (p.authorUid && blockedUids[p.authorUid]) return false;\n")
+src = ed(src, "  function renderPostMedia(post) {\n    var html = '';\n",
+  "  function renderPostMedia(post) {\n    if (isPostHidden(post)) return '';\n    var html = '';\n")
+src = ed(src, "  function renderPost(post, isReply) {\n    const uid = liveUid();\n",
+  "  function renderPost(post, isReply) {\n    if (isPostHidden(post)) return '';\n    const uid = liveUid();\n")
+src = ed(src, "  function siteNotifs() {\n    return notifItems.filter(function (n) { return !n.siteId || n.siteId === SITE_ID; });\n  }\n",
+  "  function siteNotifs() {\n    return notifItems.filter(function (n) { return (!n.siteId || n.siteId === SITE_ID) && !(n.postId && hiddenIds[n.postId] && n.type !== 'report' && n.type !== 'report_update'); });\n  }\n")
+src = ed(src, "  function findStory(id) {\n    for (var i = 0; i < liveStories.length; i++) if (liveStories[i].id === id) return liveStories[i];\n    return null;\n  }\n",
+  "  function findStory(id) {\n    if (hiddenIds['story:' + id] || hiddenIds[id]) return null;\n    for (var i = 0; i < liveStories.length; i++) if (liveStories[i].id === id && !isStoryHidden(liveStories[i])) return liveStories[i];\n    return null;\n  }\n")
+src = ed(src, "    liveStories.forEach(function (s) {\n      if (s.siteId && s.siteId !== SITE_ID) return;\n      if (s.expiresAtMs && s.expiresAtMs <= now) return;\n",
+  "    liveStories.forEach(function (s) {\n      if (isStoryHidden(s)) return;\n      if (s.siteId && s.siteId !== SITE_ID) return;\n      if (s.expiresAtMs && s.expiresAtMs <= now) return;\n")
+src = ed(src, "    var story = storyViewerList[storyViewerIdx];\n    if (!story) { closeStoriesViewer(); return; }\n",
+  "    var story = storyViewerList[storyViewerIdx];\n    if (!story || isStoryHidden(story)) { closeStoriesViewer(); return; }\n")
+src = ed(src, "    for (i = 0; i < posts.length; i++) {\n      var post = posts[i];\n      if (!post || post.parentId) continue;\n",
+  "    for (i = 0; i < posts.length; i++) {\n      var post = posts[i];\n      if (!post || post.parentId || isPostHidden(post)) continue;\n")
+src = ed(src, "  function nestHasActivity(slug) {\n    var key = nestKey(slug);\n    if (!key) return false;\n    for (var i = 0; i < livePosts.length; i++) {\n      if (nestKey(livePosts[i].nestSlug) === key) return true;\n    }\n    return false;\n  }\n",
+  "  function nestHasActivity(slug) {\n    var key = nestKey(slug);\n    if (!key) return false;\n    for (var i = 0; i < livePosts.length; i++) {\n      if (!isPostHidden(livePosts[i]) && nestKey(livePosts[i].nestSlug) === key) return true;\n    }\n    return false;\n  }\n")
+src = ed(src, "    const mine = livePosts.filter(function (p) { return p.authorUid && p.authorUid === uid; });\n",
+  "    const mine = livePosts.filter(function (p) { return p.authorUid && p.authorUid === uid && !isPostHidden(p); });\n")
+src = ed(src, "      listenKillSwitch();\n      listenLivePosts();\n      initStories();\n",
+  "      listenKillSwitch();\n      listenHides();\n      listenLivePosts();\n      initStories();\n")
+src = ed(src, "    el.innerHTML = rows.map(function (r) {\n      var post = findPost(r.postId);\n      var snippet = (post && post.text) ? String(post.text).replace(/\\s+/g, ' ').trim().slice(0, 180) : '(post unavailable)';\n      var count = reporterCount(r.postId);\n      return '<div class=\"notif-item\">' +\n        '<p>' + escapeHtml(snippet) + '</p>' +\n        '<p>' + count + ' reporter' + (count === 1 ? '' : 's') + '</p>' +\n        '<button type=\"button\" class=\"post-action\" data-report-remove=\"' + escapeHtml(r.postId) + '\">Remove post</button> ' +\n        reportTriage(r) +\n        '</div>';\n    }).join('');",
+  """    el.innerHTML = rows.map(function (r) {
+      var isHid = !!(hiddenIds[r.postId] || HIDE_REASONS[r.reason]);
+      var post = isHid ? null : findPost(r.postId);
+      var snippet = isHid ? ('[Hidden — ' + (r.reason || 'reported') + ' · ' + r.postId + ']') :
+        ((post && post.text) ? String(post.text).replace(/\\s+/g, ' ').trim().slice(0, 180) : '(post unavailable)');
+      var count = reporterCount(r.postId);
+      return '<div class="notif-item"' + (isHid ? ' style="opacity:0.65"' : '') + '>' +
+        '<p>' + escapeHtml(snippet) + '</p>' +
+        '<p>' + count + ' reporter' + (count === 1 ? '' : 's') + (r.reason ? ' · ' + escapeHtml(r.reason) : '') + '</p>' +
+        '<button type="button" class="post-action" data-report-remove="' + escapeHtml(r.postId) + '">Remove post</button> ' +
+        reportTriage(r) +
+        '</div>';
+    }).join('');""")
+src = ed(src, "  function reportTriage(r) {\n    var b = function (st, label) {\n      return '<button type=\"button\" class=\"post-action\" data-report-status=\"' + st + '\" data-report-id=\"' + escapeHtml(r.id) +\n        '\" data-report-uid=\"' + escapeHtml(r.reporterUid) + '\">' + label + '</button> ';\n    };\n    return '<p>' + escapeHtml(REPORT_STATUS[r.status || 'open'] || r.status) + '</p>' +\n      (r.status === 'reviewing' ? '' : b('reviewing', 'Reviewing')) + b('actioned', 'Action taken') + b('dismissed', 'Dismiss');\n  }",
+  """  function restoreHiddenReport(postId, reportId) {
+    var me = liveUid();
+    if (me !== ADMIN_UID || !fbDb || !postId) return;
+    if (!window.confirm('Restore ' + postId + ' to the room? Only admin can restore hidden content.')) return;
+    fbDb.collection('hides').doc(SITE_ID + '_' + postId).delete().then(function () {
+      delete hiddenIds[postId];
+      if (reportId) {
+        fbDb.collection('reports').doc(reportId).update({
+          status: 'dismissed',
+          reviewedBy: me,
+          reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          resolution: 'Restored by admin',
+          history: firebase.firestore.FieldValue.arrayUnion({ status: 'restored', by: me, ms: Date.now() })
+        }).catch(function () {});
+      }
+      renderFeed();
+      renderReports();
+      toast('Restored.');
+    }).catch(function (e) { toast((e && e.message) || 'Could not restore.'); });
+  }
+  function adminMassHide(reason) {
+    var me = liveUid();
+    if (me !== ADMIN_UID || !fbDb) return;
+    var open = reportItems.filter(function (r) { return r.status !== 'dismissed' && r.status !== 'actioned' && (!reason || r.reason === reason); });
+    if (!open.length) { toast('No matching open reports.'); return; }
+    var b = fbDb.batch();
+    var ts = firebase.firestore.FieldValue.serverTimestamp();
+    open.slice(0, 20).forEach(function (r) {
+      if (!r.postId) return;
+      hiddenIds[r.postId] = true;
+      b.set(fbDb.collection('hides').doc(SITE_ID + '_' + r.postId), {
+        siteId: SITE_ID, postId: r.postId, reportId: r.id, reporterUid: me, reason: r.reason || 'ncii', hiddenAt: ts
+      });
+    });
+    renderFeed();
+    renderReports();
+    b.commit().then(function () { toast('Hidden ' + open.length + ' reported items.'); }).catch(function (e) { toast((e && e.message) || 'Mass-hide failed.'); });
+  }
+  function reportTriage(r) {
+    var b = function (st, label) {
+      return '<button type="button" class="post-action" data-report-status="' + st + '" data-report-id="' + escapeHtml(r.id) +
+        '" data-report-uid="' + escapeHtml(r.reporterUid) + '">' + label + '</button> ';
+    };
+    var rest = ((hiddenIds && hiddenIds[r.postId]) || (HIDE_REASONS && HIDE_REASONS[r.reason]))
+      ? '<button type="button" class="post-action" data-report-restore="' + escapeHtml(r.postId) + '" data-report-id="' + escapeHtml(r.id) + '">Restore</button> '
+      : '';
+    return '<p>' + escapeHtml(REPORT_STATUS[r.status || 'open'] || r.status) + '</p>' +
+      rest + (r.status === 'reviewing' ? '' : b('reviewing', 'Reviewing')) + b('actioned', 'Action taken') + b('dismissed', 'Dismiss');
+  }""")
+src = ed(src, "      if (t.closest('[data-myreports]')) { e.preventDefault(); openMyReports(); return; }\n",
+  "      var rb = t.closest('[data-report-restore]');\n      if (rb) { restoreHiddenReport(rb.getAttribute('data-report-restore'), rb.getAttribute('data-report-id')); return; }\n      if (t.closest('[data-mass-hide]')) { adminMassHide(t.closest('[data-mass-hide]').getAttribute('data-mass-hide')); return; }\n      if (t.closest('[data-myreports]')) { e.preventDefault(); openMyReports(); return; }\n")
+# Lean CSS whitespace trim for core byte budget (255,000 B):
+for css_fn in ['ensureRailCss', 'ensurePreviewLiftCss', 'ensureDmCss', 'ensureEarlyWelcomeCss', 'ensureJoinAuthCss', 'ensureShareSheet', 'ensureStoriesComposer', 'ensureStoriesViewer', 'ensureStoriesTray', 'paintStoryViewer', 'renderStoriesTray', 'initStories', 'openDisplayNamePrompt', 'renderSidebarAuth', 'renderThreads', 'ensureNestNav']:
+    m = re.search(r'  function ' + css_fn + r'\(\) \{[\s\S]*?\n  \}\n', src)
+    assert m, css_fn
+    blk = m.group(0)
+    blk2 = re.sub(r"' \+\n\s+'", "", blk)
+    src = src.replace(blk, blk2, 1)
 src = banner + src
 open('factory.js', 'w').write(src)

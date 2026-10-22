@@ -94,12 +94,13 @@
 
   var PLUGIN = {};
   var CORE = {
-    activeTopics: activeTopics,
     closeSocialOverlays: closeSocialOverlays,
+    collectTopicIds: collectTopicIds,
     composeErr: composeErr,
     escapeHtml: escapeHtml,
     featureOn: featureOn,
     findPost: findPost,
+    highlightDeepPost: highlightDeepPost,
     isLiveUser: isLiveUser,
     liveUid: liveUid,
     loadJSON: loadJSON,
@@ -107,16 +108,26 @@
     openAuth: openAuth,
     railCfg: railCfg,
     railNwsSlots: railNwsSlots,
+    refreshPorchUi: refreshPorchUi,
+    renderFeed: renderFeed,
+    renderPost: renderPost,
+    renderReports: renderReports,
+    repliesFor: repliesFor,
     saveJSON: saveJSON,
     sendNotif: sendNotif,
-    taxonomyCatalog: taxonomyCatalog,
     toast: toast,
-    topicById: topicById,
+    topLevelPosts: topLevelPosts,
     tsMillis: tsMillis,
     get ADMIN_UID() { return ADMIN_UID; },
+    get HIDE_REASONS() { return HIDE_REASONS; },
     get SITE_ID() { return SITE_ID; },
+    get currentNest() { return currentNest; },
     get fbDb() { return fbDb; },
     get focusedTopicId() { return focusedTopicId; },
+    get hiddenIds() { return hiddenIds; },
+    get liveError() { return liveError; },
+    get liveReady() { return liveReady; },
+    get reportItems() { return reportItems; },
     get site() { return site; },
     get watchlistPickerOpen() { return watchlistPickerOpen; },
     set watchlistPickerOpen(v) { watchlistPickerOpen = v; }
@@ -186,10 +197,56 @@
   var reportItems = [];
   var reportsUnsub = null;
   var reportedMem = {};
+  var hiddenIds = {};
+  var hidesUnsub = null;
+  var HIDE_REASONS = { ncii: 1, copyright: 1, violent_offensive: 1, hate: 1, impersonation: 1, csam: 1 };
   var previewLiftWired = false;
 
   function isAdminUser() {
     return liveUid() === ADMIN_UID;
+  }
+  function isPostHidden(p) {
+    return !!(p && (hiddenIds[p.id] || (p.parentId && hiddenIds[p.parentId]) || (p.authorUid && hiddenIds['uid:' + p.authorUid])));
+  }
+  function isStoryHidden(s) {
+    return !!(s && (hiddenIds['story:' + s.id] || hiddenIds[s.id] || (s.authorUid && hiddenIds['uid:' + s.authorUid])));
+  }
+  function listenHides() {
+    if (hidesUnsub) { hidesUnsub(); hidesUnsub = null; }
+    if (!fbDb || !SITE_ID) return;
+    hidesUnsub = fbDb.collection('hides').where('siteId', '==', SITE_ID).onSnapshot(function (snap) {
+      var next = {};
+      snap.forEach(function (d) { d = d.data() || {}; if (d.postId) next[d.postId] = true; });
+      hiddenIds = next;
+      renderFeed();
+      if (typeof renderStoriesTray === 'function') renderStoriesTray();
+      if (currentUser) syncProfile();
+      renderNotifs();
+      renderReports();
+    }, function () {});
+  }
+  function pickReportReason() {
+    if (typeof window === 'undefined' || typeof window.prompt !== 'function') return 'ncii';
+    var r = window.prompt('Report reason (1-5):\n1=NCII (auto-hide)\n2=Copyright (auto-hide)\n3=Violent/offensive (auto-hide)\n4=Hate/harassment (auto-hide)\n5=Other abuse/spam', '1');
+    if (r === null) return '';
+    var m = { '1': 'ncii', '2': 'copyright', '3': 'violent_offensive', '4': 'hate', '5': 'abuse' };
+    var s = String(r || '').trim().toLowerCase();
+    return m[s] || (HIDE_REASONS[s] || s === 'abuse' ? s : 'ncii');
+  }
+  function commitAutoHideReport(postId, targetUid, storyId, reason, fallbackAdd) {
+    var me = liveUid(), rRef = fbDb.collection('reports').doc(), ts = firebase.firestore.FieldValue.serverTimestamp();
+    var rDoc = { siteId: SITE_ID, postId: postId, targetUid: targetUid || '', reporterUid: me, reason: reason, status: 'open', createdAt: ts };
+    if (storyId) rDoc.storyId = storyId;
+    hiddenIds[postId] = true;
+    renderFeed();
+    if (typeof renderStoriesTray === 'function') renderStoriesTray();
+    var b = fbDb.batch();
+    b.set(rRef, rDoc);
+    b.set(fbDb.collection('hides').doc(SITE_ID + '_' + postId), { siteId: SITE_ID, postId: postId, reportId: rRef.id, reporterUid: me, reason: reason, hiddenAt: ts });
+    return b.commit().catch(function (e) {
+      if (isPermDenied(e) && fallbackAdd) return fallbackAdd();
+      throw e;
+    });
   }
   var ACC_CLOSED = 'Accounts are not open yet. You can read the room as a guest.';
   function accountsOpen() {
@@ -346,21 +403,7 @@
     var st = document.createElement('style');
     st.id = 'preview-lift-css';
     st.textContent =
-      '.name-prefix-nudge{margin:0.7rem 1rem 0;padding:0.75rem 0.9rem;display:flex;gap:0.6rem;align-items:flex-start;' +
-        'background:var(--surface,#111);color:var(--text,#f4f4f4);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:10px;font-size:0.86rem;}' +
-      '.name-prefix-nudge[hidden],.name-prompt[hidden]{display:none!important;}' +
-      '.name-prefix-nudge-copy{flex:1;}' +
-      '.name-prefix-nudge-link,.name-prefix-nudge-x{background:transparent;border:1px solid var(--border,rgba(255,255,255,0.18));color:inherit;border-radius:8px;cursor:pointer;}' +
-      '.name-prefix-nudge-link{margin-left:0.35rem;padding:0.15rem 0.5rem;font:inherit;font-weight:600;}' +
-      '.name-prefix-nudge-x{width:1.7rem;height:1.7rem;}' +
-      '.name-prompt{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:1rem;}' +
-      '.name-prompt-card{background:var(--surface,#111);color:var(--text,#f4f4f4);border-radius:12px;padding:1rem;width:min(22rem,100%);}' +
-      '.name-prompt-card input{width:100%;margin:0.5rem 0;padding:0.45rem 0.6rem;border-radius:8px;border:1px solid var(--border,#333);background:transparent;color:inherit;}' +
-      '.name-prompt-err{min-height:1.1rem;color:var(--accent,#e10600);font-size:0.8rem;}' +
-      '.name-prompt-actions{display:flex;justify-content:flex-end;gap:0.5rem;margin-top:0.4rem;}' +
-      '.post-menu{position:relative;margin-left:auto;}' +
-      '.post-menu-pop{position:absolute;right:0;top:100%;z-index:5;background:var(--surface,#111);border:1px solid var(--border,#333);border-radius:8px;padding:0.25rem;min-width:8rem;}' +
-      '#nav-reports{cursor:pointer;width:100%;background:none;border:0;font:inherit;text-align:left;}';
+      '.name-prefix-nudge{margin:0.7rem 1rem 0;padding:0.75rem 0.9rem;display:flex;gap:0.6rem;align-items:flex-start;background:var(--surface,#111);color:var(--text,#f4f4f4);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:10px;font-size:0.86rem;}.name-prefix-nudge[hidden],.name-prompt[hidden]{display:none!important;}.name-prefix-nudge-copy{flex:1;}.name-prefix-nudge-link,.name-prefix-nudge-x{background:transparent;border:1px solid var(--border,rgba(255,255,255,0.18));color:inherit;border-radius:8px;cursor:pointer;}.name-prefix-nudge-link{margin-left:0.35rem;padding:0.15rem 0.5rem;font:inherit;font-weight:600;}.name-prefix-nudge-x{width:1.7rem;height:1.7rem;}.name-prompt{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:1rem;}.name-prompt-card{background:var(--surface,#111);color:var(--text,#f4f4f4);border-radius:12px;padding:1rem;width:min(22rem,100%);}.name-prompt-card input{width:100%;margin:0.5rem 0;padding:0.45rem 0.6rem;border-radius:8px;border:1px solid var(--border,#333);background:transparent;color:inherit;}.name-prompt-err{min-height:1.1rem;color:var(--accent,#e10600);font-size:0.8rem;}.name-prompt-actions{display:flex;justify-content:flex-end;gap:0.5rem;margin-top:0.4rem;}.post-menu{position:relative;margin-left:auto;}.post-menu-pop{position:absolute;right:0;top:100%;z-index:5;background:var(--surface,#111);border:1px solid var(--border,#333);border-radius:8px;padding:0.25rem;min-width:8rem;}#nav-reports{cursor:pointer;width:100%;background:none;border:0;font:inherit;text-align:left;}';
     document.head.appendChild(st);
   }
   function showEmailPrefixNudge(uid) {
@@ -395,14 +438,7 @@
       el.id = 'name-prompt';
       el.className = 'name-prompt';
       el.innerHTML =
-        '<div class="name-prompt-card" role="dialog" aria-label="Pick a display name">' +
-          '<p>Pick a display name</p>' +
-          '<input id="name-prompt-input" maxlength="50" autocomplete="nickname" placeholder="Your name">' +
-          '<div class="name-prompt-err" id="name-prompt-err"></div>' +
-          '<div class="name-prompt-actions">' +
-            '<button type="button" id="name-prompt-cancel">Cancel</button>' +
-            '<button type="button" id="name-prompt-save">Save</button>' +
-          '</div></div>';
+        '<div class="name-prompt-card" role="dialog" aria-label="Pick a display name"><p>Pick a display name</p><input id="name-prompt-input" maxlength="50" autocomplete="nickname" placeholder="Your name"><div class="name-prompt-err" id="name-prompt-err"></div><div class="name-prompt-actions"><button type="button" id="name-prompt-cancel">Cancel</button><button type="button" id="name-prompt-save">Save</button></div></div>';
       document.body.appendChild(el);
     }
     var err = document.getElementById('name-prompt-err');
@@ -668,9 +704,10 @@
       sessionStorage.setItem(key, JSON.stringify(map));
     } catch (e) {}
   }
-  function writeReportAlert(post, me) {
+  function writeReportAlert(post, me, reason) {
     if (!me || me === ADMIN_UID || !fbDb || !post) return;
-    var snippet = String(post.text || '').replace(/\s+/g, ' ').trim().slice(0, 180);
+    var hide = HIDE_REASONS[reason] || isPostHidden(post);
+    var snippet = hide ? ('[' + (reason || 'hidden') + ' · auto-hidden]') : String(post.text || '').replace(/\s+/g, ' ').trim().slice(0, 180);
     fbDb.collection('users').doc(ADMIN_UID).collection('notifications').add({
       toUid: ADMIN_UID,
       fromUid: me,
@@ -781,12 +818,14 @@
       return;
     }
     el.innerHTML = rows.map(function (r) {
-      var post = findPost(r.postId);
-      var snippet = (post && post.text) ? String(post.text).replace(/\s+/g, ' ').trim().slice(0, 180) : '(post unavailable)';
+      var isHid = !!(hiddenIds[r.postId] || HIDE_REASONS[r.reason]);
+      var post = isHid ? null : findPost(r.postId);
+      var snippet = isHid ? ('[Hidden — ' + (r.reason || 'reported') + ' · ' + r.postId + ']') :
+        ((post && post.text) ? String(post.text).replace(/\s+/g, ' ').trim().slice(0, 180) : '(post unavailable)');
       var count = reporterCount(r.postId);
-      return '<div class="notif-item">' +
+      return '<div class="notif-item"' + (isHid ? ' style="opacity:0.65"' : '') + '>' +
         '<p>' + escapeHtml(snippet) + '</p>' +
-        '<p>' + count + ' reporter' + (count === 1 ? '' : 's') + '</p>' +
+        '<p>' + count + ' reporter' + (count === 1 ? '' : 's') + (r.reason ? ' · ' + escapeHtml(r.reason) : '') + '</p>' +
         '<button type="button" class="post-action" data-report-remove="' + escapeHtml(r.postId) + '">Remove post</button> ' +
         reportTriage(r) +
         '</div>';
@@ -954,9 +993,10 @@
     return !!(post && post.sessionSeed);
   }
   function findPost(id) {
+    if (hiddenIds[id]) return null;
     var i;
-    for (i = 0; i < livePosts.length; i++) if (livePosts[i].id === id) return livePosts[i];
-    for (i = 0; i < nestPosts.length; i++) if (nestPosts[i].id === id) return nestPosts[i];
+    for (i = 0; i < livePosts.length; i++) if (livePosts[i].id === id && !isPostHidden(livePosts[i])) return livePosts[i];
+    for (i = 0; i < nestPosts.length; i++) if (nestPosts[i].id === id && !isPostHidden(nestPosts[i])) return nestPosts[i];
     var seeds = sessionSeedPosts();
     for (var j = 0; j < seeds.length; j++) if (seeds[j].id === id) return seeds[j];
     return null;
@@ -996,30 +1036,14 @@
       var st = document.createElement('style');
       st.id = 'share-sheet-css';
       st.textContent =
-        '#share-sheet{position:fixed;inset:0;z-index:80;background:rgba(18,24,28,.42);display:flex;align-items:flex-end;justify-content:center;padding:16px;}' +
-        '#share-sheet[hidden]{display:none!important;}' +
-        '.share-sheet{width:min(420px,100%);background:var(--surface,#fffaf3);color:var(--text,#1a2a30);border:1px solid var(--border,#e4d6c4);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);padding:10px;}' +
-        '.share-sheet h3{margin:6px 8px 10px;font-size:15px;font-weight:650;}' +
-        '.share-sheet button{display:block;width:100%;text-align:left;background:transparent;border:0;border-radius:10px;padding:11px 12px;font:inherit;font-size:14px;cursor:pointer;color:inherit;}' +
-        '.share-sheet button:hover{background:rgba(0,0,0,.06);}' +
-        '.share-sheet .share-cancel{color:var(--text-muted,#4a5f66);margin-top:4px;}' +
-        '.share-sheet-preview{display:block;width:100%;max-height:160px;object-fit:cover;border-radius:10px;margin:0 0 8px;}' +
-        '.share-sheet-preview[hidden]{display:none!important;}' +
-        '.post.is-deep-post{box-shadow:inset 0 0 0 2px var(--accent,#e07a3d);border-radius:10px;}';
+        '#share-sheet{position:fixed;inset:0;z-index:80;background:rgba(18,24,28,.42);display:flex;align-items:flex-end;justify-content:center;padding:16px;}#share-sheet[hidden]{display:none!important;}.share-sheet{width:min(420px,100%);background:var(--surface,#fffaf3);color:var(--text,#1a2a30);border:1px solid var(--border,#e4d6c4);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);padding:10px;}.share-sheet h3{margin:6px 8px 10px;font-size:15px;font-weight:650;}.share-sheet button{display:block;width:100%;text-align:left;background:transparent;border:0;border-radius:10px;padding:11px 12px;font:inherit;font-size:14px;cursor:pointer;color:inherit;}.share-sheet button:hover{background:rgba(0,0,0,.06);}.share-sheet .share-cancel{color:var(--text-muted,#4a5f66);margin-top:4px;}.share-sheet-preview{display:block;width:100%;max-height:160px;object-fit:cover;border-radius:10px;margin:0 0 8px;}.share-sheet-preview[hidden]{display:none!important;}.post.is-deep-post{box-shadow:inset 0 0 0 2px var(--accent,#e07a3d);border-radius:10px;}';
       document.head.appendChild(st);
     }
     ov = document.createElement('div');
     ov.id = 'share-sheet';
     ov.hidden = true;
     ov.innerHTML =
-      '<div class="share-sheet" role="dialog" aria-modal="true" aria-label="Share">' +
-        '<img class="share-sheet-preview" id="share-sheet-preview" alt="" hidden>' +
-        '<h3>Share</h3>' +
-        '<button type="button" data-share="copy">Copy link</button>' +
-        '<button type="button" data-share="x">Share to x.com</button>' +
-        '<button type="button" data-share="reddit">Share to Reddit</button>' +
-        '<button type="button" class="share-cancel" data-share="close">Cancel</button>' +
-      '</div>';
+      '<div class="share-sheet" role="dialog" aria-modal="true" aria-label="Share"><img class="share-sheet-preview" id="share-sheet-preview" alt="" hidden><h3>Share</h3><button type="button" data-share="copy">Copy link</button><button type="button" data-share="x">Share to x.com</button><button type="button" data-share="reddit">Share to Reddit</button><button type="button" class="share-cancel" data-share="close">Cancel</button></div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', function (e) {
       if (e.target === ov) { closeShareSheet(); return; }
@@ -1168,24 +1192,30 @@
       if (dmsOn()) syncChatChrome();
     }, function () {});
   }
-  function reportPost(id) {
+  function reportPost(id, optReason) {
     if (!requireVerified('report')) return;
     var post = findPost(id);
     if (!post || !fbDb || isSessionSeedPost(post)) return;
     if (alreadyReported(id)) { toast('You already reported this post.'); return; }
+    var reason = optReason || pickReportReason();
+    if (!reason) return;
     var me = liveUid();
-    fbDb.collection('reports').add({
-      siteId: SITE_ID,
-      postId: id,
-      targetUid: post.authorUid || '',
-      reporterUid: me,
-      reason: 'abuse',
-      status: 'open',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(function () {
+    var addOnly = function () {
+      return fbDb.collection('reports').add({
+        siteId: SITE_ID,
+        postId: id,
+        targetUid: post.authorUid || '',
+        reporterUid: me,
+        reason: reason,
+        status: 'open',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    };
+    var op = (HIDE_REASONS[reason] || isAdminUser()) ? commitAutoHideReport(id, post.authorUid || '', '', reason, addOnly) : addOnly();
+    op.then(function () {
       markReported(id);
-      toast('Reported. Thanks.');
-      writeReportAlert(post, me);
+      toast(HIDE_REASONS[reason] ? 'Reported and hidden pending review.' : 'Reported. Thanks.');
+      writeReportAlert(post, me, reason);
     }).catch(function (e) {
       toast(reportErr(e));
     });
@@ -1421,16 +1451,7 @@
     var st = document.createElement('style');
     st.id = 'early-welcome-css';
     st.textContent =
-      '.early-welcome[hidden]{display:none!important;}' +
-      '.early-welcome{margin:0.7rem 1rem 0.15rem;padding:0.85rem 0.95rem 0.85rem 1.05rem;' +
-        'background:var(--surface,#111);color:var(--text,#f4f4f4);' +
-        'border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:10px;' +
-        'font-size:0.86rem;line-height:1.45;display:flex;gap:0.75rem;align-items:flex-start;}' +
-      '.early-welcome-copy{flex:1;}' +
-      '.early-welcome-dismiss{flex:0 0 auto;width:1.7rem;height:1.7rem;padding:0;' +
-        'border:1px solid var(--border,rgba(255,255,255,0.18));background:transparent;' +
-        'color:var(--text-muted,#9a9aa3);border-radius:8px;cursor:pointer;font-size:1.1rem;line-height:1;}' +
-      '.early-welcome-dismiss:hover{color:var(--text,#f4f4f4);background:rgba(255,255,255,0.06);}';
+      '.early-welcome[hidden]{display:none!important;}.early-welcome{margin:0.7rem 1rem 0.15rem;padding:0.85rem 0.95rem 0.85rem 1.05rem;background:var(--surface,#111);color:var(--text,#f4f4f4);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:10px;font-size:0.86rem;line-height:1.45;display:flex;gap:0.75rem;align-items:flex-start;}.early-welcome-copy{flex:1;}.early-welcome-dismiss{flex:0 0 auto;width:1.7rem;height:1.7rem;padding:0;border:1px solid var(--border,rgba(255,255,255,0.18));background:transparent;color:var(--text-muted,#9a9aa3);border-radius:8px;cursor:pointer;font-size:1.1rem;line-height:1;}.early-welcome-dismiss:hover{color:var(--text,#f4f4f4);background:rgba(255,255,255,0.06);}';
     document.head.appendChild(st);
   }
 
@@ -1944,7 +1965,7 @@
     var key = nestKey(slug);
     if (!key) return false;
     for (var i = 0; i < livePosts.length; i++) {
-      if (nestKey(livePosts[i].nestSlug) === key) return true;
+      if (!isPostHidden(livePosts[i]) && nestKey(livePosts[i].nestSlug) === key) return true;
     }
     return false;
   }
@@ -2246,14 +2267,7 @@
     list.className = 'nav-nests';
     list.setAttribute('aria-label', 'Nested rooms');
     list.innerHTML =
-      '<li class="nav-nests-label"><span>Nests</span>' +
-        '<button type="button" class="nav-nest-add" id="nav-nest-add" aria-label="Add a nested room" title="Add a nested room">+</button></li>' +
-      '<li class="nav-nest-form" id="nav-nest-form" hidden>' +
-        '<label>Label<input type="text" id="nest-add-label" maxlength="40" autocomplete="off" placeholder="Room name"></label>' +
-        '<label>Slug<input type="text" id="nest-add-slug" maxlength="40" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="room-name"></label>' +
-        '<p class="nav-nest-form-err" id="nest-add-err" role="status"></p>' +
-        '<button type="button" class="nav-nest-save" id="nest-add-save">Add room</button>' +
-      '</li>';
+      '<li class="nav-nests-label"><span>Nests</span><button type="button" class="nav-nest-add" id="nav-nest-add" aria-label="Add a nested room" title="Add a nested room">+</button></li><li class="nav-nest-form" id="nav-nest-form" hidden><label>Label<input type="text" id="nest-add-label" maxlength="40" autocomplete="off" placeholder="Room name"></label><label>Slug<input type="text" id="nest-add-slug" maxlength="40" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="room-name"></label><p class="nav-nest-form-err" id="nest-add-err" role="status"></p><button type="button" class="nav-nest-save" id="nest-add-save">Add room</button></li>';
     var items = document.createElement('li');
     var inner = document.createElement('ul');
     inner.id = 'nav-nests-items';
@@ -2547,6 +2561,7 @@
   }
 
   function renderPostMedia(post) {
+    if (isPostHidden(post)) return '';
     var html = '';
     if (post.imageUrl) {
       html += '<div class="post-image"><img src="' + escapeHtml(post.imageUrl) + '" alt="" loading="lazy"></div>';
@@ -2574,6 +2589,7 @@
   }
 
   function renderPost(post, isReply) {
+    if (isPostHidden(post)) return '';
     const uid = liveUid();
     const liked = !!(uid && post.likedBy && post.likedBy[uid]);
     const likeCount = post.likes || 0;
@@ -2633,39 +2649,18 @@
 
   function topLevelPosts() {
     return postsForFeed().filter(function (p) {
-      if (p.parentId || (p.authorUid && blockedUids[p.authorUid])) return false;
+      if (p.parentId || isPostHidden(p) || (p.authorUid && blockedUids[p.authorUid])) return false;
       if (currentNest) return nestKey(p.nestSlug) === nestKey(currentNest.slug);
       return true;
     });
   }
 
   function repliesFor(parentId) {
-    return postsForFeed().filter(function (p) { return p.parentId === parentId && !(p.authorUid && blockedUids[p.authorUid]); })
+    if (hiddenIds[parentId]) return [];
+    return postsForFeed().filter(function (p) { return p.parentId === parentId && !isPostHidden(p) && !(p.authorUid && blockedUids[p.authorUid]); })
       .sort(function (a, b) { return (a.ms || 0) - (b.ms || 0); });
   }
 
-  function taxonomyCatalog() {
-    var tax = site && site.taxonomy;
-    if (!tax || typeof tax !== 'object') {
-      return { version: 0, name: 'Topics', symbolPrefix: '$', topics: [], defaultWatchlist: [] };
-    }
-    return tax;
-  }
-  function activeTopics() {
-    var topics = taxonomyCatalog().topics;
-    if (!Array.isArray(topics)) return [];
-    return topics.filter(function (t) {
-      return t && t.status === 'active' && t.id;
-    });
-  }
-  function topicById(id) {
-    if (!id) return null;
-    var topics = activeTopics();
-    for (var i = 0; i < topics.length; i++) {
-      if (topics[i].id === id) return topics[i];
-    }
-    return null;
-  }
   function collectTopicIds(source) {
     var out = [];
     var seen = {};
@@ -2685,12 +2680,6 @@
     if (typeof source.topic === 'string') push(source.topic);
     return out;
   }
-  function postHasTopic(post, topicId) {
-    if (!post || !topicId) return false;
-    var ids = Array.isArray(post.topicIds) ? post.topicIds : collectTopicIds(post);
-    for (var i = 0; i < ids.length; i++) if (ids[i] === topicId) return true;
-    return false;
-  }
   function addToWatchlist() { // factory-gp.js
     if (PLUGIN.addToWatchlist) return PLUGIN.addToWatchlist.apply(null, arguments);
   }
@@ -2702,59 +2691,8 @@
     var box = document.getElementById('watchlist');
     if (box) box.hidden = true;
   }
-  function topicFocusHtml(topic) {
-    var symbol = topic && topic.symbol ? topic.symbol : (focusedTopicId || 'Topic');
-    var label = topic ? topic.label : 'Not in this room';
-    var blurb = topic && topic.blurb
-      ? '<div class="topic-focus-blurb">' + escapeHtml(topic.blurb) + '</div>'
-      : '';
-    return '<div class="topic-focus">' +
-      '<div class="topic-focus-copy">' +
-        '<div class="topic-focus-title"><span class="topic-focus-symbol">' + escapeHtml(symbol) + '</span>' +
-        '<span class="topic-focus-label">' + escapeHtml(label) + '</span></div>' +
-        blurb +
-      '</div>' +
-      '<button type="button" class="topic-focus-clear" data-topic-clear>For You</button>' +
-    '</div>';
-  }
-  function renderTopicFeed() {
-    var el = document.getElementById('thoughts-feed');
-    if (!el) return;
-    var topic = topicById(focusedTopicId);
-    var symbol = topic && topic.symbol ? topic.symbol : focusedTopicId;
-    var head = topicFocusHtml(topic);
-    if (!topic) {
-      el.innerHTML = head + '<div class="post-empty"><strong>That topic is not in this room.</strong></div>';
-      refreshPorchUi();
-      return;
-    }
-    if (!liveReady && !liveError) {
-      el.innerHTML = head + '<div class="post-empty">Connecting to the live feed…</div>';
-      refreshPorchUi();
-      return;
-    }
-    if (liveError) {
-      el.innerHTML = head + '<div class="post-empty"><strong>Live feed could not load.</strong><p>No tagged posts to show.</p></div>';
-      refreshPorchUi();
-      return;
-    }
-    var seeds = (currentNest ? [] : sessionSeedPosts()).filter(function (p) { return postHasTopic(p, focusedTopicId); });
-    var posts = topLevelPosts().filter(function (p) { return postHasTopic(p, focusedTopicId); });
-    var seedIds = {};
-    for (var si = 0; si < seeds.length; si++) seedIds[seeds[si].id] = true;
-    posts = seeds.concat(posts.filter(function (p) { return !seedIds[p.id]; }));
-    if (!posts.length) {
-      el.innerHTML = head + '<div class="post-empty"><strong>No posts tagged ' + escapeHtml(symbol) + ' yet.</strong>' +
-        '<p>Nothing in the feed is tagged with this topic.</p></div>';
-      refreshPorchUi();
-      return;
-    }
-    el.innerHTML = head + posts.map(function (p) {
-      var kids = repliesFor(p.id);
-      return renderPost(p, false) + kids.map(function (r) { return renderPost(r, true); }).join('');
-    }).join('');
-    highlightDeepPost();
-    refreshPorchUi();
+  function renderTopicFeed() { // factory-gp.js
+    if (PLUGIN.renderTopicFeed) return PLUGIN.renderTopicFeed.apply(null, arguments);
   }
 
   function canOpenProfile(post) {
@@ -2803,7 +2741,7 @@
       return;
     }
     var posts = livePosts.filter(function (p) {
-      if (!p || p.parentId) return false;
+      if (!p || p.parentId || isPostHidden(p)) return false;
       if (p.authorUid && blockedUids[p.authorUid]) return false;
       return !!(p.authorUid && followingUids[p.authorUid]);
     });
@@ -2961,32 +2899,10 @@
     var st = document.createElement('style');
     st.id = 'rail-porch-css';
     st.textContent =
-      '.news-item{display:block;padding:1rem 1.4rem;border-bottom:1px solid rgba(255,255,255,0.06);}' +
-      'a.news-item{text-decoration:none;cursor:pointer;}' +
-      '.porch-btns{display:flex;gap:0.45rem;margin:0.45rem 0 0.2rem;flex-wrap:wrap;}' +
-      '.porch-btn{font:inherit;font-size:0.78rem;font-weight:600;padding:0.35rem 0.8rem;border-radius:999px;' +
-        'border:1px solid rgba(255,255,255,0.22);background:rgba(255,255,255,0.08);color:#f0f4f7;cursor:pointer;}' +
-      '.porch-btn:hover{background:rgba(255,255,255,0.16);}' +
-      '.porch-btn-picked{border-color:var(--accent,#e07a3d);background:rgba(224,122,61,0.28);box-shadow:inset 0 0 0 1px var(--accent,#e07a3d);}' +
-      '.porch-tally{font-size:0.75rem;line-height:1.4;color:#8aa0b0;margin:0.28rem 0 0.1rem;}' +
-      '.news-page-list .news-item{background:var(--surface,#f4f7fa);border:1px solid var(--border,#c9d5de);border-radius:10px;padding:1.05rem 1.15rem;}' +
-      '.news-page-list .porch-btn{border-color:var(--border,#c9d5de);background:#fff;color:var(--text,#12202c);}' +
-      '.news-page-list .porch-btn:hover{border-color:var(--accent,#c0362c);color:var(--accent,#c0362c);}' +
-      '.news-page-list .porch-btn-picked{border-color:var(--accent,#c0362c);color:var(--accent,#c0362c);background:rgba(192,54,44,0.08);}' +
-      '.news-page-list .porch-tally{color:var(--text-muted,#4a5f66);}' +
-      '[data-porch-dwell] .news-item-porch{padding-top:1.25rem;padding-bottom:1.25rem;}';
+      '.news-item{display:block;padding:1rem 1.4rem;border-bottom:1px solid rgba(255,255,255,0.06);}a.news-item{text-decoration:none;cursor:pointer;}.porch-btns{display:flex;gap:0.45rem;margin:0.45rem 0 0.2rem;flex-wrap:wrap;}.porch-btn{font:inherit;font-size:0.78rem;font-weight:600;padding:0.35rem 0.8rem;border-radius:999px;border:1px solid rgba(255,255,255,0.22);background:rgba(255,255,255,0.08);color:#f0f4f7;cursor:pointer;}.porch-btn:hover{background:rgba(255,255,255,0.16);}.porch-btn-picked{border-color:var(--accent,#e07a3d);background:rgba(224,122,61,0.28);box-shadow:inset 0 0 0 1px var(--accent,#e07a3d);}.porch-tally{font-size:0.75rem;line-height:1.4;color:#8aa0b0;margin:0.28rem 0 0.1rem;}.news-page-list .news-item{background:var(--surface,#f4f7fa);border:1px solid var(--border,#c9d5de);border-radius:10px;padding:1.05rem 1.15rem;}.news-page-list .porch-btn{border-color:var(--border,#c9d5de);background:#fff;color:var(--text,#12202c);}.news-page-list .porch-btn:hover{border-color:var(--accent,#c0362c);color:var(--accent,#c0362c);}.news-page-list .porch-btn-picked{border-color:var(--accent,#c0362c);color:var(--accent,#c0362c);background:rgba(192,54,44,0.08);}.news-page-list .porch-tally{color:var(--text-muted,#4a5f66);}[data-porch-dwell] .news-item-porch{padding-top:1.25rem;padding-bottom:1.25rem;}';
     if (featureOn('topicFollow')) {
       st.textContent +=
-        '.news-item{padding:1rem 2.8rem 1rem 1.4rem;position:relative;}' +
-        'a.news-item,.news-item-main{text-decoration:none;cursor:pointer;color:inherit;display:block;padding-right:2.15rem;}' +
-        '.news-follow-btn{position:absolute;top:0.75rem;right:0.85rem;z-index:2;width:28px;height:28px;padding:0;border-radius:999px;' +
-          'border:1px solid var(--accent,#e10600);background:transparent;color:var(--accent,#e10600);cursor:pointer;' +
-          'display:inline-flex;align-items:center;justify-content:center;}' +
-        '.news-follow-btn:hover{background:rgba(225,6,0,0.14);}' +
-        '.news-follow-btn:focus-visible{outline:2px solid var(--accent,#e10600);outline-offset:2px;}' +
-        '.news-follow-btn.is-following{background:var(--accent,#e10600);color:#fff;border-color:var(--accent,#e10600);}' +
-        '.news-page-list .news-follow-btn{border-color:var(--accent,#c0362c);color:var(--accent,#c0362c);}' +
-        '.news-page-list .news-follow-btn.is-following{background:var(--accent,#c0362c);color:#fff;border-color:var(--accent,#c0362c);}';
+        '.news-item{padding:1rem 2.8rem 1rem 1.4rem;position:relative;}a.news-item,.news-item-main{text-decoration:none;cursor:pointer;color:inherit;display:block;padding-right:2.15rem;}.news-follow-btn{position:absolute;top:0.75rem;right:0.85rem;z-index:2;width:28px;height:28px;padding:0;border-radius:999px;border:1px solid var(--accent,#e10600);background:transparent;color:var(--accent,#e10600);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}.news-follow-btn:hover{background:rgba(225,6,0,0.14);}.news-follow-btn:focus-visible{outline:2px solid var(--accent,#e10600);outline-offset:2px;}.news-follow-btn.is-following{background:var(--accent,#e10600);color:#fff;border-color:var(--accent,#e10600);}.news-page-list .news-follow-btn{border-color:var(--accent,#c0362c);color:var(--accent,#c0362c);}.news-page-list .news-follow-btn.is-following{background:var(--accent,#c0362c);color:#fff;border-color:var(--accent,#c0362c);}';
     }
     document.head.appendChild(st);
   }
@@ -3599,7 +3515,7 @@
     var posts = livePosts || [];
     for (i = 0; i < posts.length; i++) {
       var post = posts[i];
-      if (!post || post.parentId) continue;
+      if (!post || post.parentId || isPostHidden(post)) continue;
       var opt = porchOptionFromText(post.text);
       if (opt && Object.prototype.hasOwnProperty.call(counts, opt)) counts[opt] += 1;
     }
@@ -3751,7 +3667,7 @@
   }
 
   function siteNotifs() {
-    return notifItems.filter(function (n) { return !n.siteId || n.siteId === SITE_ID; });
+    return notifItems.filter(function (n) { return (!n.siteId || n.siteId === SITE_ID) && !(n.postId && hiddenIds[n.postId] && n.type !== 'report' && n.type !== 'report_update'); });
   }
 
   function unreadNotifCount() {
@@ -4052,17 +3968,7 @@
     var st = document.createElement('style');
     st.id = 'dm-css';
     st.textContent =
-      '.post-name-link{cursor:pointer;}' +
-      '.post-name-link:hover{text-decoration:underline;}' +
-      '.thread-unread{display:inline-block;margin-left:0.35rem;min-width:1.1rem;padding:0.05rem 0.35rem;border-radius:999px;background:var(--accent,#e10600);color:#fff;font-size:0.68rem;font-weight:700;text-align:center;}' +
-      '#chat-compose-err{padding:0.35rem 1rem 0;font-size:0.8rem;color:var(--accent,#e10600);}' +
-      '.chat-user-picker{position:absolute;inset:12px;z-index:4;background:var(--surface,#1c1c20);border:1px solid var(--border,#2c2c32);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;}' +
-      '.chat-user-picker[hidden]{display:none!important;}' +
-      '.chat-user-picker-head{display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1rem;border-bottom:1px solid var(--border,#2c2c32);font-weight:700;}' +
-      '.chat-user-picker-head button{background:none;border:0;color:inherit;font-size:1.2rem;cursor:pointer;}' +
-      '.chat-picker-item{display:flex;gap:0.7rem;align-items:center;padding:0.75rem 1rem;cursor:pointer;border-bottom:1px solid var(--border,#2c2c32);}' +
-      '.chat-picker-item:hover{background:rgba(225,6,0,0.08);}' +
-      '#chat-thread-view[hidden],#chat-placeholder[hidden],#chat-user-picker[hidden],#profile-message-btn[hidden],#profile-follow-btn[hidden]{display:none!important;}';
+      '.post-name-link{cursor:pointer;}.post-name-link:hover{text-decoration:underline;}.thread-unread{display:inline-block;margin-left:0.35rem;min-width:1.1rem;padding:0.05rem 0.35rem;border-radius:999px;background:var(--accent,#e10600);color:#fff;font-size:0.68rem;font-weight:700;text-align:center;}#chat-compose-err{padding:0.35rem 1rem 0;font-size:0.8rem;color:var(--accent,#e10600);}.chat-user-picker{position:absolute;inset:12px;z-index:4;background:var(--surface,#1c1c20);border:1px solid var(--border,#2c2c32);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;}.chat-user-picker[hidden]{display:none!important;}.chat-user-picker-head{display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1rem;border-bottom:1px solid var(--border,#2c2c32);font-weight:700;}.chat-user-picker-head button{background:none;border:0;color:inherit;font-size:1.2rem;cursor:pointer;}.chat-picker-item{display:flex;gap:0.7rem;align-items:center;padding:0.75rem 1rem;cursor:pointer;border-bottom:1px solid var(--border,#2c2c32);}.chat-picker-item:hover{background:rgba(225,6,0,0.08);}#chat-thread-view[hidden],#chat-placeholder[hidden],#chat-user-picker[hidden],#profile-message-btn[hidden],#profile-follow-btn[hidden]{display:none!important;}';
     document.head.appendChild(st);
   }
 
@@ -4239,17 +4145,11 @@
     const el = document.getElementById('chat-thread-list');
     if (!el) return;
     if (!dmsOn()) {
-      el.innerHTML = '<div class="soon-panel soon-panel-pad">' +
-        '<strong>Chat — Soon.</strong>' +
-        '<p>Direct messages are not live. Sample thread copy in site.json is not a real inbox.</p>' +
-        '</div>';
+      el.innerHTML = '<div class="soon-panel soon-panel-pad"><strong>Chat — Soon.</strong><p>Direct messages are not live. Sample thread copy in site.json is not a real inbox.</p></div>';
       return;
     }
     if (!isLiveUser()) {
-      el.innerHTML = '<div class="soon-panel soon-panel-pad">' +
-        '<strong>Join to chat.</strong>' +
-        '<p>Sign in to send and receive direct messages. Guest cannot chat.</p>' +
-        '</div>';
+      el.innerHTML = '<div class="soon-panel soon-panel-pad"><strong>Join to chat.</strong><p>Sign in to send and receive direct messages. Guest cannot chat.</p></div>';
       return;
     }
     var q = ((document.getElementById('chat-search-input') || {}).value || '').trim().toLowerCase();
@@ -4260,9 +4160,7 @@
       return name.indexOf(q) !== -1 || prev.indexOf(q) !== -1;
     });
     if (!list.length) {
-      el.innerHTML = '<div class="soon-panel soon-panel-pad">' +
-        '<strong>' + (dmConversations.length ? 'No matches.' : 'No messages yet.') + '</strong>' +
-        '</div>';
+      el.innerHTML = '<div class="soon-panel soon-panel-pad"><strong>' + (dmConversations.length ? 'No matches.' : 'No messages yet.') + '</strong></div>';
       return;
     }
     var me = liveUid();
@@ -4270,9 +4168,7 @@
       var name = convPeerName(c);
       var unread = (c.unreadCounts && me && c.unreadCounts[me]) || 0;
       var handle = String(name).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 15) || 'member';
-      return '<div class="chat-thread-item' + (c.id === activeConvId ? ' active' : '') + '" data-cid="' + escapeHtml(c.id) + '">' +
-        '<div class="post-avatar" style="background:' + colorFor(handle) + '">' + initials(name) + '</div>' +
-        '<div><div class="thread-name">' + escapeHtml(name) +
+      return '<div class="chat-thread-item' + (c.id === activeConvId ? ' active' : '') + '" data-cid="' + escapeHtml(c.id) + '"><div class="post-avatar" style="background:' + colorFor(handle) + '">' + initials(name) + '</div><div><div class="thread-name">' + escapeHtml(name) +
           (unread ? '<span class="thread-unread">' + escapeHtml(String(unread)) + '</span>' : '') +
         '</div><div class="thread-preview">' + escapeHtml(c.lastMessage || '') + '</div></div></div>';
     }).join('');
@@ -4570,7 +4466,7 @@
     if (b) b.textContent = bio || '';
     const pane = document.getElementById('profile-pane-posts');
     if (!pane) return;
-    const mine = livePosts.filter(function (p) { return p.authorUid && p.authorUid === uid; });
+    const mine = livePosts.filter(function (p) { return p.authorUid && p.authorUid === uid && !isPostHidden(p); });
     if (!mine.length) {
       pane.innerHTML = '<div class="empty-note" id="profile-posts-empty">' + escapeHtml(skin('profileEmpty', (site && site.emptyState) || 'No posts yet.')) + '</div>';
     } else {
@@ -4626,23 +4522,14 @@
     if (!el) return;
     if (isLiveUser() && currentUser && currentUser.live) {
       el.innerHTML =
-        '<div class="sidebar-auth-user">' +
-          '<div class="sidebar-auth-avatar">' + initials(currentUser.name) + '</div>' +
-          '<div class="sidebar-auth-name">@' + escapeHtml(currentUser.handle) + '</div>' +
-        '</div>' +
-        '<button class="sidebar-auth-btn" id="auth-signout" type="button">Sign out</button>';
+        '<div class="sidebar-auth-user"><div class="sidebar-auth-avatar">' + initials(currentUser.name) + '</div><div class="sidebar-auth-name">@' + escapeHtml(currentUser.handle) + '</div></div><button class="sidebar-auth-btn" id="auth-signout" type="button">Sign out</button>';
       if (av) {
         av.textContent = initials(currentUser.name);
         av.style.background = colorFor(currentUser.handle);
       }
     } else if (currentUser && !currentUser.live) {
       el.innerHTML =
-        '<div class="sidebar-auth-user">' +
-          '<div class="sidebar-auth-avatar">' + initials(currentUser.name || 'G') + '</div>' +
-          '<div class="sidebar-auth-name">Guest · browse only</div>' +
-        '</div>' +
-        '<button class="sidebar-auth-btn primary" id="auth-signin" type="button">Sign in</button>' +
-        '<button class="sidebar-auth-btn" id="auth-signout" type="button">Leave guest</button>';
+        '<div class="sidebar-auth-user"><div class="sidebar-auth-avatar">' + initials(currentUser.name || 'G') + '</div><div class="sidebar-auth-name">Guest · browse only</div></div><button class="sidebar-auth-btn primary" id="auth-signin" type="button">Sign in</button><button class="sidebar-auth-btn" id="auth-signout" type="button">Leave guest</button>';
       if (av) {
         av.textContent = initials(currentUser.name || 'G');
         av.style.background = colorFor(currentUser.handle || 'guest');
@@ -4700,14 +4587,7 @@
     var st = document.createElement('style');
     st.id = 'join-auth-css';
     st.textContent =
-      '.conv-modal-tabs.is-join-hidden{display:none;}' +
-      '.conv-email-toggle{width:100%;padding:0.55rem;margin:0.15rem 0 0.35rem;' +
-        'background:transparent;border:1px solid var(--border,rgba(0,0,0,0.14));' +
-        'border-radius:50px;cursor:pointer;font-size:0.82rem;font-weight:600;' +
-        'color:var(--text-muted,#666);}' +
-      '.conv-email-toggle:hover{color:var(--text,#111);}' +
-      '.cv-email-signin{margin-top:0.2rem;}' +
-      '.conv-google-btn{margin-bottom:0.2rem;}';
+      '.conv-modal-tabs.is-join-hidden{display:none;}.conv-email-toggle{width:100%;padding:0.55rem;margin:0.15rem 0 0.35rem;background:transparent;border:1px solid var(--border,rgba(0,0,0,0.14));border-radius:50px;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text-muted,#666);}.conv-email-toggle:hover{color:var(--text,#111);}.cv-email-signin{margin-top:0.2rem;}.conv-google-btn{margin-bottom:0.2rem;}';
     document.head.appendChild(st);
   }
   function ageCheckLabel() {
@@ -5844,7 +5724,8 @@
     catch (e) { /* private mode */ }
   }
   function findStory(id) {
-    for (var i = 0; i < liveStories.length; i++) if (liveStories[i].id === id) return liveStories[i];
+    if (hiddenIds['story:' + id] || hiddenIds[id]) return null;
+    for (var i = 0; i < liveStories.length; i++) if (liveStories[i].id === id && !isStoryHidden(liveStories[i])) return liveStories[i];
     return null;
   }
   function mapStory(doc) {
@@ -5965,6 +5846,7 @@
     var byUid = {};
     var order = [];
     liveStories.forEach(function (s) {
+      if (isStoryHidden(s)) return;
       if (s.siteId && s.siteId !== SITE_ID) return;
       if (s.expiresAtMs && s.expiresAtMs <= now) return;
       var uid = s.authorUid || s.id;
@@ -6123,25 +6005,7 @@
     ov.className = 'stories-composer-overlay';
     ov.hidden = true;
     ov.innerHTML =
-      '<div class="stories-composer" role="dialog" aria-modal="true" aria-labelledby="stories-composer-title">' +
-        '<h2 id="stories-composer-title">Add a story</h2>' +
-        '<p class="stories-composer-note">Lives 24 hours on this room only. Text, a photo, or a short clip.</p>' +
-        '<div class="stories-composer-types">' +
-          '<button type="button" data-story-type="text" class="is-on">Text</button>' +
-          '<button type="button" data-story-type="image">Photo</button>' +
-          '<button type="button" data-story-type="video">Clip</button>' +
-        '</div>' +
-        '<textarea id="stories-composer-text" maxlength="' + STORIES_TEXT_MAX + '" placeholder="' + escapeHtml(storiesComposePlaceholder()) + '"></textarea>' +
-        '<input class="stories-composer-file" id="stories-composer-image" type="file" accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp" hidden>' +
-        '<input class="stories-composer-file" id="stories-composer-video" type="file" accept="video/mp4,video/webm,.mp4,.webm" hidden>' +
-        '<div class="stories-composer-preview" id="stories-composer-preview"></div>' +
-        '<input class="stories-composer-caption" id="stories-composer-caption" maxlength="' + STORIES_CAPTION_MAX + '" placeholder="Caption (optional)" hidden>' +
-        '<div class="stories-composer-err" id="stories-composer-err" role="status"></div>' +
-        '<div class="stories-composer-bar">' +
-          '<button type="button" class="stories-composer-close" id="stories-composer-close">Cancel</button>' +
-          '<button type="button" class="stories-composer-post" id="stories-composer-post">Share story</button>' +
-        '</div>' +
-      '</div>';
+      '<div class="stories-composer" role="dialog" aria-modal="true" aria-labelledby="stories-composer-title"><h2 id="stories-composer-title">Add a story</h2><p class="stories-composer-note">Lives 24 hours on this room only. Text, a photo, or a short clip.</p><div class="stories-composer-types"><button type="button" data-story-type="text" class="is-on">Text</button><button type="button" data-story-type="image">Photo</button><button type="button" data-story-type="video">Clip</button></div><textarea id="stories-composer-text" maxlength="' + STORIES_TEXT_MAX + '" placeholder="' + escapeHtml(storiesComposePlaceholder()) + '"></textarea><input class="stories-composer-file" id="stories-composer-image" type="file" accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp" hidden><input class="stories-composer-file" id="stories-composer-video" type="file" accept="video/mp4,video/webm,.mp4,.webm" hidden><div class="stories-composer-preview" id="stories-composer-preview"></div><input class="stories-composer-caption" id="stories-composer-caption" maxlength="' + STORIES_CAPTION_MAX + '" placeholder="Caption (optional)" hidden><div class="stories-composer-err" id="stories-composer-err" role="status"></div><div class="stories-composer-bar"><button type="button" class="stories-composer-close" id="stories-composer-close">Cancel</button><button type="button" class="stories-composer-post" id="stories-composer-post">Share story</button></div></div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', function (e) {
       if (e.target === ov) closeStoriesComposer();
@@ -6314,7 +6178,7 @@
     var el = document.getElementById('stories-viewer');
     if (!el) return;
     var story = storyViewerList[storyViewerIdx];
-    if (!story) { closeStoriesViewer(); return; }
+    if (!story || isStoryHidden(story)) { closeStoriesViewer(); return; }
     markStoriesSeen([story.id]);
     var segs = storyViewerList.map(function (_, i) {
       var cls = i < storyViewerIdx ? ' is-done' : (i === storyViewerIdx ? ' is-active' : '');
@@ -6338,24 +6202,12 @@
       : '';
     var canReport = isLiveUser() && story.authorUid && story.authorUid !== liveUid();
     el.innerHTML =
-      '<div class="stories-viewer-card">' +
-        '<div class="stories-progress">' + segs + '</div>' +
-        '<div class="stories-viewer-top">' +
-          '<div class="stories-avatar" style="width:32px;height:32px;font-size:0.65rem;background:' + colorFor(story.handle) + '">' + escapeHtml(initials(story.name)) + '</div>' +
-          '<div><div class="stories-viewer-who">' + escapeHtml(story.name) + '</div>' +
-          '<div class="stories-viewer-meta">@' + escapeHtml(story.handle) + ' · ' + when + '</div></div>' +
-          '<button type="button" class="stories-viewer-close" data-story-ui="close" aria-label="Close">&times;</button>' +
-        '</div>' +
-        '<div class="stories-stage">' +
+      '<div class="stories-viewer-card"><div class="stories-progress">' + segs + '</div><div class="stories-viewer-top"><div class="stories-avatar" style="width:32px;height:32px;font-size:0.65rem;background:' + colorFor(story.handle) + '">' + escapeHtml(initials(story.name)) + '</div><div><div class="stories-viewer-who">' + escapeHtml(story.name) + '</div><div class="stories-viewer-meta">@' + escapeHtml(story.handle) + ' · ' + when + '</div></div><button type="button" class="stories-viewer-close" data-story-ui="close" aria-label="Close">&times;</button></div><div class="stories-stage">' +
           media + caption +
-          '<button type="button" class="stories-stage-hit prev" data-story-ui="prev" aria-label="Previous"></button>' +
-          '<button type="button" class="stories-stage-hit next" data-story-ui="next" aria-label="Next"></button>' +
-        '</div>' +
-        '<div class="stories-viewer-actions">' +
+          '<button type="button" class="stories-stage-hit prev" data-story-ui="prev" aria-label="Previous"></button><button type="button" class="stories-stage-hit next" data-story-ui="next" aria-label="Next"></button></div><div class="stories-viewer-actions">' +
           (canReport ? '<button type="button" data-story-ui="report">Report</button>' : '') +
           (story.authorUid === liveUid() ? '<button type="button" data-story-ui="delete">Delete</button>' : '') +
-        '</div>' +
-      '</div>';
+        '</div></div>';
     clearStoryViewerTimer();
     var ms = storyAdvanceMs(story);
     if (ms) {
@@ -6413,21 +6265,29 @@
       }
     }
   }
-  function reportStory(id) {
+  function reportStory(id, optReason) {
     if (!requireVerified('report')) return;
     var story = findStory(id);
     if (!story || !fbDb) return;
-    fbDb.collection('reports').add({
-      siteId: SITE_ID,
-      storyId: id,
-      postId: 'story:' + id,
-      targetUid: story.authorUid || '',
-      reporterUid: liveUid(),
-      reason: 'abuse',
-      status: 'open',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(function () {
-      toast('Reported. Thanks.');
+    var reason = optReason || pickReportReason();
+    if (!reason) return;
+    var me = liveUid(), pid = 'story:' + id;
+    var addOnly = function () {
+      return fbDb.collection('reports').add({
+        siteId: SITE_ID,
+        storyId: id,
+        postId: pid,
+        targetUid: story.authorUid || '',
+        reporterUid: me,
+        reason: reason,
+        status: 'open',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    };
+    var op = (HIDE_REASONS[reason] || isAdminUser()) ? commitAutoHideReport(pid, story.authorUid || '', id, reason, addOnly) : addOnly();
+    op.then(function () {
+      toast(HIDE_REASONS[reason] ? 'Reported and hidden pending review.' : 'Reported. Thanks.');
+      writeReportAlert({ id: pid, text: story.text || '' }, me, reason);
     }).catch(function (e) {
       toast(reportErr(e));
     });
@@ -6497,12 +6357,9 @@
       html +=
         '<button type="button" class="' + addCls + '"' +
           (hasMine ? ' data-story-uid="' + escapeHtml(me) + '"' : ' data-story-add="1"') +
-          ' aria-label="' + (hasMine ? 'Your story' : 'Add story') + '">' +
-          '<span class="stories-ring">' +
+          ' aria-label="' + (hasMine ? 'Your story' : 'Add story') + '"><span class="stories-ring">' +
             storyTrayAvatarHtml(myLatest, (currentUser && currentUser.name) || 'Me', (currentUser && currentUser.handle) || 'me') +
-            '<span class="stories-add-badge" data-story-add="1">+</span></span>' +
-          '<span class="stories-label">' + (hasMine ? 'Your story' : 'Add story') + '</span>' +
-        '</button>';
+            '<span class="stories-add-badge" data-story-add="1">+</span></span><span class="stories-label">' + (hasMine ? 'Your story' : 'Add story') + '</span></button>';
     }
     groups.forEach(function (g) {
       var latest = latestStory(g.stories);
@@ -6511,10 +6368,7 @@
       var unseen = groupHasUnseen(g.stories);
       html +=
         '<button type="button" class="stories-item' + (unseen ? '' : ' is-seen') + '" data-story-uid="' +
-          escapeHtml(g.uid) + '" role="listitem">' +
-          '<span class="stories-ring">' + storyTrayAvatarHtml(latest) + '</span>' +
-          '<span class="stories-label">' + escapeHtml(latest.name) + '</span>' +
-        '</button>';
+          escapeHtml(g.uid) + '" role="listitem"><span class="stories-ring">' + storyTrayAvatarHtml(latest) + '</span><span class="stories-label">' + escapeHtml(latest.name) + '</span></button>';
     });
     el.innerHTML = html;
     primeStoryTrayThumbs(el);
@@ -6582,11 +6436,8 @@
           var el = ensureStoriesTray();
           el.hidden = false;
           el.innerHTML =
-            '<button type="button" class="stories-item is-add" data-story-add="1" aria-label="Add story">' +
-              '<span class="stories-ring"><span class="stories-avatar" style="background:' + colorFor(SITE_ID || 'room') + '">' +
-              escapeHtml(String(SITE_ID || 'room').replace(/chat$/i, '').slice(0, 3).toUpperCase() || 'ME') + '</span>' +
-              '<span class="stories-add-badge">+</span></span>' +
-              '<span class="stories-label">Add story</span></button>';
+            '<button type="button" class="stories-item is-add" data-story-add="1" aria-label="Add story"><span class="stories-ring"><span class="stories-avatar" style="background:' + colorFor(SITE_ID || 'room') + '">' +
+              escapeHtml(String(SITE_ID || 'room').replace(/chat$/i, '').slice(0, 3).toUpperCase() || 'ME') + '</span><span class="stories-add-badge">+</span></span><span class="stories-label">Add story</span></button>';
         },
         setDemo: function (list, ownUid) {
           if (storiesUnsub) { storiesUnsub(); storiesUnsub = null; }
@@ -6698,6 +6549,7 @@
         });
       }
       listenKillSwitch();
+      listenHides();
       listenLivePosts();
       initStories();
     });
