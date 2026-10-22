@@ -1,5 +1,6 @@
 name: drift
-# Nightly read-only check: live factory.js / styles.css on every room apex vs the room's FACTORY.lock and this release.
+# Nightly read-only check: live factory.js / styles.css (+ factory-gp.js / factory-rail.js where the lock lists them)
+# on every room apex vs the room's FACTORY.lock and this release.
 # Needs no secrets. A failed run (DRIFT, or an unexpected fetch ERROR) is the alarm: GitHub emails the repo owner.
 on:
   schedule: [{ cron: '17 10 * * *' }]   # 10:17 UTC = 4:17 AM MT (MDT)

@@ -1,13 +1,27 @@
 {
-  "version": "v1.0.1",
+  "version": "v1.1.0",
   "factory.js": {
-    "sha256": "5db3afa908549bd776b862b44582f192bbeafaa35cf80941b5243015a38ec734",
-    "bytes": 289004
+    "sha256": "a09b6092d7d025ecba9ba7874e23b17b3c1566f296b72e49936ce02dacce3fe1",
+    "bytes": 252450
   },
   "sources": {
     "template": "build/sources/template_factory_660144d1886e.js (T0 pin, nest-feed query edited in place)",
     "gpchat_base": "jebbdykstra99/gpchat@7553762",
-    "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)"
+    "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)",
+    "split": "build/split.mjs (opt-in files out of the folded single-file build)"
   },
-  "built": "2026-10-17 (MT)"
+  "built": "2026-10-22 (MT)",
+  "optIn": {
+    "factory-gp.js": {
+      "sha256": "bca8688433bd4cb1936a66c64e53da7371d5dc2c51c974ce9e68fa6410eb3198",
+      "bytes": 31358,
+      "loadWhen": "site.json features.watchlist|topicFollow|sessionSeeds true, or rail.kind f1-calendar (gpchat only today)"
+    },
+    "factory-rail.js": {
+      "sha256": "d409bfce8b559b5c75c89aba93dee86d3e10367b4c765b0d3aefdd3fce1bd0ea",
+      "bytes": 10231,
+      "loadWhen": "site.json rail.kind nws-forecast|nws-cwf|bart-bsa, or rail.forecastUrl / rail.lat+lon (415, 808, samo, bart)"
+    }
+  },
+  "coreBudgetBytes": 255000
 }

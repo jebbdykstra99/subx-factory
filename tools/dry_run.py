@@ -8,7 +8,7 @@ import stamp as S
 ap = argparse.ArgumentParser(); ap.add_argument('--rooms-dir', required=True); ap.add_argument('--out'); ap.add_argument('--keep')
 a = ap.parse_args()
 cfg = json.load(open(os.path.join(ROOT, 'rooms.json')))
-release = {'factory': open(os.path.join(ROOT, 'factory/factory.js'), 'rb').read(), 'version': cfg['version']}
+release = S.load_release(ROOT, cfg['version'])
 rows = []
 for e in sorted(cfg['rooms'], key=lambda e: e['order']):
     src = os.path.join(a.rooms_dir, e['room'])
@@ -17,8 +17,11 @@ for e in sorted(cfg['rooms'], key=lambda e: e['order']):
     shutil.copytree(src, tmp, symlinks=True)
     rep, files = S.stamp(e, release, tmp, dry=True)
     # always write into the temp copy so the diff size is measurable even for blocked rooms
-    fjs, idx, site_raw, lock = files
+    fjs, idx, site_raw, lock, optin = files
     open(os.path.join(tmp, 'factory.js'), 'wb').write(fjs); open(os.path.join(tmp, 'index.html'), 'w').write(idx)
+    for f in S.OPTIN:
+        if f in optin: open(os.path.join(tmp, f), 'wb').write(optin[f])
+        elif os.path.exists(os.path.join(tmp, f)): os.remove(os.path.join(tmp, f))
     if site_raw: open(os.path.join(tmp, 'site.json'), 'w').write(site_raw)
     open(os.path.join(tmp, 'FACTORY.lock'), 'w').write(json.dumps(lock, indent=2) + '\n')
     subprocess.run(['git', '-C', tmp, 'add', '-A'], check=True)

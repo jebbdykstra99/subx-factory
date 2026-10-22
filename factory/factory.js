@@ -21,11 +21,9 @@
 
   let SITE_ID = '';  // set from site.json siteId in boot()
   let site = null;
-  const LS_TOPIC_FOLLOWS = 'subx.topicFollows';
   let dmSendInFlight = false;
   let focusedTopicId = '';
   let watchlistPickerOpen = false;
-  let watchlistQuery = '';
   let COLORS = ['#0b1c2c', '#1b6b73', '#c0362c', '#2a4a62', '#8a3b32', '#345c6e'];
   let TRENDS = [];
   let PLACES = [];
@@ -95,6 +93,34 @@
   let notifTab = 'all';
   const ADMIN_UID = 'o774wL9hUVSi19EkDCgLqQomP8i2';
   const DM_TEXT_MAX = 1000;
+
+  // Opt-in files (factory-gp.js, factory-rail.js) push installers onto window.__subxPlugins
+  // before this file runs. A room that does not load one keeps the neutral stubs (feature-off behavior).
+  var PLUGIN = {};
+  var CORE = {
+    activeTopics: activeTopics,
+    composeErr: composeErr,
+    escapeHtml: escapeHtml,
+    featureOn: featureOn,
+    isLiveUser: isLiveUser,
+    liveUid: liveUid,
+    loadJSON: loadJSON,
+    openAuth: openAuth,
+    railCfg: railCfg,
+    railNwsSlots: railNwsSlots,
+    saveJSON: saveJSON,
+    taxonomyCatalog: taxonomyCatalog,
+    topicById: topicById,
+    get SITE_ID() { return SITE_ID; },
+    get focusedTopicId() { return focusedTopicId; },
+    get site() { return site; },
+    get watchlistPickerOpen() { return watchlistPickerOpen; },
+    set watchlistPickerOpen(v) { watchlistPickerOpen = v; }
+  };
+  (window.__subxPlugins || []).forEach(function (install) {
+    var api = install(CORE) || {};
+    Object.keys(api).forEach(function (k) { PLUGIN[k] = api[k]; });
+  });
 
   const FB_WEB_CONFIG_URL = 'https://subx-skins.web.app/firebase-web-config.json';
 
@@ -166,7 +192,7 @@
   }
   function siteMinAge() {
     var n = parseInt(site && site.minAge, 10);
-    if (!isFinite(n) || n < 1) return 13;
+    if (!isFinite(n) || n < 1) return 18;
     return n;
   }
   function ageGateMessage() {
@@ -833,107 +859,17 @@
     try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { /* private mode */ }
   }
 
-  function topicFollowsStoreKey() {
-    return LS_TOPIC_FOLLOWS + '.' + (SITE_ID || 'site');
+  function renderFollowBtn() { // factory-gp.js
+    if (PLUGIN.renderFollowBtn) return PLUGIN.renderFollowBtn.apply(null, arguments);
+    return '';
   }
 
-  function loadTopicFollows() {
-    var raw = loadJSON(topicFollowsStoreKey(), {});
-    return (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+  function syncTopicFollowButtons() { // factory-gp.js
+    if (PLUGIN.syncTopicFollowButtons) return PLUGIN.syncTopicFollowButtons.apply(null, arguments);
   }
 
-  function topicFollowSlug(s) {
-    return String(s || '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 80);
-  }
-
-  function cardTopicKey(card) {
-    if (!card) return 'topic';
-    var explicit = card.followId || card.topic;
-    if (explicit) {
-      var fromExplicit = topicFollowSlug(explicit);
-      if (fromExplicit) return fromExplicit;
-    }
-    var tag = topicFollowSlug(card.tag);
-    var head = topicFollowSlug(card.headline);
-    if (tag && head) return (tag + '-' + head).slice(0, 80);
-    return tag || head || 'topic';
-  }
-
-  function isTopicFollowed(key) {
-    return !!(key && loadTopicFollows()[key]);
-  }
-
-  function setTopicFollowed(key, on) {
-    if (!key) return;
-    var map = loadTopicFollows();
-    if (on) map[key] = true;
-    else delete map[key];
-    saveJSON(topicFollowsStoreKey(), map);
-  }
-
-  function topicFollowLabel(card) {
-    return String((card && (card.tag || card.headline)) || 'topic');
-  }
-
-  function followIconSvg(on) {
-    if (on) {
-      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
-    }
-    return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
-  }
-
-  function renderFollowBtn(card) {
-    if (!featureOn('topicFollow')) return '';
-    var key = cardTopicKey(card);
-    var label = topicFollowLabel(card);
-    var on = isLiveUser() && isTopicFollowed(key);
-    var aria = (on ? 'Following ' : 'Follow ') + label;
-    return '<button type="button" class="news-follow-btn' + (on ? ' is-following' : '') +
-      '" data-topic-follow="' + escapeHtml(key) +
-      '" data-topic-label="' + escapeHtml(label) +
-      '" aria-pressed="' + (on ? 'true' : 'false') +
-      '" aria-label="' + escapeHtml(aria) +
-      '" title="' + escapeHtml(aria) + '">' +
-      followIconSvg(on) +
-      '</button>';
-  }
-
-  function paintFollowBtn(btn, on) {
-    if (!btn) return;
-    var label = btn.getAttribute('data-topic-label') || 'topic';
-    var aria = (on ? 'Following ' : 'Follow ') + label;
-    btn.classList.toggle('is-following', !!on);
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    btn.setAttribute('aria-label', aria);
-    btn.setAttribute('title', aria);
-    btn.innerHTML = followIconSvg(!!on);
-  }
-
-  function syncTopicFollowButtons() {
-    var buttons = document.querySelectorAll('[data-topic-follow]');
-    var signedIn = isLiveUser();
-    for (var i = 0; i < buttons.length; i++) {
-      var key = buttons[i].getAttribute('data-topic-follow');
-      paintFollowBtn(buttons[i], signedIn && isTopicFollowed(key));
-    }
-  }
-
-  function toggleTopicFollow(btn) {
-    if (!isLiveUser()) {
-      composeErr('Sign in to follow. Guest can only browse.');
-      openAuth('join');
-      return;
-    }
-    var key = btn && btn.getAttribute('data-topic-follow');
-    if (!key) return;
-    var next = !isTopicFollowed(key);
-    setTopicFollowed(key, next);
-    var buttons = document.querySelectorAll('[data-topic-follow="' + key + '"]');
-    for (var i = 0; i < buttons.length; i++) paintFollowBtn(buttons[i], next);
+  function toggleTopicFollow() { // factory-gp.js
+    if (PLUGIN.toggleTopicFollow) return PLUGIN.toggleTopicFollow.apply(null, arguments);
   }
 
   let currentUser = loadJSON(LS_USER, null);
@@ -977,39 +913,9 @@
     return !!(fbAuth && fbAuth.currentUser);
   }
 
-  function sessionSeedList() {
-    if (!featureOn('sessionSeeds')) return [];
-    if (site && Array.isArray(site.sessionSeeds) && site.sessionSeeds.length) {
-      return site.sessionSeeds;
-    }
-    if (site && Array.isArray(site.seed)) {
-      return site.seed.filter(function (p) { return p && p.session === true; });
-    }
+  function sessionSeedPosts() { // factory-gp.js
+    if (PLUGIN.sessionSeedPosts) return PLUGIN.sessionSeedPosts.apply(null, arguments);
     return [];
-  }
-
-  function sessionSeedPosts() {
-    var now = Date.now();
-    return sessionSeedList().map(function (p, i) {
-      var hours = (p.hours != null) ? p.hours : i;
-      return {
-        id: String(p.id || ('session-seed-' + i)),
-        authorUid: null,
-        name: p.name || 'Room',
-        handle: p.handle || 'room',
-        text: p.text || '',
-        ms: now - hours * 3600000,
-        hours: hours,
-        likedBy: {},
-        likes: p.likes || 0,
-        replies: p.replies || 0,
-        parentId: null,
-        live: false,
-        sessionSeed: true,
-        imageUrl: p.imageUrl || null,
-        poll: null
-      };
-    });
   }
 
   function isSessionSeedPost(post) {
@@ -2721,27 +2627,6 @@
     }
     return null;
   }
-  function defaultWatchlistIds() {
-    var tax = taxonomyCatalog();
-    var ids = Array.isArray(tax.defaultWatchlist) ? tax.defaultWatchlist.slice() : [];
-    if (!ids.length) {
-      activeTopics().forEach(function (t) {
-        if (t.followDefault) ids.push(t.id);
-      });
-    }
-    return sanitizeTopicIds(ids);
-  }
-  function sanitizeTopicIds(ids) {
-    var seen = {};
-    var out = [];
-    (ids || []).forEach(function (id) {
-      var topic = topicById(id);
-      if (!topic || seen[topic.id]) return;
-      seen[topic.id] = true;
-      out.push(topic.id);
-    });
-    return out;
-  }
   function collectTopicIds(source) {
     var out = [];
     var seen = {};
@@ -2767,150 +2652,16 @@
     for (var i = 0; i < ids.length; i++) if (ids[i] === topicId) return true;
     return false;
   }
-  // v1 stores the personal list beside other user prefs (localStorage).
-  // TODO: move to Firestore users/{uid}/watchlist/{siteId} → { topicIds, updatedAt }
-  // once security rules allow that subcollection. Never write the factory taxonomy.
-  function watchlistStoreKey(uid) {
-    return 'subx.watchlist.' + (SITE_ID || 'site') + '.' + String(uid || 'anon');
+  function addToWatchlist() { // factory-gp.js
+    if (PLUGIN.addToWatchlist) return PLUGIN.addToWatchlist.apply(null, arguments);
   }
-  function savePersonalWatchlist(topicIds) {
-    var uid = liveUid();
-    if (!uid) return;
-    saveJSON(watchlistStoreKey(uid), {
-      topicIds: topicIds.slice(),
-      updatedAt: new Date().toISOString()
-    });
+  function removeFromWatchlist() { // factory-gp.js
+    if (PLUGIN.removeFromWatchlist) return PLUGIN.removeFromWatchlist.apply(null, arguments);
   }
-  function personalWatchlistIds() {
-    var uid = liveUid();
-    if (!uid) return defaultWatchlistIds();
-    var raw = loadJSON(watchlistStoreKey(uid), null);
-    if (!raw || !Array.isArray(raw.topicIds)) {
-      var seeded = defaultWatchlistIds();
-      savePersonalWatchlist(seeded);
-      return seeded;
-    }
-    return sanitizeTopicIds(raw.topicIds);
-  }
-  function addToWatchlist(id) {
-    if (!isLiveUser() || !topicById(id)) return;
-    var ids = personalWatchlistIds();
-    if (ids.indexOf(id) !== -1) return;
-    ids.push(id);
-    savePersonalWatchlist(ids);
-    renderWatchlist();
-  }
-  function removeFromWatchlist(id) {
-    if (!isLiveUser()) return;
-    var ids = personalWatchlistIds().filter(function (x) { return x !== id; });
-    savePersonalWatchlist(ids);
-    renderWatchlist();
-  }
-  function watchRowHtml(topic) {
-    var focused = focusedTopicId === topic.id;
-    var nest = topic.nestSlug ? ' data-nest-slug="' + escapeHtml(topic.nestSlug) + '"' : '';
-    var remove = isLiveUser()
-      ? '<button type="button" class="watchlist-remove" data-watch-remove="' + escapeHtml(topic.id) +
-        '" aria-label="Unfollow ' + escapeHtml(topic.label) + '" title="Unfollow">&times;</button>'
-      : '';
-    return '<li class="watchlist-row' + (focused ? ' is-focused' : '') + '">' +
-      '<button type="button" class="watchlist-open" data-watch-topic="' + escapeHtml(topic.id) + '"' + nest +
-        ' aria-current="' + (focused ? 'true' : 'false') + '"' +
-        ' title="' + escapeHtml(topic.blurb || topic.label) + '">' +
-        '<span class="watchlist-symbol">' + escapeHtml(topic.symbol || topic.id) + '</span>' +
-        '<span class="watchlist-label">' + escapeHtml(topic.label) + '</span>' +
-      '</button>' + remove + '</li>';
-  }
-  function renderWatchlistCatalog() {
-    var box = document.getElementById('watchlist-catalog');
-    if (!box) return;
-    if (!isLiveUser() || !watchlistPickerOpen) {
-      box.innerHTML = '';
-      return;
-    }
-    var have = {};
-    personalWatchlistIds().forEach(function (id) { have[id] = true; });
-    var q = String(watchlistQuery || '').trim().toLowerCase().replace(/^\$/, '');
-    var rows = activeTopics().filter(function (t) {
-      if (have[t.id]) return false;
-      if (!q) return true;
-      var hay = ((t.symbol || '') + ' ' + t.label + ' ' + t.id + ' ' + (t.blurb || '') + ' ' + (t.kind || '')).toLowerCase();
-      return hay.indexOf(q) !== -1;
-    });
-    if (!rows.length) {
-      box.innerHTML = '<li class="watchlist-catalog-empty">' +
-        (q ? 'No active topics match.' : 'Every active topic is already on your watchlist.') +
-        '</li>';
-      return;
-    }
-    box.innerHTML = rows.map(function (t) {
-      return '<li class="watchlist-catalog-row">' +
-        '<span class="watchlist-symbol">' + escapeHtml(t.symbol || '') + '</span>' +
-        '<span class="watchlist-catalog-copy"><span class="watchlist-label">' + escapeHtml(t.label) + '</span>' +
-        (t.blurb ? '<span class="watchlist-blurb">' + escapeHtml(t.blurb) + '</span>' : '') +
-        '</span>' +
-        '<button type="button" class="watchlist-follow" data-watch-add="' + escapeHtml(t.id) + '">Follow</button>' +
-      '</li>';
-    }).join('');
-  }
-  function renderWatchlist() {
+  function renderWatchlist() { // factory-gp.js
+    if (PLUGIN.renderWatchlist) return PLUGIN.renderWatchlist.apply(null, arguments);
     var box = document.getElementById('watchlist');
-    if (!featureOn('watchlist')) { if (box) box.hidden = true; return; }
-    if (box) box.hidden = false;
-    var list = document.getElementById('watchlist-list');
-    if (!list) return;
-    var tax = taxonomyCatalog();
-    var kicker = document.getElementById('watchlist-kicker');
-    if (kicker) kicker.textContent = tax.name || 'Topics';
-    var signedIn = isLiveUser();
-    if (!signedIn) watchlistPickerOpen = false;
-    var ids = signedIn ? personalWatchlistIds() : defaultWatchlistIds();
-    var html = '';
-    ids.forEach(function (id) {
-      var topic = topicById(id);
-      if (topic) html += watchRowHtml(topic);
-    });
-    list.innerHTML = html;
-    var addBtn = document.getElementById('watchlist-add');
-    if (addBtn) {
-      addBtn.hidden = !signedIn;
-      addBtn.textContent = watchlistPickerOpen ? 'Close' : 'Add';
-      addBtn.setAttribute('aria-expanded', watchlistPickerOpen ? 'true' : 'false');
-    }
-    var note = document.getElementById('watchlist-note');
-    if (note) {
-      var taxName = tax.name || 'Topics';
-      if (!signedIn) {
-        note.hidden = false;
-        if (!activeTopics().length) {
-          note.textContent = (taxName || 'Topics') + ' topics are not loaded.';
-        } else {
-          note.innerHTML = '<button type="button" class="watchlist-signin" data-watch-signin>Sign in</button> to personalize. These are the ' + escapeHtml(taxName) + ' defaults.';
-        }
-      } else if (!ids.length) {
-        note.hidden = false;
-        note.textContent = 'Your watchlist is empty. Add a topic from the ' + taxName + ' catalog.';
-      } else {
-        note.hidden = true;
-        note.textContent = '';
-      }
-    }
-    var picker = document.getElementById('watchlist-picker');
-    if (picker) picker.hidden = !signedIn || !watchlistPickerOpen;
-    var search = document.getElementById('watchlist-search');
-    if (search) {
-      var taxLabel = tax.name || 'Topics';
-      search.placeholder = 'Search ' + taxLabel + ' topics';
-      search.setAttribute('aria-label', 'Search ' + taxLabel + ' topics to follow');
-      if (!search.dataset.wired) {
-        search.dataset.wired = '1';
-        search.addEventListener('input', function () {
-          watchlistQuery = search.value || '';
-          renderWatchlistCatalog();
-        });
-      }
-    }
-    renderWatchlistCatalog();
+    if (box) box.hidden = true;
   }
   function topicFocusHtml(topic) {
     var symbol = topic && topic.symbol ? topic.symbol : (focusedTopicId || 'Topic');
@@ -3095,21 +2846,6 @@
   }
 
   var RAIL_MAX = 3;
-
-  function nwsHeaders(accept) {
-    var cfg = railCfg();
-    var ua = cfg.userAgent || ((site && site.name) || SITE_ID || 'subx') + '/rail (jebb@subx.it)';
-    return {
-      'Accept': accept || 'application/geo+json',
-      'User-Agent': ua
-    };
-  }
-
-  function nwsTagFor(shortForecast) {
-    var s = String(shortForecast || '').toLowerCase();
-    if (/\bfog\b/.test(s)) return 'Fog';
-    return 'NWS';
-  }
 
   function renderTrendCard(t) {
     const href = t.url || '#';
@@ -3486,200 +3222,14 @@
     window.addEventListener('resize', syncRailOverlayViewport);
   }
 
-  function nwsCardFromPeriod(period, href, meta) {
-    var name = period.name || 'Forecast';
-    var short = period.shortForecast || '';
-    var temp = (period.temperature != null)
-      ? (period.temperature + '°' + (period.temperatureUnit || 'F'))
-      : '';
-    var snippet = short + (temp ? ' · ' + temp : '');
-    return {
-      tag: nwsTagFor(short),
-      headline: name,
-      snippet: snippet,
-      meta: meta,
-      url: href
-    };
+  function fetchNwsCards() { // factory-rail.js
+    if (PLUGIN.fetchNwsCards) return PLUGIN.fetchNwsCards.apply(null, arguments);
+    return Promise.reject(new Error('factory-rail.js not loaded'));
   }
 
-  function nwsCardFromAlert(feature, href, meta) {
-    var p = (feature && feature.properties) || {};
-    var headline = p.headline || p.event || '';
-    if (!headline) return null;
-    var desc = String(p.description || p.instruction || '').replace(/\s+/g, ' ').trim();
-    return {
-      tag: 'Alert',
-      headline: headline,
-      snippet: desc ? desc.slice(0, 160) : (p.event || 'Active NWS alert'),
-      meta: meta,
-      url: p.web || href
-    };
-  }
-
-  function resolveForecastUrl(cfg, headers) {
-    if (cfg.forecastUrl) return Promise.resolve(cfg.forecastUrl);
-    if (cfg.lat == null || cfg.lon == null) return Promise.reject(new Error('no nws point'));
-    var points = 'https://api.weather.gov/points/' + cfg.lat + ',' + cfg.lon;
-    return fetch(points, { headers: headers }).then(function (res) {
-      if (!res.ok) throw new Error('nws points ' + res.status);
-      return res.json();
-    }).then(function (data) {
-      var url = data && data.properties && data.properties.forecast;
-      if (!url) throw new Error('nws points missing forecast');
-      return url;
-    });
-  }
-
-  function fetchNwsCards() {
-    var cfg = railCfg();
-    var headers = nwsHeaders();
-    var meta = cfg.meta || 'Live';
-    var pageHref = cfg.forecastPage || cfg.forecastUrl || 'https://www.weather.gov/';
-    return resolveForecastUrl(cfg, headers).then(function (forecastUrl) {
-      if (!cfg.forecastPage && forecastUrl) pageHref = forecastUrl;
-      var forecastJob = fetch(forecastUrl, { headers: headers }).then(function (res) {
-        if (!res.ok) throw new Error('nws forecast ' + res.status);
-        return res.json();
-      });
-      var alertsUrl = cfg.alertsUrl;
-      if (!alertsUrl && cfg.zone) {
-        alertsUrl = 'https://api.weather.gov/alerts/active?zone=' + encodeURIComponent(cfg.zone);
-      }
-      var alertsJob = alertsUrl
-        ? fetch(alertsUrl, { headers: headers }).then(function (res) {
-            return res.ok ? res.json() : { features: [] };
-          }).catch(function () { return { features: [] }; })
-        : Promise.resolve({ features: [] });
-      return Promise.all([forecastJob, alertsJob]);
-    }).then(function (pair) {
-      var forecast = pair[0] || {};
-      var alerts = pair[1] || {};
-      var cards = [];
-      var features = alerts.features || [];
-      for (var i = 0; i < features.length; i++) {
-        var alertCard = nwsCardFromAlert(features[i], pageHref, meta);
-        if (alertCard) cards.push(alertCard);
-      }
-      var periods = (forecast.properties && forecast.properties.periods) || [];
-      for (var p = 0; p < periods.length; p++) {
-        cards.push(nwsCardFromPeriod(periods[p], pageHref, meta));
-      }
-      if (!periods.length) throw new Error('nws forecast empty');
-      return cards;
-    });
-  }
-
-  function cwfHeadline(name) {
-    return String(name || 'Forecast')
-      .toLowerCase()
-      .replace(/\b[a-z]/g, function (ch) { return ch.toUpperCase(); })
-      .replace(/\bOf\b/g, 'of');
-  }
-
-  function cwfSnippet(body) {
-    var flat = String(body || '').replace(/\s+/g, ' ').trim();
-    if (!flat) return '';
-    var wind = /[^.]*(?:\bwind|\bwinds)[^.]*\.?/i.exec(flat);
-    var seas = /[^.]*(?:\bseas?\b|\bswell\b)[^.]*\.?/i.exec(flat);
-    var bits = [];
-    if (wind) bits.push(wind[0].trim().replace(/\.+$/, '') + '.');
-    if (seas && (!wind || seas.index !== wind.index)) bits.push(seas[0].trim().replace(/\.+$/, '') + '.');
-    if (bits.length) return bits.join(' ');
-    return flat.slice(0, 160);
-  }
-
-  function cwfTag(productText) {
-    return /small craft/i.test(String(productText || '')) ? 'Advisory' : 'Seas';
-  }
-
-  function parseCwfPeriods(productText) {
-    var text = String(productText || '');
-    var cut = text.search(/\n&&(?:\n|$)/);
-    if (cut < 0) cut = text.search(/\n\.VAAIGA\b/);
-    if (cut > 0) text = text.slice(0, cut);
-    var periodRe = /^\.([A-Z][A-Z \-]{1,40})\.{2,}(.*)$/;
-    var lines = text.split(/\n/);
-    var periods = [];
-    var cur = null;
-    for (var i = 0; i < lines.length; i++) {
-      var line = lines[i];
-      var m = line.match(periodRe);
-      if (m) {
-        if (cur) periods.push(cur);
-        cur = { name: m[1].replace(/\s+/g, ' ').trim(), body: m[2] || '' };
-        continue;
-      }
-      if (cur) {
-        if (/^\$\$/.test(line) || /^&&/.test(line)) {
-          periods.push(cur);
-          cur = null;
-          break;
-        }
-        if (line.trim()) cur.body += ' ' + line;
-      }
-    }
-    if (cur) periods.push(cur);
-    return periods.filter(function (p) {
-      return p.name && !/^(SYNOPSIS|VAAIGA|PO|ASO)\b/.test(p.name);
-    });
-  }
-
-  function parseCwfCards(productText, href, meta) {
-    var periods = parseCwfPeriods(productText);
-    var tag = cwfTag(productText);
-    var cards = [];
-    var n = Math.min(2, periods.length);
-    for (var i = 0; i < n; i++) {
-      var snippet = cwfSnippet(periods[i].body);
-      if (!snippet) continue;
-      cards.push({
-        tag: tag,
-        headline: cwfHeadline(periods[i].name),
-        snippet: snippet,
-        meta: meta,
-        url: href
-      });
-    }
-    return cards;
-  }
-
-  function latestCwfProductId(data) {
-    var graph = (data && (data['@graph'] || data.graph)) || [];
-    if (!graph.length && data && (data.id || data['@id'])) graph = [data];
-    graph = graph.slice().sort(function (a, b) {
-      return String((b && b.issuanceTime) || '').localeCompare(String((a && a.issuanceTime) || ''));
-    });
-    var latest = graph[0];
-    if (!latest) return '';
-    if (latest.id) return String(latest.id);
-    if (latest['@id']) return String(latest['@id']).replace(/^.*\//, '');
-    return '';
-  }
-
-  function fetchCwfCards() {
-    var cfg = railCfg();
-    var headers = nwsHeaders('application/ld+json');
-    var loc = cfg.productLocation || 'PPG';
-    var type = cfg.productType || 'CWF';
-    var meta = cfg.meta || 'Live';
-    var pageHref = cfg.forecastPage || 'https://www.weather.gov/ppg/marine';
-    var listUrl = 'https://api.weather.gov/products/types/' + encodeURIComponent(type) +
-      '/locations/' + encodeURIComponent(loc);
-    return fetch(listUrl, { headers: headers }).then(function (res) {
-      if (!res.ok) throw new Error('nws cwf list ' + res.status);
-      return res.json();
-    }).then(function (data) {
-      var id = latestCwfProductId(data);
-      if (!id) throw new Error('nws cwf missing id');
-      return fetch('https://api.weather.gov/products/' + encodeURIComponent(id), { headers: headers });
-    }).then(function (res) {
-      if (!res.ok) throw new Error('nws cwf product ' + res.status);
-      return res.json();
-    }).then(function (prod) {
-      var cards = parseCwfCards(prod && prod.productText, pageHref, meta);
-      if (!cards.length) throw new Error('nws cwf parse empty');
-      return cards;
-    });
+  function fetchCwfCards() { // factory-rail.js
+    if (PLUGIN.fetchCwfCards) return PLUGIN.fetchCwfCards.apply(null, arguments);
+    return Promise.reject(new Error('factory-rail.js not loaded'));
   }
 
 
@@ -3702,512 +3252,15 @@
     return out;
   }
 
-  function bartCdata(node) {
-    if (node == null) return '';
-    if (typeof node === 'string') return node;
-    if (typeof node === 'number') return String(node);
-    return node['#cdata-section'] || node['#text'] || node.description || '';
+  function fetchBartCards() { // factory-rail.js
+    if (PLUGIN.fetchBartCards) return PLUGIN.fetchBartCards.apply(null, arguments);
+    return Promise.reject(new Error('factory-rail.js not loaded'));
   }
 
-  function fetchBartCards() {
-    var cfg = railCfg();
-    var key = cfg.bartKey || 'MW9S-E7SL-26DU-VV8V';
-    var url = cfg.bartUrl || ('https://api.bart.gov/api/bsa.aspx?cmd=bsa&json=y&key=' + encodeURIComponent(key));
-    var meta = cfg.meta || 'Live · BART';
-    var href = cfg.forecastPage || 'https://www.bart.gov/schedules/advisories';
-    return fetch(url).then(function (res) {
-      if (!res.ok) throw new Error('bart bsa ' + res.status);
-      return res.json();
-    }).then(function (data) {
-      var root = (data && data.root) || {};
-      var raw = root.bsa;
-      var list = Array.isArray(raw) ? raw : (raw ? [raw] : []);
-      var cards = [];
-      for (var i = 0; i < list.length; i++) {
-        var item = list[i] || {};
-        var desc = String(bartCdata(item.description) || bartCdata(item.sms_text) || '').replace(/\s+/g, ' ').trim();
-        if (!desc) continue;
-        if (/^no delay/i.test(desc) && list.length > 1) continue;
-        var typ = String(item.type || 'Advisory').toLowerCase();
-        var tag = /delay/.test(typ) || /delay/.test(desc.toLowerCase()) ? 'Delay' : 'BART';
-        var station = item.station && item.station !== 'BART' ? String(item.station) : '';
-        cards.push({
-          tag: tag,
-          headline: station || (tag === 'Delay' ? 'Delay advisory' : 'BART advisory'),
-          snippet: desc.slice(0, 180),
-          meta: meta,
-          url: href
-        });
-      }
-      if (!cards.length) {
-        cards.push({
-          tag: 'BART',
-          headline: 'No delay advisory',
-          snippet: 'BART reports no current BSA. Porch still posts into this room.',
-          meta: meta,
-          url: href
-        });
-      }
-      return cards;
-    });
-  }
 
-  var F1_SESSION_KEYS = [
-    ['FirstPractice', 'FP1'],
-    ['SecondPractice', 'FP2'],
-    ['ThirdPractice', 'FP3'],
-    ['SprintQualifying', 'Sprint Quali'],
-    ['Sprint', 'Sprint'],
-    ['Qualifying', 'Quali']
-  ];
-  var F1_SESSION_MS = {
-    FP1: 60 * 60 * 1000,
-    FP2: 60 * 60 * 1000,
-    FP3: 60 * 60 * 1000,
-    'Sprint Quali': 60 * 60 * 1000,
-    Sprint: 45 * 60 * 1000,
-    Quali: 60 * 60 * 1000,
-    Race: 2 * 60 * 60 * 1000
-  };
-
-  function f1ParseWhen(sess) {
-    if (!sess || !sess.date) return null;
-    var time = sess.time || '00:00:00Z';
-    if (!/Z$/i.test(time)) time += 'Z';
-    var d = new Date(sess.date + 'T' + time);
-    return isNaN(d.getTime()) ? null : d;
-  }
-
-  function f1FormatLocal(d) {
-    if (!d) return '';
-    return d.toLocaleString('en-US', {
-      timeZone: 'America/Denver',
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    }) + ' MT';
-  }
-
-  function f1Sessions(race) {
-    var out = [];
-    if (!race) return out;
-    for (var i = 0; i < F1_SESSION_KEYS.length; i++) {
-      var key = F1_SESSION_KEYS[i][0];
-      var label = F1_SESSION_KEYS[i][1];
-      var when = f1ParseWhen(race[key]);
-      if (when) out.push({ label: label, when: when, ms: when.getTime() });
-    }
-    var raceWhen = f1ParseWhen({ date: race.date, time: race.time });
-    if (raceWhen) out.push({ label: 'Race', when: raceWhen, ms: raceWhen.getTime() });
-    out.sort(function (a, b) { return a.ms - b.ms; });
-    return out;
-  }
-
-  function f1RaceFromPayload(data) {
-    var races = data && data.MRData && data.MRData.RaceTable && data.MRData.RaceTable.Races;
-    return (races && races[0]) || null;
-  }
-
-  function f1CardsFromRace(race, cfg, finished) {
-    var circuit = (race && race.Circuit) || {};
-    var loc = circuit.Location || {};
-    var href = race.url || circuit.url || '';
-    var meta = (cfg && cfg.meta) || 'Live · race weekend';
-    var cmo = (cfg && cfg.cmo) || {};
-    var sessions = f1Sessions(race);
-    var now = Date.now();
-    var first = sessions[0];
-    var last = sessions[sessions.length - 1];
-    var lastEnd = last ? last.ms + (F1_SESSION_MS[last.label] || 0) : 0;
-    var live = !!(first && last && now >= first.ms && now <= lastEnd);
-    var justFinished = !!finished || !!(last && now > lastEnd);
-    var place = [loc.locality, loc.country].filter(Boolean).join(', ');
-    var circuitLine = [circuit.circuitName, place].filter(Boolean).join(' · ');
-    var raceWhen = f1ParseWhen({ date: race.date, time: race.time });
-    var cards = [];
-    cards.push({
-      tag: race.round ? ('R' + race.round) : 'GP',
-      headline: cmo.title || race.raceName || 'Grand Prix',
-      snippet: circuitLine || 'Race weekend',
-      meta: raceWhen ? ('Race · ' + f1FormatLocal(raceWhen)) : meta,
-      url: href,
-      topic: race.round ? ('r' + race.round) : 'gp'
-    });
-    if (sessions.length) {
-      cards.push({
-        tag: 'Sessions',
-        headline: 'Weekend timetable',
-        snippet: sessions.map(function (s) { return s.label + ' ' + f1FormatLocal(s.when); }).join(' · '),
-        meta: meta,
-        url: href,
-        topic: 'sessions'
-      });
-    }
-    var nextSess = null;
-    for (var s = 0; s < sessions.length; s++) {
-      var end = sessions[s].ms + (F1_SESSION_MS[sessions[s].label] || 0);
-      if (now < end) { nextSess = sessions[s]; break; }
-    }
-    var stateSnip;
-    if (cmo.next && !justFinished) {
-      stateSnip = cmo.next;
-    } else if (justFinished) {
-      stateSnip = (race.raceName || 'This race') + ' is in the books.';
-    } else if (nextSess) {
-      stateSnip = (now >= nextSess.ms ? nextSess.label + ' is on · ' : nextSess.label + ' · ') + f1FormatLocal(nextSess.when);
-    } else {
-      stateSnip = raceWhen ? ('Race · ' + f1FormatLocal(raceWhen)) : 'Race weekend';
-    }
-    var stateHead = justFinished
-      ? 'Just finished'
-      : (cmo.state || (live ? 'Weekend is live' : 'Next up'));
-    cards.push({
-      tag: justFinished ? 'Finished' : (live ? 'Live' : 'Next'),
-      headline: stateHead,
-      snippet: stateSnip,
-      meta: meta,
-      url: href,
-      topic: justFinished ? 'finished' : (live ? 'live' : 'next')
-    });
-    return cards;
-  }
-
-  function fetchF1Json(url) {
-    return fetch(url).then(function (res) {
-      if (!res.ok) throw new Error('jolpica ' + res.status);
-      return res.json();
-    });
-  }
-
-  function openf1Url(path) {
-    var base = String(railCfg().openf1 || 'https://api.openf1.org/v1').replace(/\/+$/, '');
-    return base + path;
-  }
-
-  function fetchOpenF1Json(path) {
-    function once(retried) {
-      return fetch(openf1Url(path)).then(function (res) {
-        if (res.status === 429 && !retried) {
-          return new Promise(function (resolve) {
-            setTimeout(function () { resolve(once(true)); }, 1000);
-          });
-        }
-        if (res.status === 401 || res.status === 403) return null;
-        if (!res.ok) return null;
-        return res.json();
-      }).then(function (data) {
-        return Array.isArray(data) && data.length ? data : null;
-      }).catch(function () {
-        return null;
-      });
-    }
-    return once(false);
-  }
-
-  function f1ParseIso(s) {
-    if (!s) return null;
-    var d = new Date(s);
-    return isNaN(d.getTime()) ? null : d;
-  }
-
-  function f1OpenF1Tag(sess) {
-    var raw = String((sess && (sess.session_name || sess.session_type)) || '');
-    if (/practice\s*1/i.test(raw) || /^fp1$/i.test(raw)) return 'FP1';
-    if (/practice\s*2/i.test(raw) || /^fp2$/i.test(raw)) return 'FP2';
-    if (/practice\s*3/i.test(raw) || /^fp3$/i.test(raw)) return 'FP3';
-    if (/sprint\s*qual/i.test(raw) || /shootout/i.test(raw)) return 'Sprint Quali';
-    if (/sprint/i.test(raw)) return 'Sprint';
-    if (/qual/i.test(raw)) return 'Quali';
-    if (/race/i.test(raw)) return 'Race';
-    return raw || 'Session';
-  }
-
-  function f1FormatDuration(duration) {
-    if (duration == null || duration === '') return '';
-    if (Object.prototype.toString.call(duration) === '[object Array]') {
-      var last = null;
-      var i;
-      for (i = duration.length - 1; i >= 0; i--) {
-        if (duration[i] != null && duration[i] !== '') { last = duration[i]; break; }
-      }
-      return f1FormatDuration(last);
-    }
-    if (typeof duration === 'string') {
-      var trimmed = duration.replace(/^\s+|\s+$/g, '');
-      if (!trimmed) return '';
-      if (/lap/i.test(trimmed)) return trimmed;
-      if (trimmed.indexOf(':') !== -1) return trimmed;
-      var parsed = parseFloat(trimmed);
-      if (isNaN(parsed)) return trimmed;
-      duration = parsed;
-    }
-    if (typeof duration !== 'number' || !isFinite(duration)) return '';
-    var sign = duration < 0 ? '-' : '';
-    var abs = Math.abs(duration);
-    var mins = Math.floor(abs / 60);
-    var secs = abs - mins * 60;
-    var secStr = secs.toFixed(3);
-    if (secs < 10) secStr = '0' + secStr;
-    return sign + mins + ':' + secStr;
-  }
-
-  function f1FormatGap(gap) {
-    if (gap == null || gap === '') return '';
-    if (Object.prototype.toString.call(gap) === '[object Array]') {
-      var lastGap = null;
-      var gi;
-      for (gi = gap.length - 1; gi >= 0; gi--) {
-        if (gap[gi] != null && gap[gi] !== '') { lastGap = gap[gi]; break; }
-      }
-      return f1FormatGap(lastGap);
-    }
-    if (typeof gap === 'string') {
-      var g = gap.replace(/^\s+|\s+$/g, '');
-      if (!g || /^0+(\.0+)?$/.test(g)) return '';
-      if (/lap/i.test(g)) return g.charAt(0) === '+' ? g : ('+' + g);
-      if (g.charAt(0) === '+') return g;
-      var n = parseFloat(g);
-      if (isNaN(n)) return g;
-      gap = n;
-    }
-    if (typeof gap !== 'number' || !isFinite(gap) || gap === 0) return '';
-    return (gap < 0 ? '-' : '+') + Math.abs(gap).toFixed(3);
-  }
-
-  function f1DriverLabel(drv) {
-    if (!drv) return '';
-    var acr = String(drv.name_acronym || '').replace(/^\s+|\s+$/g, '');
-    if (acr) return acr;
-    var last = String(drv.last_name || '').replace(/^\s+|\s+$/g, '');
-    if (last) return last;
-    if (drv.driver_number != null) return String(drv.driver_number);
-    return '';
-  }
-
-  function f1Top3Line(results, drivers) {
-    var byNum = {};
-    var i;
-    if (drivers) {
-      for (i = 0; i < drivers.length; i++) {
-        var d = drivers[i];
-        if (d && d.driver_number != null) byNum[String(d.driver_number)] = d;
-      }
-    }
-    var rows = (results || []).slice();
-    rows.sort(function (a, b) {
-      return (Number(a && a.position) || 99) - (Number(b && b.position) || 99);
-    });
-    var parts = [];
-    for (i = 0; i < rows.length && parts.length < 3; i++) {
-      var row = rows[i];
-      if (!row) continue;
-      var label = f1DriverLabel(byNum[String(row.driver_number)]) || String(row.driver_number || '');
-      if (!label) continue;
-      if (parts.length === 0) {
-        var time = f1FormatDuration(row.duration);
-        if (!time) continue;
-        parts.push(label + ' ' + time);
-      } else {
-        var gap = f1FormatGap(row.gap_to_leader);
-        if (gap) parts.push(label + ' ' + gap);
-        else {
-          var fallback = f1FormatDuration(row.duration);
-          if (fallback) parts.push(label + ' ' + fallback);
-        }
-      }
-    }
-    return parts.join(' · ');
-  }
-
-  function f1SessionRank(item) {
-    var tag = (item && item.tag) || '';
-    if (tag === 'Race') return 80;
-    if (tag === 'Quali') return 70;
-    if (tag === 'Sprint') return 60;
-    if (tag === 'Sprint Quali') return 50;
-    if (tag === 'FP3') return 30;
-    if (tag === 'FP2') return 20;
-    if (tag === 'FP1') return 10;
-    return 0;
-  }
-
-  function f1SessionUsable(item, now) {
-    if (!item) return false;
-    if (item.endMs < now) return true;
-    if (item.startMs <= now) return true;
-    return false;
-  }
-
-  function f1PickResultSession(list, now, preferKey) {
-    var latestCompleted = null;
-    var quali = null;
-    var race = null;
-    var pinned = null;
-    var i;
-    for (i = 0; i < list.length; i++) {
-      var item = list[i];
-      var key = item.raw && item.raw.session_key;
-      if (preferKey != null && String(key) === String(preferKey)) pinned = item;
-      if (item.tag === 'Quali') quali = item;
-      if (item.tag === 'Race') race = item;
-      if (item.endMs < now) latestCompleted = item;
-    }
-    var pick = latestCompleted;
-    if (quali && f1SessionUsable(quali, now)) pick = quali;
-    if (race && f1SessionUsable(race, now)) pick = race;
-    if (pinned && f1SessionUsable(pinned, now)) {
-      if (!pick || f1SessionRank(pinned) >= f1SessionRank(pick)) pick = pinned;
-    }
-    if (latestCompleted && (!pick || f1SessionRank(latestCompleted) > f1SessionRank(pick))) {
-      pick = latestCompleted;
-    }
-    return pick;
-  }
-
-  function overlayOpenF1Cards(cards, cfg) {
-    if (!cards || !cards.length) return Promise.resolve(cards);
-    var pinnedKey = cfg && cfg.openf1SessionKey;
-    var latestP = fetchOpenF1Json('/sessions?session_key=latest');
-    var pinnedP = pinnedKey != null
-      ? fetchOpenF1Json('/sessions?session_key=' + encodeURIComponent(pinnedKey))
-      : Promise.resolve(null);
-    return Promise.all([latestP, pinnedP]).then(function (pair) {
-      var latestSess = pair[0] && pair[0][0];
-      var pinnedSess = pair[1] && pair[1][0];
-      var meetingKey = latestSess && latestSess.meeting_key;
-      if (meetingKey == null && pinnedSess) meetingKey = pinnedSess.meeting_key;
-      if (meetingKey == null) return cards;
-      var preferKey = null;
-      if (pinnedSess && pinnedSess.meeting_key == meetingKey) preferKey = pinnedSess.session_key;
-      else if (pinnedKey != null && latestSess && latestSess.meeting_key == meetingKey) preferKey = pinnedKey;
-      return fetchOpenF1Json('/sessions?meeting_key=' + encodeURIComponent(meetingKey)).then(function (sessions) {
-        if (!sessions || !sessions.length) return cards;
-        var now = Date.now();
-        var list = [];
-        var i;
-        for (i = 0; i < sessions.length; i++) {
-          var s = sessions[i];
-          if (!s || s.is_cancelled) continue;
-          var start = f1ParseIso(s.date_start);
-          var end = f1ParseIso(s.date_end);
-          if (!start || !end) continue;
-          list.push({
-            raw: s,
-            tag: f1OpenF1Tag(s),
-            start: start,
-            startMs: start.getTime(),
-            endMs: end.getTime()
-          });
-        }
-        list.sort(function (a, b) { return a.startMs - b.startMs; });
-        var completed = f1PickResultSession(list, now, preferKey);
-        var live = null;
-        var upcoming = null;
-        for (i = 0; i < list.length; i++) {
-          var item = list[i];
-          if (item.startMs <= now && item.endMs > now) live = item;
-          else if (item.startMs > now && !upcoming) upcoming = item;
-        }
-        if (completed && live && completed.raw && live.raw &&
-            String(completed.raw.session_key) === String(live.raw.session_key)) {
-          live = null;
-        }
-        var resultKey = completed && completed.raw.session_key;
-        var resultP = resultKey != null
-          ? fetchOpenF1Json('/session_result?session_key=' + encodeURIComponent(resultKey))
-          : Promise.resolve(null);
-        return resultP.then(function (results) {
-          var driversP = (resultKey != null && results)
-            ? fetchOpenF1Json('/drivers?session_key=' + encodeURIComponent(resultKey))
-            : Promise.resolve(null);
-          return driversP.then(function (drivers) {
-            var out = cards.slice();
-            var href = (cards[0] && cards[0].url) || '';
-            var meta = (cfg && cfg.meta) || 'Live · race weekend';
-            var cmo = (cfg && cfg.cmo) || {};
-            if (completed && results && results.length) {
-              var line = f1Top3Line(results, drivers);
-              if (line) {
-                out[1] = {
-                  tag: completed.tag,
-                  headline: line,
-                  snippet: completed.tag + ' result · OpenF1 historical' +
-                    (resultKey != null ? ' ' + resultKey : ''),
-                  meta: meta,
-                  url: href,
-                  topic: topicFollowSlug(completed.tag) || 'result'
-                };
-              }
-            }
-            var stateCard;
-            if (live) {
-              stateCard = {
-                tag: 'Live',
-                headline: live.tag + ' is on',
-                snippet: live.tag + ' is on · ' + f1FormatLocal(live.start),
-                meta: meta,
-                url: href,
-                topic: 'live'
-              };
-            } else if (upcoming) {
-              stateCard = {
-                tag: 'Next',
-                headline: cmo.state || 'Next up',
-                snippet: cmo.next || (upcoming.tag + ' · ' + f1FormatLocal(upcoming.start)),
-                meta: meta,
-                url: href,
-                topic: 'next'
-              };
-            } else {
-              var finished = !!(completed && !live && !upcoming);
-              var snip = cmo.next
-                ? cmo.next
-                : (finished ? 'This race is in the books.' : ((out[2] && out[2].snippet) || 'Race weekend'));
-              stateCard = {
-                tag: finished ? 'Finished' : ((out[2] && out[2].tag) || 'Next'),
-                headline: finished ? 'Just finished' : (cmo.state || (out[2] && out[2].headline) || 'Next up'),
-                snippet: snip,
-                meta: meta,
-                url: href,
-                topic: finished ? 'finished' : 'next'
-              };
-            }
-            if (out.length >= 3) out[2] = stateCard;
-            else out.push(stateCard);
-            return out;
-          });
-        });
-      });
-    }).catch(function () {
-      return cards;
-    });
-  }
-
-  function fetchF1Cards() {
-    var cfg = railCfg();
-    var nextUrl = cfg.endpoint || 'https://api.jolpi.ca/ergast/f1/current/next.json';
-    var lastUrl = /\/next\.json/i.test(nextUrl)
-      ? nextUrl.replace(/\/next\.json/i, '/last.json')
-      : 'https://api.jolpi.ca/ergast/f1/current/last.json';
-    function fromLast() {
-      return fetchF1Json(lastUrl).then(function (data) {
-        var race = f1RaceFromPayload(data);
-        if (!race) throw new Error('jolpica last empty');
-        return f1CardsFromRace(race, cfg, true);
-      });
-    }
-    return fetchF1Json(nextUrl).then(function (data) {
-      var race = f1RaceFromPayload(data);
-      if (!race) return fromLast();
-      return f1CardsFromRace(race, cfg, false);
-    }).catch(function (err) {
-      return fromLast().catch(function () { throw err; });
-    }).then(function (cards) {
-      if (!cards || !cards.length) throw new Error('jolpica empty');
-      return overlayOpenF1Cards(cards, cfg);
-    });
+  function fetchF1Cards() { // factory-gp.js
+    if (PLUGIN.fetchF1Cards) return PLUGIN.fetchF1Cards.apply(null, arguments);
+    return Promise.reject(new Error('factory-gp.js not loaded'));
   }
 
   function fallbackTrendCards() {
@@ -4227,45 +3280,9 @@
     return porchOn ? Math.max(1, max - 1) : max;
   }
 
-  function stalePreRaceCard(card) {
-    if (!card) return false;
-    var tag = String(card.tag || '');
-    var head = String(card.headline || '');
-    var snip = String(card.snippet || '');
-    var blob = head + ' ' + snip;
-    if (/^FP2$/i.test(tag)) return true;
-    if (/1:33\.662/.test(head) || /Antonelli tops FP2/i.test(head)) return true;
-    if (/1:22\.559/.test(head) && /Lec|Ant/i.test(head)) return true;
-    if (/Russell/i.test(head) && /1:22/.test(head) && !/pole|P2/i.test(head)) return true;
-    if (/FP2/i.test(snip) && /Russell/i.test(head + snip) && !/pole/i.test(head)) return true;
-    if (/^Grid$/i.test(tag) && /PU|Monza|Gasly/i.test(blob)) return true;
-    if (/^Quali$/i.test(tag) && /Monza|Gasly|yellow-flag lottery/i.test(blob)) return true;
-    if (/Gasly P1/i.test(head) || /Gasly pole/i.test(head)) return true;
-    if (/Race Sun 7:00/i.test(blob) && !/57 laps/i.test(blob)) return true;
-    if (/back(\s+of\s+the)?\s+(the\s+)?grid|back row|→ back/i.test(blob) && /PU/i.test(blob)) return true;
-    if (/OpenF1 11357|session_key 11357/i.test(blob)) return true;
-    return false;
-  }
-
-  function mergeF1Rail(cards, extra) {
-    var max = railNwsSlots();
-    var pins = [];
-    var i;
-    extra = extra || [];
-    for (i = 0; i < extra.length; i++) {
-      if (!stalePreRaceCard(extra[i])) pins.push(extra[i]);
-    }
-    if (pins.length >= max) return pins.slice(0, max);
-    var live = [];
-    if (cards && cards.length) {
-      if (cards[1] && !stalePreRaceCard(cards[1])) live.push(cards[1]);
-      if (cards[2] && !stalePreRaceCard(cards[2])) live.push(cards[2]);
-      if (cards[0] && pins.length === 0) live.push(cards[0]);
-    }
-    var out = pins.slice();
-    for (i = 0; i < live.length && out.length < max; i++) out.push(live[i]);
-    if (!out.length) return (cards || []).slice(0, max);
-    return out.slice(0, max);
+  function mergeF1Rail(cards, extra) { // factory-gp.js
+    if (PLUGIN.mergeF1Rail) return PLUGIN.mergeF1Rail.apply(null, arguments);
+    return (cards || []).concat(extra || []);
   }
 
   var f1RefreshTimer = null;
