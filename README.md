@@ -9,7 +9,7 @@ The single source for every SubX room's `factory.js`. Rooms stay self-contained 
 - v1.0.1 → v1.1.0: no behavior change. 289,004 B single file split into core + opt-ins (lean audit 2026-10-22, P0 #2). Headless render of template-stamped gpchat, 415chat, samochat, 27chat matched v1.0.1.
 - v1.0.1: a nest view queries its own posts (`siteId` + `nestSlug`, `createdAt` desc, 80 at a time) with an "Older posts in this nest" control. The home feed is still the newest 80 for `siteId`. If the composite index is missing, the nest pages that same `siteId` + `createdAt` query until the page fills, the collection ends, or 4,000 documents are scanned. The index definition is `factory/firestore.indexes.json` — do not deploy that file as the project's full index set.
 - Owner: jebbdykstra99. All Actions are free (public repo). No paid services.
-- **Rules are never deployed from here.** `rules/` is a reference copy plus emulator tests. Jebb hand-publishes Firestore and Storage rules in the console.
+- **Rules are never deployed from here.** `rules/` holds proposed rules plus emulator tests, not a copy of what is live (see below). Jebb hand-publishes Firestore and Storage rules in the console.
 
 ## What v1.0.0 is
 T0 master template (hosted Firebase config, rail overlay, nest group headers, nest seat cards, visit pixel) **plus** gpchat's features from PR #31 @ `43a1936` (Watchlist, topic/people follow, notifications, DMs, F1 session seeds and rail merge, and the preview-lift write guards: server time, link and field limits, impersonation checks, `rateLimits` throttle batch, steward label). Rebuild with `build/rebuild.sh` (3-way `git merge-file`, then `build/resolve.py` and the function-level `build/fold.py`). CI checks that the rebuild is byte-identical.
@@ -37,7 +37,7 @@ Copy note: many rooms carried stale fallbacks from the 415/311 lineage (avatar "
 - `tools/smoke.mjs`: headless load of stamped folders. Read-only; the pixel and Cloud Functions are blocked.
 - `tools/drift_check.py`: live hashes vs `FACTORY.lock` vs the release.
 - `.github/workflows/`: `ci.yml` (node --check, eslint, no `AIza`, reproducible rebuild), `drift.yml` (nightly 4:17 AM MT, read-only), `stamp.yml` (manual dispatch only; refuses to run, including room clones, until `rules_step1_live=YES`; then one PR per room on a new branch; **no force-push, never main**).
-- `rules/`: proposed Firestore (= gpchat PR #31 final) and Storage rules, baselines, emulator tests. Reference only.
+- `rules/`: proposed Firestore (= gpchat PR #31 final) and Storage rules, baselines, emulator tests. **Not** a source of truth for what is live: `firestore.rules.proposed` is behind the live Firestore rules, and `storage.rules.proposed` matches the live Storage rules as of 2026-10-22 (#6). The live rules are whatever Jebb last hand-published in the console.
 
 ## Stamping (Jebb)
 1. **First publish Firestore rules step 1** (`RULES_PASTE_for_Jebb.txt`). The new factory.js writes `rateLimits` in the same batch as every post. On the old rules, posting breaks.
