@@ -4,7 +4,10 @@
   python3 tools/stamp.py --room 27chat --repo-dir /path/to/27chat [--dry-run] [--json out.json] [--force-blocked]
 
 Writes (inside --repo-dir, never pushes, never touches git history):
-  factory.js            = factory/factory.js (identical bytes in every room)
+  factory.js            = factory/factory.js (identical bytes in every room; core, byte budget tools/check_budget.sh)
+  factory-gp.js         = factory/factory-gp.js, only when site.json asks for gp features or the F1 rail (see needed_optins)
+  factory-rail.js       = factory/factory-rail.js, only for NWS / CWF / BART live rails
+                          (opt-in files load before factory.js; index.html gets/loses their <script> tags to match)
   index.html            = factory.js?v=N+1, and site.json?v=M+1 (preload + every data-site) when site.json changes
   site.json             = deep-merge of rooms.json features / skin / sitePatch (room copy moves out of JS)
   FACTORY.lock          = release version + sha256 of factory.js and the room-pinned styles.css
@@ -25,6 +28,31 @@ from fnsplit import split
 def sha(b): return hashlib.sha256(b).hexdigest()
 def rd(p): return open(p, 'rb').read()
 def fns(src): return [k for k, _ in split(src) if not k.startswith('#')]
+OPTIN = ('factory-gp.js', 'factory-rail.js')
+GP_FEATURES = ('watchlist', 'topicFollow', 'sessionSeeds')
+
+def needed_optins(site):
+    """Opt-in files a room needs, from its (stamped) site.json. Mirrors the core: features + rail.kind / railUsesNws."""
+    feats = site.get('features') or {}; rail = site.get('rail') or {}; kind = rail.get('kind') or ''
+    need = []
+    if any(feats.get(k) is True for k in GP_FEATURES) or kind == 'f1-calendar': need.append('factory-gp.js')
+    if kind in ('nws-forecast', 'nws-cwf', 'bart-bsa') or rail.get('forecastUrl') or (rail.get('lat') is not None and rail.get('lon') is not None):
+        need.append('factory-rail.js')
+    return need
+
+def load_release(root, version):
+    rel = {'factory': rd(os.path.join(root, 'factory', 'factory.js')), 'version': version, 'optin': {}}
+    for f in OPTIN: rel['optin'][f] = rd(os.path.join(root, 'factory', f))
+    return rel
+
+def wire_optins(idx, need, fv):
+    """Drop old opt-in <script> lines, then put the needed ones right before factory.js (same indent, same ?v=)."""
+    idx = re.sub(r'[ \t]*<script src="factory-(?:gp|rail)\.js[^"]*"></script>\n', '', idx)
+    m = re.search(r'^([ \t]*)<script src="factory\.js\?v=', idx, re.M)
+    if not m or not need: return idx
+    tags = ''.join('%s<script src="%s?v=%s"></script>\n' % (m.group(1), f, fv) for f in need)
+    return idx[:m.start()] + tags + idx[m.start():]
+
 DEAD = ['app.js', 'firestore.rules', 'storage.rules', 'firebase.indexes.json', 'RULES.md', 'nest_stubs.py']
 
 def deep_merge(dst, src):
@@ -41,11 +69,13 @@ def stamp(entry, release, repo, dry):
     site_p = os.path.join(repo, 'site.json'); site_raw = rd(site_p).decode(); site = json.loads(site_raw)
     if site.get('siteId') != entry['siteId']:
         rep['blockers'].append('siteId mismatch: site.json %r vs rooms.json %r' % (site.get('siteId'), entry['siteId']))
-    rel_fns = set(fns(rel_js)); lost = [f for f in fns(old_js) if f not in rel_fns]
+    rel_fns = set(fns(rel_js))
+    for f in OPTIN: rel_fns |= set(fns(release['optin'][f].decode()))
+    lost = [f for f in fns(old_js) if f not in rel_fns]
     unl = [f for f in lost if f not in entry.get('allowLoss', [])]
     if unl: rep['blockers'].append('%d room-only functions would be deleted (not in allowLoss): %s' % (len(unl), ', '.join(unl[:12]) + (' …' if len(unl) > 12 else '')))
     if entry['status'] == 'blocked': rep['blockers'].insert(0, 'rooms.json status blocked: ' + '; '.join(entry.get('waitFor', [])))
-    extra_js = sorted(f for f in os.listdir(repo) if f.endswith('.js') and f not in ('factory.js', 'app.js'))
+    extra_js = sorted(f for f in os.listdir(repo) if f.endswith('.js') and f not in ('factory.js', 'app.js') + OPTIN)
     for f in extra_js:
         if f not in entry.get('keepFiles', []): rep['blockers'].append('unlisted extra file %s (add to keepFiles + EXCEPTIONS.md)' % f)
     rep['cleanup'] = [f for f in DEAD if os.path.exists(os.path.join(repo, f))]
@@ -78,21 +108,29 @@ def stamp(entry, release, repo, dry):
     if site_changed:
         sm = re.search(r'site\.json\?v=(\d+)', idx)
         if sm: idx = re.sub(r'site\.json\?v=\d+', 'site.json?v=%d' % (int(sm.group(1)) + 1), idx)
+    need = needed_optins(new_site)
+    if fv is not None: idx = wire_optins(idx, need, fv)
+    rep['optin'] = need
+    if need: rep['changes'].append('opt-in files: ' + ', '.join(need))
     for needed in ('firebase-app-check-compat', 'firebase-storage-compat'):
         if needed not in idx: rep['blockers'].append('index.html lacks %s script' % needed)
     styles = rd(os.path.join(repo, 'styles.css')) if os.path.exists(os.path.join(repo, 'styles.css')) else b''
     lock = {'factory': 'jebbdykstra99/subx-factory', 'version': release['version'], 'room': entry['room'], 'siteId': entry['siteId'],
-            'files': {'factory.js': sha(release['factory']), 'styles.css': sha(styles)},
+            'files': dict([('factory.js', sha(release['factory']))] + [(f, sha(release['optin'][f])) for f in need] + [('styles.css', sha(styles))]),
             'keepFiles': entry.get('keepFiles', []), 'exceptions': 'see subx-factory EXCEPTIONS.md',
             'stampedAt': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}
     rep['ok'] = not rep['blockers']
     if not dry and rep['ok']:
         open(os.path.join(repo, 'factory.js'), 'wb').write(release['factory'])
+        for f in OPTIN:
+            fp = os.path.join(repo, f)
+            if f in need: open(fp, 'wb').write(release['optin'][f])
+            elif os.path.exists(fp): os.remove(fp)
         open(idx_p, 'w').write(idx)
         if site_changed: open(site_p, 'w').write(new_site_raw)
         open(os.path.join(repo, 'FACTORY.lock'), 'w').write(json.dumps(lock, indent=2) + '\n')
     rep['factory_v'] = fv
-    return rep, (release['factory'], idx, new_site_raw if site_changed else None, lock)
+    return rep, (release['factory'], idx, new_site_raw if site_changed else None, lock, {f: release['optin'][f] for f in need})
 
 def main():
     ap = argparse.ArgumentParser()
@@ -103,7 +141,7 @@ def main():
     cfg = json.load(open(os.path.join(ROOT, 'rooms.json')))
     entry = next((e for e in cfg['rooms'] if e['room'] == a.room), None)
     if not entry: sys.exit('room not in rooms.json: ' + a.room)
-    release = {'factory': rd(os.path.join(ROOT, 'factory', 'factory.js')), 'version': cfg['version']}
+    release = load_release(ROOT, cfg['version'])
     if a.force_blocked and not a.dry_run: sys.exit('--force-blocked is for --dry-run only')
     rep, _ = stamp(entry, release, a.repo_dir, a.dry_run)
     if a.force_blocked and entry['status'] == 'blocked': pass

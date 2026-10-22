@@ -2,7 +2,11 @@
 
 The single source for every SubX room's `factory.js`. Rooms stay self-contained GitHub Pages repos. This repo **stamps** them by pull request and **checks nightly** that they haven't drifted.
 
-- Release: `v1.0.1`. `factory/factory.js` sha256 `5db3afa90854…` (289,004 B; see `FACTORY_RELEASE.json`).
+- Release: `v1.1.0`. Core `factory/factory.js` 252,450 B (budget 255,000 B, `tools/check_budget.sh`, CI fails above it), plus two opt-in files (see `FACTORY_RELEASE.json` for sha256):
+  - `factory/factory-gp.js` (31,358 B): Watchlist, topic follow, session seeds, F1/OpenF1 rail. Loaded only when site.json turns on `features.watchlist|topicFollow|sessionSeeds` or `rail.kind: f1-calendar` (gpchat only today).
+  - `factory/factory-rail.js` (10,231 B): NWS forecast/alerts, NWS CWF, BART BSA live rails. Loaded only for `rail.kind nws-forecast|nws-cwf|bart-bsa` or a rail with `forecastUrl`/`lat`+`lon` (415, 808, samo, bart).
+  - Opt-in files load **before** `factory.js` (`<script src="factory-gp.js?v=N"></script>`); `tools/stamp.py` adds/removes the tags and files from the stamped site.json. A room without the file runs neutral core stubs (feature-off behavior; a live rail falls back to the room's fallback cards). `build/split.mjs` generates all three from the single-file build, so `build/rebuild.sh --check` stays byte-reproducible.
+- v1.0.1 → v1.1.0: no behavior change. 289,004 B single file split into core + opt-ins (lean audit 2026-10-22, P0 #2). Headless render of template-stamped gpchat, 415chat, samochat, 27chat matched v1.0.1.
 - v1.0.1: a nest view queries its own posts (`siteId` + `nestSlug`, `createdAt` desc, 80 at a time) with an "Older posts in this nest" control. The home feed is still the newest 80 for `siteId`. If the composite index is missing, the nest pages that same `siteId` + `createdAt` query until the page fills, the collection ends, or 4,000 documents are scanned. The index definition is `factory/firestore.indexes.json` — do not deploy that file as the project's full index set.
 - Owner: jebbdykstra99. All Actions are free (public repo). No paid services.
 - **Rules are never deployed from here.** `rules/` is a reference copy plus emulator tests. Jebb hand-publishes Firestore and Storage rules in the console.

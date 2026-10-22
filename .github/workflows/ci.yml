@@ -9,11 +9,13 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm install --no-audit --no-fund
-      - run: node --check factory/factory.js
-      - run: npx eslint --no-eslintrc -c .eslintrc.json factory/factory.js
+      - run: node --check factory/factory.js && node --check factory/factory-gp.js && node --check factory/factory-rail.js
+      - run: npx eslint --no-eslintrc -c .eslintrc.json factory/factory.js factory/factory-gp.js factory/factory-rail.js
+      - name: Core byte budget (<= 255 KB; lean audit 2026-10-22)
+        run: tools/check_budget.sh
       - run: node test/nest-feed.test.js
       - name: No inline Firebase web key (Sep 25 secret-scan lock)
-        run: "! grep -n 'AIza' factory/factory.js"
+        run: "! grep -n 'AIza' factory/factory.js factory/factory-gp.js factory/factory-rail.js"
       - name: Rebuild is reproducible
         run: build/rebuild.sh --check
       - run: python3 -c "import json; json.load(open('rooms.json'))"
