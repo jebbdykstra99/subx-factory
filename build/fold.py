@@ -378,11 +378,14 @@ assert 'nestSlugNorm' not in src
 # features.notifs was on (and only if the bell listener had not errored). Like/follow/mention were rendered by
 # notifLine() but never written. Reports carried no status, and report errors went to the compose box, which can be
 # off-screen or missing, so a refused report looked like nothing happened.
+ORIG_REPLY = "  function writeReplyNotif(parentId, text) {\n    var me = liveUid();\n    if (!me || !fbDb || !notifsOn() || notifsError || !isEmailVerified() || !parentId) return;\n    var send = function (authorUid) {\n      if (!authorUid || authorUid === me) return;\n      var payload = {\n        toUid: authorUid,\n        fromUid: me,\n        type: 'reply',\n        siteId: SITE_ID,\n        postId: parentId,\n        read: false,\n        createdAt: firebase.firestore.FieldValue.serverTimestamp()\n      };\n      var snippet = String(text || '').trim().slice(0, 180);\n      if (snippet) payload.text = snippet;\n      fbDb.collection('users').doc(authorUid).collection('notifications').add(payload).catch(function (e) {\n        console.warn('reply notif', e);\n      });\n    };\n    var parent = findPost(parentId);\n    if (parent && parent.authorUid) { send(parent.authorUid); return; }\n    fbDb.collection('posts').doc(parentId).get().then(function (snap) {\n      var d = snap.exists ? (snap.data() || {}) : {};\n      send(d.authorUid || '');\n    }).catch(function (e) { console.warn('reply notif parent', e); });\n  }\n"
 # sendNotif(): one writer for reply/like/follow/mention. Writes do not depend on features.notifs (the bell UI still
 # does), so every room's members get docs. Like/follow use a fixed doc id: a repeat is an update, which the rules
 # refuse (only 'read' may change), so unlike/relike or unfollow/refollow cannot spam the inbox.
-# Mentions resolve @handle against authors already loaded in this room's feed (users/{uid} is private by rules).
-src = ed(src, "  function writeReplyNotif(parentId, text) {\n", """  function sendNotif(to, type, postId, text, id) {
+# Mentions resolve @handle against authors already loaded in this room's feed (users/{uid} is private by rules),
+# at most 5 people per post, and never the parent author who already gets the reply notif for that post.
+# writeReplyNotif() runs for every new post: it resolves the parent author (if any), sends the reply notif, then mentions.
+src = ed(src, ORIG_REPLY, """  function sendNotif(to, type, postId, text, id) {
     var me = liveUid();
     if (!me || !fbDb || !to || to === me || !isEmailVerified()) return;
     var p = { toUid: to, fromUid: me, type: type, siteId: SITE_ID, read: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
@@ -392,22 +395,33 @@ src = ed(src, "  function writeReplyNotif(parentId, text) {\n", """  function se
     var c = fbDb.collection('users').doc(to).collection('notifications');
     (id ? c.doc(id).set(p) : c.add(p)).catch(function (e) { console.warn(type + ' notif', e); });
   }
-  function writeMentionNotifs(text, postId) {
-    var seen = {};
+  function writeMentionNotifs(text, postId, skip) {
+    var seen = {}, n = 0;
+    seen[liveUid()] = seen[skip] = 1;
     String(text || '').replace(/@([a-z0-9_]{2,15})/gi, function (m, h) {
       h = h.toLowerCase();
-      for (var i = 0; i < livePosts.length; i++) {
+      for (var i = 0; i < livePosts.length && n < 5; i++) {
         var u = livePosts[i].authorUid;
-        if (u && !seen[u] && String(livePosts[i].handle || '').toLowerCase() === h) { seen[u] = 1; sendNotif(u, 'mention', postId, text); break; }
+        if (u && !seen[u] && String(livePosts[i].handle || '').toLowerCase() === h) { seen[u] = 1; n++; sendNotif(u, 'mention', postId, text); break; }
       }
     });
   }
-  function writeReplyNotif(parentId, text) {
+  function writeReplyNotif(parentId, text, postId) {
+    if (!liveUid() || !fbDb || !isEmailVerified()) return;
+    var done = function (a) {
+      if (parentId) sendNotif(a, 'reply', parentId, text);
+      writeMentionNotifs(text, postId, a);
+    };
+    var parent = parentId && findPost(parentId);
+    if (!parentId || (parent && parent.authorUid)) return done(parent && parent.authorUid);
+    fbDb.collection('posts').doc(parentId).get().then(function (snap) {
+      done(snap.exists ? (snap.data() || {}).authorUid : '');
+    }).catch(function (e) { console.warn('reply notif parent', e); done(''); });
+  }
 """)
-src = ed(src, "if (!me || !fbDb || !notifsOn() || notifsError || !isEmailVerified() || !parentId) return;",
-  "if (!me || !fbDb || !isEmailVerified() || !parentId) return;")
 src = ed(src, "    }).then(function () {\n      input.value = '';\n",
-  "    }).then(function (ref) {\n      writeMentionNotifs(text, ref && ref.id);\n      input.value = '';\n")
+  "    }).then(function (ref) {\n      writeReplyNotif(parentId, text, ref && ref.id);\n      input.value = '';\n")
+src = ed(src, "        writeReplyNotif(parentId, text);\n", "")
 src = ed(src, "      patch['likes.' + uid] = true;\n    }\n    fbDb.collection('posts').doc(postId).update(patch).catch(function (err) {\n",
   "      patch['likes.' + uid] = true;\n    }\n    fbDb.collection('posts').doc(postId).update(patch).then(function () {\n      if (!likedBy[uid] && post) sendNotif(post.authorUid, 'like', postId, '', 'like_' + postId + '_' + uid);\n    }).catch(function (err) {\n")
 src = ed(src, "    op.then(done).catch(function (e) {\n",

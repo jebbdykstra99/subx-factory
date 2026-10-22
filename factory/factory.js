@@ -3956,42 +3956,28 @@
     var c = fbDb.collection('users').doc(to).collection('notifications');
     (id ? c.doc(id).set(p) : c.add(p)).catch(function (e) { console.warn(type + ' notif', e); });
   }
-  function writeMentionNotifs(text, postId) {
-    var seen = {};
+  function writeMentionNotifs(text, postId, skip) {
+    var seen = {}, n = 0;
+    seen[liveUid()] = seen[skip] = 1;
     String(text || '').replace(/@([a-z0-9_]{2,15})/gi, function (m, h) {
       h = h.toLowerCase();
-      for (var i = 0; i < livePosts.length; i++) {
+      for (var i = 0; i < livePosts.length && n < 5; i++) {
         var u = livePosts[i].authorUid;
-        if (u && !seen[u] && String(livePosts[i].handle || '').toLowerCase() === h) { seen[u] = 1; sendNotif(u, 'mention', postId, text); break; }
+        if (u && !seen[u] && String(livePosts[i].handle || '').toLowerCase() === h) { seen[u] = 1; n++; sendNotif(u, 'mention', postId, text); break; }
       }
     });
   }
-  function writeReplyNotif(parentId, text) {
-    var me = liveUid();
-    if (!me || !fbDb || !isEmailVerified() || !parentId) return;
-    var send = function (authorUid) {
-      if (!authorUid || authorUid === me) return;
-      var payload = {
-        toUid: authorUid,
-        fromUid: me,
-        type: 'reply',
-        siteId: SITE_ID,
-        postId: parentId,
-        read: false,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      var snippet = String(text || '').trim().slice(0, 180);
-      if (snippet) payload.text = snippet;
-      fbDb.collection('users').doc(authorUid).collection('notifications').add(payload).catch(function (e) {
-        console.warn('reply notif', e);
-      });
+  function writeReplyNotif(parentId, text, postId) {
+    if (!liveUid() || !fbDb || !isEmailVerified()) return;
+    var done = function (a) {
+      if (parentId) sendNotif(a, 'reply', parentId, text);
+      writeMentionNotifs(text, postId, a);
     };
-    var parent = findPost(parentId);
-    if (parent && parent.authorUid) { send(parent.authorUid); return; }
+    var parent = parentId && findPost(parentId);
+    if (!parentId || (parent && parent.authorUid)) return done(parent && parent.authorUid);
     fbDb.collection('posts').doc(parentId).get().then(function (snap) {
-      var d = snap.exists ? (snap.data() || {}) : {};
-      send(d.authorUid || '');
-    }).catch(function (e) { console.warn('reply notif parent', e); });
+      done(snap.exists ? (snap.data() || {}).authorUid : '');
+    }).catch(function (e) { console.warn('reply notif parent', e); done(''); });
   }
 
   function markNotifsRead(onlyId) {
@@ -5071,13 +5057,12 @@
       }
       return guardedPostWrite(doc);
     }).then(function (ref) {
-      writeMentionNotifs(text, ref && ref.id);
+      writeReplyNotif(parentId, text, ref && ref.id);
       input.value = '';
       input.placeholder = input.getAttribute('data-ph') || input.placeholder;
       resetComposeExtras();
       syncPostBtn();
       if (parentId) {
-        writeReplyNotif(parentId, text);
         fbDb.collection('posts').doc(parentId).update({
           replyCount: firebase.firestore.FieldValue.increment(1)
         }).catch(function (e) {
