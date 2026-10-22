@@ -5,3 +5,5 @@ build/*.js
 *.log
 rules/tests/firestore.rules
 rules/tests/storage.rules
+package-lock.json
+__pycache__/

@@ -190,6 +190,34 @@
   function isAdminUser() {
     return liveUid() === ADMIN_UID;
   }
+  var ACC_CLOSED = 'Accounts are not open yet. You can read the room as a guest.';
+  function accountsOpen() {
+    return !(site && (site.accountsOpen === false || site.accounts === 'closed'));
+  }
+  function applyAccountsGate() {
+    var d = document.documentElement, o = accountsOpen(), stew = false, n = document.getElementById('cv-accounts-closed');
+    try { stew = localStorage.getItem('subx.steward') === '1'; } catch (e) {}
+    d.classList.toggle('acc-closed', !o);
+    d.classList.toggle('acc-stew', stew);
+    if (n) n.style.display = o ? 'none' : '';
+    if (o || document.getElementById('acc-gate-css')) return;
+    var g = document.getElementById('cv-google-age'), c = '.acc-closed:not(.acc-stew) ';
+    g = g && g.closest('label');
+    if (g) g.classList.add('acc-g');
+    var st = document.createElement('style');
+    st.id = 'acc-gate-css';
+    st.textContent = '.acc-closed [data-tab="register"],.acc-closed #cv-panel-register,.acc-closed #cv-goto-register,.acc-closed #cv-goto-join,' +
+      c + '#cv-google-login,' + c + '.acc-g,' + c + '[for=cv-google-dob],' + c + '#cv-panel-login .conv-modal-divider{display:none!important}';
+    document.head.appendChild(st);
+    var p = document.getElementById('cv-panel-login'), t = document.getElementById('auth-title');
+    if (t) t.textContent = 'Sign in to ' + (site && site.name || 'this room');
+    if (n || !p) return;
+    n = document.createElement('p');
+    n.className = 'conv-modal-note';
+    n.id = 'cv-accounts-closed';
+    n.textContent = ACC_CLOSED;
+    p.insertBefore(n, p.firstChild);
+  }
   function siteMinAge() {
     var n = parseInt(site && site.minAge, 10);
     if (!isFinite(n) || n < 1) return 18;
@@ -289,6 +317,7 @@
   }
   function ensurePublicProfile(user, typedName, extra) {
     if (!fbDb || !user) return Promise.resolve();
+    if (!accountsOpen() && user.uid !== ADMIN_UID) return Promise.reject(new Error(ACC_CLOSED));
     var typed = String(typedName || '').trim();
     if (typed && !nameOk(typed)) return Promise.reject(new Error('That display name is reserved.'));
     var idn = memberIdentity(user, typed);
@@ -547,6 +576,7 @@
     return '';
   }
   function guardedPostWrite(doc) {
+    if (!accountsOpen() && doc.authorUid !== ADMIN_UID) return Promise.reject(new Error(ACC_CLOSED));
     var msg = postGuardMessage(doc);
     if (msg) return Promise.reject(new Error(msg));
     if (guardState.sending) return Promise.reject(new Error('Post already sending.'));
@@ -984,8 +1014,8 @@
         '<img class="share-sheet-preview" id="share-sheet-preview" alt="" hidden>' +
         '<h3>Share</h3>' +
         '<button type="button" data-share="copy">Copy link</button>' +
-        '<button type="button" data-share="x">Post on X</button>' +
-        '<button type="button" data-share="reddit">Post on Reddit</button>' +
+        '<button type="button" data-share="x">Share to x.com</button>' +
+        '<button type="button" data-share="reddit">Share to Reddit</button>' +
         '<button type="button" class="share-cancel" data-share="close">Cancel</button>' +
       '</div>';
     document.body.appendChild(ov);
@@ -1013,7 +1043,7 @@
         return;
       }
       if (act === 'x') {
-        var xUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(slice) +
+        var xUrl = 'https://x.com/intent/post?text=' + encodeURIComponent(slice) +
           '&url=' + encodeURIComponent(permalink);
         window.open(xUrl, '_blank', 'noopener,noreferrer');
         closeShareSheet();
@@ -1074,6 +1104,10 @@
     function gateErr(msg) {
       if (action === 'chat') chatErr(msg);
       else composeErr(msg);
+    }
+    if (!accountsOpen() && !isAdminUser() && action !== 'report' && action !== 'block') {
+      gateErr(ACC_CLOSED);
+      return false;
     }
     if (!isLiveUser()) {
       gateErr('Sign in to ' + (action || 'post') + '. Guest can only browse.');
@@ -4755,6 +4789,7 @@
     if (!ov) return;
     ov.classList.add('open');
     var mode = tab || 'join';
+    if (mode === 'register' && !accountsOpen()) mode = 'join';
     if (mode === 'login') mode = 'join';
     var tabs = document.querySelector('#cv-auth-overlay .conv-modal-tabs');
     var login = document.getElementById('cv-panel-login');
@@ -5615,6 +5650,7 @@
         const email = (document.getElementById('cv-reg-email').value || '').trim();
         const pw = document.getElementById('cv-reg-pw').value || '';
         const age = document.getElementById('cv-reg-age');
+        if (!accountsOpen()) { err.textContent = ACC_CLOSED; err.classList.add('show'); return; }
         if (!age || !age.checked) {
           err.textContent = ageGateMessage();
           err.classList.add('show');
@@ -5644,6 +5680,7 @@
     document.getElementById('cv-google-login').addEventListener('click', function () {
       var err = document.getElementById('cv-login-err');
       runWithAuth(err, function () {
+      if (!accountsOpen() && !document.documentElement.classList.contains('acc-stew')) { err.textContent = ACC_CLOSED; err.classList.add('show'); return; }
       var age = document.getElementById('cv-google-age');
       if (!age || !age.checked) {
         err.textContent = ageGateMessage();
@@ -5659,6 +5696,7 @@
       var isSafari = /Safari/i.test(ua) && !/Chrome|CriOS|FxiOS|Android/i.test(ua);
       function finishGoogle(cred) {
         var u = cred && cred.user;
+        if (u && !accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut().then(function () { throw new Error(ACC_CLOSED); });
         if (fbDb && u) {
           return ensurePublicProfile(u, '', {
             provider: 'google',
@@ -6579,6 +6617,7 @@
     syncChatChrome();
 
     wireEvents();
+    applyAccountsGate();
     document.addEventListener('subx-auth-land', function () { landInFeedCompose(); });
     renderTrends();
     renderExplore();
@@ -6611,6 +6650,7 @@
       if (fbAuth) {
         fbAuth.getRedirectResult().then(function (cred) {
           var u = cred && cred.user;
+          if (u && !accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut();
           if (fbDb && u) {
             return ensurePublicProfile(u, '', {
               provider: 'google',

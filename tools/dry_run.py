@@ -9,6 +9,9 @@ ap = argparse.ArgumentParser(); ap.add_argument('--rooms-dir', required=True); a
 a = ap.parse_args()
 cfg = json.load(open(os.path.join(ROOT, 'rooms.json')))
 release = S.load_release(ROOT, cfg['version'])
+try:  # all-or-nothing: one room without an explicit accountsOpen fails the whole run
+    for e in cfg['rooms']: S.require_accounts_open(e)
+except S.AccountsOpenMissing as x: print('ERROR: %s' % x, file=sys.stderr); sys.exit(2)
 rows = []
 for e in sorted(cfg['rooms'], key=lambda e: e['order']):
     src = os.path.join(a.rooms_dir, e['room'])

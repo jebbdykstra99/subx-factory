@@ -1,0 +1,830 @@
+{
+  "siteId": "gpchat",
+  "redditSr": "gpchat",
+  "name": "gpchat",
+  "tagline": "Nothing but Grand Prix.",
+  "composePlaceholder": "Say something. This is a work in progress.",
+  "earlyWelcome": false,
+  "dms": true,
+  "emptyState": "This room is empty. Sign in to post the first take about the Grand Prix. Guest can browse only.",
+  "theme": {
+    "bg": "#141416",
+    "surface": "#1c1c20",
+    "nav-bg": "#0a0a0c",
+    "nav-text": "#9a9aa3",
+    "nav-hover": "#f2f2f2",
+    "nav-active": "#f2f2f2",
+    "text": "#f2f2f2",
+    "text-muted": "#9a9aa3",
+    "text-light": "#9a9aa3",
+    "accent": "#e10600",
+    "accent-dark": "#b10500",
+    "teal": "#e10600",
+    "silver": "#9a9aa3",
+    "border": "#2c2c32",
+    "avatarColors": [
+      "#e10600",
+      "#b10500",
+      "#0a0a0c",
+      "#d4af37",
+      "#3a3a42",
+      "#6b1a16"
+    ],
+    "gold": "#d4af37",
+    "delay": "#e10600"
+  },
+  "trends": [
+    {
+      "tag": "Quali",
+      "headline": "Q3 is a yellow-flag lottery tonight",
+      "snippet": "Pole is whoever does not lift for the marshal. Bring your quali takes.",
+      "meta": "Race weekend"
+    },
+    {
+      "tag": "Safety car",
+      "headline": "SC boards out, field bunches",
+      "snippet": "Safety car calls and strategy gambles. Bring your race takes.",
+      "meta": "SC / VSC"
+    },
+    {
+      "tag": "Team radio",
+      "headline": "BOX BOX vs stay out",
+      "snippet": "Plan B. Confirm plan B. What is plan B. Pit wall is a group chat with telemetry.",
+      "meta": "Radio energy"
+    },
+    {
+      "tag": "DNF",
+      "headline": "Power unit smoke, retirement talk",
+      "snippet": "Points swings and DNFs. Talk title math here.",
+      "meta": "Retirement"
+    },
+    {
+      "tag": "Championship",
+      "headline": "Constructors is a street fight",
+      "snippet": "Gold trophy talk in the garage. Run your points math here.",
+      "meta": "Points fight",
+      "gold": true
+    },
+    {
+      "tag": "Pit lane",
+      "headline": "Double stack mixup at the box",
+      "snippet": "Second car waited like it was a drive-through. Same compound. Same mistake.",
+      "meta": "Pit-lane mixup"
+    },
+    {
+      "tag": "Undercut",
+      "headline": "Undercut window is three cars wide",
+      "snippet": "Undercut or overcut? Tire offset math from the couch.",
+      "meta": "Strategy"
+    },
+    {
+      "tag": "2026",
+      "headline": "2026 grid talk in the paddock",
+      "snippet": "New regs, new faces. What are you watching for on the 2026 grid?",
+      "meta": "Regs chatter"
+    }
+  ],
+  "places": [
+    {
+      "tag": "Circuit",
+      "title": "Monaco",
+      "snippet": "Quali is the race. Barriers, yacht energy, and a formation lap that feels like a parade."
+    },
+    {
+      "tag": "Circuit",
+      "title": "Spa-Francorchamps",
+      "snippet": "Eau Rouge in the blood. Weather that changes twice a sector. Safety cars love it here."
+    },
+    {
+      "tag": "Circuit",
+      "title": "Silverstone",
+      "snippet": "Copse, Maggotts, Becketts. British GP weekend chat."
+    },
+    {
+      "tag": "Circuit",
+      "title": "Monza",
+      "snippet": "Temple of speed. DRS detect on the main straight. Slipstream is a religion."
+    },
+    {
+      "tag": "Circuit",
+      "title": "Suzuka",
+      "snippet": "Figure-eight. 130R. Quali laps that look illegal. Japanese GP chat."
+    },
+    {
+      "tag": "Circuit",
+      "title": "Interlagos",
+      "snippet": "Interlagos weather, championship points, and a last-lap DRS that bottles into the hairpin."
+    },
+    {
+      "tag": "Circuit",
+      "title": "Marina Bay",
+      "snippet": "Marina Bay under the lights. Bring your night-race takes."
+    },
+    {
+      "tag": "Circuit",
+      "title": "Circuit of the Americas",
+      "snippet": "Austin weekend chat: Turn 1, the hill and your race takes."
+    }
+  ],
+  "topics": [
+    {
+      "tag": "Quali",
+      "title": "Qualifying drama",
+      "snippet": "Q1 traffic, Q3 yellows, pole that the paint did not agree with."
+    },
+    {
+      "tag": "SC",
+      "title": "Safety car & VSC",
+      "snippet": "Boards out. Delta is a suggestion. Field bunches."
+    },
+    {
+      "tag": "Box",
+      "title": "Pit-lane mixups",
+      "snippet": "Double stack, wrong compound, traffic light that lied."
+    },
+    {
+      "tag": "Radio",
+      "title": "Team radio",
+      "snippet": "Box this lap. Stay out. Plan B. We are checking."
+    },
+    {
+      "tag": "Points",
+      "title": "Championship fight",
+      "snippet": "Points math and title talk."
+    },
+    {
+      "tag": "2026",
+      "title": "2026 grid talk",
+      "snippet": "New regs chatter for the 2026 grid."
+    },
+    {
+      "tag": "DRS",
+      "title": "DRS & overtakes",
+      "snippet": "Zone is a rumor. Detect on, still stuck. ERS empty before the line."
+    },
+    {
+      "tag": "Formation",
+      "title": "Formation lap",
+      "snippet": "Tire temps, a stall on the grid, P1 lights that take forever."
+    }
+  ],
+  "imageUploads": false,
+  "minAge": 18,
+  "stories": {
+    "enabled": false,
+    "maxSeconds": 15,
+    "maxBytes": 8000000
+  },
+  "sessionSeeds": [],
+  "seedNote": "STEWARD_REFRESH Fri 2026-09-25 · Jolpica/Apple/Tubi · no second fight · nests HOLD",
+  "seed": [
+    {
+      "id": "steward-1",
+      "name": "FP3 morning card",
+      "handle": "fp3_baku",
+      "text": "FACT: FP3 at Baku is Fri 2:30 AM MT (08:30Z). Jolpica next race: Azerbaijan GP R15. https://api.jolpi.ca/ergast/f1/current/next.json Early run or replay after coffee?",
+      "hours": 1,
+      "likes": 0,
+      "replies": 0,
+      "followed": true
+    },
+    {
+      "id": "steward-2",
+      "name": "Quali pin",
+      "handle": "quali_baku",
+      "text": "FACT: Qualifying is Fri 6:00 AM MT (12:00Z) at Baku City Circuit. Official next-race spine: https://api.jolpi.ca/ergast/f1/current/next.json Which corner do you refuse to miss?",
+      "hours": 2,
+      "likes": 0,
+      "replies": 0,
+      "followed": true
+    },
+    {
+      "id": "steward-3",
+      "name": "Race countdown",
+      "handle": "race_baku",
+      "text": "FACT: Lights out is Saturday 5:00 AM MT (11:00Z) for the Azerbaijan Grand Prix. https://api.jolpi.ca/ergast/f1/current/next.json Alarm set or breakfast results check?",
+      "hours": 3,
+      "likes": 0,
+      "replies": 0,
+      "followed": false
+    },
+    {
+      "id": "steward-4",
+      "name": "WDC board",
+      "handle": "wdc_board",
+      "text": "FACT: After R14 the board reads Antonelli 292 · Russell 211 · Hamilton 191 (Jolpica standings). https://api.jolpi.ca/ergast/f1/current/driverStandings.json Points weekend or swing weekend?",
+      "hours": 4,
+      "likes": 0,
+      "replies": 0,
+      "followed": true
+    },
+    {
+      "id": "steward-5",
+      "name": "Watch outbound chip",
+      "handle": "watch_apple_tubi",
+      "text": "FACT: US live home is Apple TV; outbound only, we don’t re-stream. Tubi free altcasts only when listed. https://tv.apple.com/us/channel/formula-1/tvs.sbd.241000 Watching the Apple feed?",
+      "hours": 5,
+      "likes": 0,
+      "replies": 0,
+      "followed": false
+    },
+    {
+      "id": "steward-6",
+      "name": "Baku circuit",
+      "handle": "baku_circuit",
+      "text": "FACT: Baku is a long lakeside street loop with castle walls; walls punish mistakes. Jolpica race spine: https://api.jolpi.ca/ergast/f1/current/next.json First live watch or favorite sector?",
+      "hours": 6,
+      "likes": 0,
+      "replies": 0,
+      "followed": true
+    }
+  ],
+  "notifs": [
+    {
+      "id": "n1",
+      "text": "@boxboxbox liked your take on the double stack mixup.",
+      "time": "1h",
+      "unread": true
+    },
+    {
+      "id": "n2",
+      "text": "@drsdetect mentioned you in a DRS detect.",
+      "time": "3h",
+      "unread": true
+    },
+    {
+      "id": "n3",
+      "text": "@champpoints started following you.",
+      "time": "Yesterday",
+      "unread": true
+    }
+  ],
+  "threads": [
+    {
+      "id": "steward-seed-a",
+      "name": "Alarm vs breakfast",
+      "handle": "alarm_breakfast",
+      "preview": "The session clock is the source; no invented grid. Jolpica next race: https://api.jolpi.ca/ergast/f1/current/next.json",
+      "messages": [
+        {
+          "me": false,
+          "text": "Race is Sat 5:00 AM MT. Setting an alarm or waiting for the highlights link?"
+        },
+        {
+          "me": true,
+          "text": "The session clock is the source; no invented grid. Jolpica next race: https://api.jolpi.ca/ergast/f1/current/next.json"
+        }
+      ]
+    },
+    {
+      "id": "steward-seed-b",
+      "name": "WDC math",
+      "handle": "wdc_math",
+      "preview": "Start with the Jolpica standings, then argue the session: https://api.jolpi.ca/ergast/f1/current/driverStandings.json",
+      "messages": [
+        {
+          "me": false,
+          "text": "Antonelli +81 on Russell after R14 — is Baku a must-score for George, or another street lottery?"
+        },
+        {
+          "me": true,
+          "text": "Start with the Jolpica standings, then argue the session: https://api.jolpi.ca/ergast/f1/current/driverStandings.json"
+        }
+      ]
+    }
+  ],
+  "rail": {
+    "kind": "f1-calendar",
+    "title": "Room Brief",
+    "kicker": "Austin · Pre-Race",
+    "meta": "United States GP · Circuit of the Americas · Pre-Race · R18",
+    "footer": "United States GP · Pre-Race at Circuit of the Americas. Official F1.com outbound only. Not live timing. Preview.",
+    "endpoint": "https://api.jolpi.ca/ergast/f1/current/next.json",
+    "openf1": "https://api.openf1.org/v1",
+    "maxCards": 3,
+    "cmo": {
+      "title": "United States GP",
+      "state": "Austin · Pre-Race",
+      "next": "Next: FP1 · Fri 11:30 AM MT"
+    },
+    "outbound": [
+      {
+        "tag": "Next",
+        "topic": "next",
+        "headline": "Next: FP1 · Fri 11:30 AM MT",
+        "snippet": "COTA · round 18. FP2 Fri 3:00 PM · FP3 Sat 11:30 AM · Quali Sat 3:00 PM · Race Sun 2:00 PM MT. Jolpica 2026/18.",
+        "meta": "Pre-Race",
+        "url": "https://www.formula1.com/en/racing/2026"
+      },
+      {
+        "tag": "WDC",
+        "topic": "standings",
+        "headline": "Antonelli 340 · Russell 238 · Hamilton 229 (gap 102)",
+        "snippet": "Board after R17. Jolpica current driverStandings.",
+        "meta": "Standings",
+        "url": "https://www.formula1.com/en/results/2026/drivers"
+      },
+      {
+        "tag": "Result",
+        "topic": "result",
+        "headline": "Singapore GP · official",
+        "snippet": "Verstappen wins by 7.335s · Leclerc P2 · Antonelli P3",
+        "meta": "R17 · Race",
+        "url": "https://www.formula1.com/en/results/2026/races/1296/singapore/race-result"
+      }
+    ],
+    "porch": {
+      "topic": "porch",
+      "prompt": "Who are you sitting with for the United States GP?",
+      "dwellMs": 9000,
+      "options": [
+        "Driver",
+        "Team",
+        "Both"
+      ]
+    }
+  },
+  "taxonomy": {
+    "version": 1,
+    "name": "Grid",
+    "symbolPrefix": "$",
+    "topics": [
+      {
+        "id": "race-weekend",
+        "label": "Race weekend",
+        "kind": "session",
+        "blurb": "Current GP hub",
+        "followDefault": true,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$RW",
+        "nestSlug": "race-weekend"
+      },
+      {
+        "id": "quali",
+        "label": "Qualifying",
+        "kind": "session",
+        "blurb": "Saturday pace",
+        "followDefault": true,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$Q",
+        "nestSlug": "quali"
+      },
+      {
+        "id": "race",
+        "label": "Race day",
+        "kind": "session",
+        "blurb": "Lights out",
+        "followDefault": true,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$RACE",
+        "nestSlug": "race"
+      },
+      {
+        "id": "wdc",
+        "label": "Drivers' Championship",
+        "kind": "theme",
+        "blurb": "WDC standings talk",
+        "followDefault": true,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$WDC",
+        "nestSlug": "wdc"
+      },
+      {
+        "id": "wcc",
+        "label": "Constructors",
+        "kind": "theme",
+        "blurb": "Team championship",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$WCC",
+        "nestSlug": "teams"
+      },
+      {
+        "id": "watch",
+        "label": "Watch (free/legal)",
+        "kind": "theme",
+        "blurb": "Where to watch",
+        "followDefault": true,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$WATCH",
+        "nestSlug": "watch"
+      },
+      {
+        "id": "paddock",
+        "label": "Paddock",
+        "kind": "theme",
+        "blurb": "Paddock news and rumors",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$PAD",
+        "nestSlug": "paddock"
+      },
+      {
+        "id": "rookies",
+        "label": "Rookies",
+        "kind": "theme",
+        "blurb": "New grid blood",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$ROOK",
+        "nestSlug": "rookies"
+      },
+      {
+        "id": "antonelli",
+        "label": "Kimi Antonelli",
+        "kind": "driver",
+        "blurb": "Mercedes",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$ANT",
+        "nestSlug": "drivers"
+      },
+      {
+        "id": "norris",
+        "label": "Lando Norris",
+        "kind": "driver",
+        "blurb": "McLaren",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$NOR",
+        "nestSlug": "drivers"
+      },
+      {
+        "id": "verstappen",
+        "label": "Max Verstappen",
+        "kind": "driver",
+        "blurb": "Red Bull",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$VER",
+        "nestSlug": "drivers"
+      },
+      {
+        "id": "hamilton",
+        "label": "Lewis Hamilton",
+        "kind": "driver",
+        "blurb": "Ferrari",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$HAM",
+        "nestSlug": "drivers"
+      },
+      {
+        "id": "russell",
+        "label": "George Russell",
+        "kind": "driver",
+        "blurb": "Mercedes",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$RUS",
+        "nestSlug": "drivers"
+      },
+      {
+        "id": "leclerc",
+        "label": "Charles Leclerc",
+        "kind": "driver",
+        "blurb": "Ferrari",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$LEC",
+        "nestSlug": "drivers"
+      },
+      {
+        "id": "piastri",
+        "label": "Oscar Piastri",
+        "kind": "driver",
+        "blurb": "McLaren",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$PIA",
+        "nestSlug": "drivers"
+      },
+      {
+        "id": "mercedes",
+        "label": "Mercedes",
+        "kind": "team",
+        "blurb": "Constructor",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$MER",
+        "nestSlug": "teams"
+      },
+      {
+        "id": "ferrari",
+        "label": "Ferrari",
+        "kind": "team",
+        "blurb": "Constructor",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$FER",
+        "nestSlug": "teams"
+      },
+      {
+        "id": "mclaren",
+        "label": "McLaren",
+        "kind": "team",
+        "blurb": "Constructor",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$MCL",
+        "nestSlug": "teams"
+      },
+      {
+        "id": "redbull",
+        "label": "Red Bull",
+        "kind": "team",
+        "blurb": "Constructor",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$RBR",
+        "nestSlug": "teams"
+      },
+      {
+        "id": "baku",
+        "label": "Baku / Azerbaijan",
+        "kind": "circuit",
+        "blurb": "Street circuit GP",
+        "followDefault": true,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$BAKU",
+        "nestSlug": "race-weekend"
+      },
+      {
+        "id": "monaco",
+        "label": "Monaco",
+        "kind": "circuit",
+        "blurb": "Street classic",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$MON"
+      },
+      {
+        "id": "spa",
+        "label": "Spa",
+        "kind": "circuit",
+        "blurb": "Ardennes",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$SPA"
+      },
+      {
+        "id": "monza",
+        "label": "Monza",
+        "kind": "circuit",
+        "blurb": "Temple of Speed",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$MNZ"
+      },
+      {
+        "id": "classic",
+        "label": "Classic races",
+        "kind": "theme",
+        "blurb": "Historic Grands Prix",
+        "followDefault": false,
+        "adminSeed": true,
+        "status": "active",
+        "symbol": "$CLASSIC",
+        "nestSlug": "classic"
+      }
+    ],
+    "defaultWatchlist": [
+      "race-weekend",
+      "quali",
+      "race",
+      "wdc",
+      "watch",
+      "baku"
+    ],
+    "notes": "Factory followable topics (StockTwits-style). Users keep/unfollow/add on their watchlist."
+  },
+  "taxonomyNestsDraft": [
+    {
+      "slug": "race-weekend",
+      "label": "Race weekend",
+      "parent": null,
+      "kind": "session",
+      "blurb": "This weekend's Grand Prix.",
+      "nav": true,
+      "rankings": [],
+      "reviews": [],
+      "railPins": []
+    },
+    {
+      "slug": "quali",
+      "label": "Qualifying",
+      "parent": null,
+      "kind": "session",
+      "blurb": "Qualifying chat.",
+      "nav": true,
+      "rankings": [],
+      "reviews": [],
+      "railPins": []
+    },
+    {
+      "slug": "race",
+      "label": "Race day",
+      "parent": null,
+      "kind": "session",
+      "blurb": "Lights-out thread.",
+      "nav": true,
+      "rankings": [],
+      "reviews": [],
+      "railPins": []
+    },
+    {
+      "slug": "drivers",
+      "label": "Drivers",
+      "parent": null,
+      "kind": "people",
+      "blurb": "People, seats, form.",
+      "nav": true,
+      "rankings": [],
+      "reviews": [],
+      "railPins": []
+    },
+    {
+      "slug": "teams",
+      "label": "Teams",
+      "parent": null,
+      "kind": "org",
+      "blurb": "Constructors / strategy.",
+      "nav": true,
+      "rankings": [],
+      "reviews": [],
+      "railPins": []
+    },
+    {
+      "slug": "wdc",
+      "label": "Championship",
+      "parent": null,
+      "kind": "theme",
+      "blurb": "Championship talk.",
+      "nav": true,
+      "rankings": [],
+      "reviews": [],
+      "railPins": []
+    },
+    {
+      "slug": "watch",
+      "label": "Watch",
+      "parent": null,
+      "kind": "theme",
+      "blurb": "Where to watch, with official links.",
+      "nav": true,
+      "rankings": [],
+      "reviews": [],
+      "railPins": []
+    },
+    {
+      "slug": "paddock",
+      "label": "Paddock",
+      "parent": null,
+      "kind": "theme",
+      "blurb": "Paddock news and rumors.",
+      "nav": true,
+      "rankings": [],
+      "reviews": [],
+      "railPins": []
+    },
+    {
+      "slug": "rookies",
+      "label": "Rookies",
+      "parent": null,
+      "kind": "people",
+      "blurb": "Grid new blood.",
+      "nav": true,
+      "rankings": [],
+      "reviews": [],
+      "railPins": []
+    },
+    {
+      "slug": "classic",
+      "label": "Classic races",
+      "parent": null,
+      "kind": "theme",
+      "blurb": "Historic Grands Prix.",
+      "nav": true,
+      "rankings": [],
+      "reviews": [],
+      "railPins": []
+    }
+  ],
+  "nests": [
+    {
+      "slug": "race-weekend",
+      "label": "Race weekend",
+      "parent": null,
+      "kind": "session",
+      "blurb": "This weekend's Grand Prix: session times, countdown and race weekend chat.",
+      "nav": true
+    },
+    {
+      "slug": "drivers",
+      "label": "Drivers",
+      "parent": null,
+      "kind": "people",
+      "blurb": "Driver form, seats and teammate comparisons.",
+      "nav": true
+    },
+    {
+      "slug": "teams",
+      "label": "Teams",
+      "parent": null,
+      "kind": "org",
+      "blurb": "Constructors, pit wall calls and upgrades.",
+      "nav": true
+    },
+    {
+      "slug": "wdc",
+      "label": "Championship",
+      "parent": null,
+      "kind": "theme",
+      "blurb": "Drivers' and Constructors' title math between race weekends.",
+      "nav": true
+    },
+    {
+      "slug": "strategy",
+      "label": "Strategy & tyres",
+      "parent": null,
+      "kind": "theme",
+      "blurb": "Undercuts, compounds, deg, pit windows.",
+      "nav": true
+    },
+    {
+      "slug": "watch",
+      "label": "Watch",
+      "parent": null,
+      "kind": "theme",
+      "blurb": "Where to watch, with links out to official broadcasters. No streams here.",
+      "nav": true
+    },
+    {
+      "slug": "paddock",
+      "label": "Paddock",
+      "parent": null,
+      "kind": "theme",
+      "blurb": "Paddock news, rumors and storylines.",
+      "nav": true
+    },
+    {
+      "slug": "tech",
+      "label": "Technical",
+      "parent": null,
+      "kind": "theme",
+      "blurb": "Regs, aero, PU, technical directives.",
+      "nav": true
+    },
+    {
+      "slug": "rookies",
+      "label": "Rookies",
+      "parent": null,
+      "kind": "people",
+      "blurb": "New faces on the grid and F2 graduates.",
+      "nav": true
+    },
+    {
+      "slug": "classic",
+      "label": "Classic races",
+      "parent": null,
+      "kind": "theme",
+      "blurb": "Classic races and historic Grands Prix for the weeks between races.",
+      "nav": true
+    }
+  ],
+  "v": 1,
+  "cacheBust": 2,
+  "images": false,
+  "accountsOpen": true,
+  "ageAttest": {
+    "enabled": true,
+    "notifyUnder18Email": false
+  },
+  "termsVersion": "1.1",
+  "skin": {
+    "avatarInitials": "GP"
+  }
+}
