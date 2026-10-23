@@ -3,7 +3,7 @@
  * assets/whomark/config.json (do not hand-edit it). Swap a family with ./swap-marks.sh <family-dir>.
  * Loaded by a separate <script> before factory.js, only in rooms whose site.json has "whoMark": true (tools/stamp.py).
  * factory.js is NOT changed (0 B; the core budget has no room once the accounts gate lands): this script upgrades the
- * factory's AI steward text pill to the mark as posts render. No script = today's text pill. */
+ * factory's AI steward text pill and any declarative [data-whomark] badge to the mark as posts/pages render. */
 (function (g) {
   'use strict';
   var CFG = /* @whomark-config */{"accentDefault":"#8a5cf6","accentVar":"--wm-accent","defaultSizePx":16,"family":"placeholder-ring","labelRequiredAtOrBelowPx":14,"minSizePx":{"ai":14,"human":14,"hybrid":16},"placeholder":true,"smallBelowPx":20,"sprite":"/assets/whomark/sprite.svg","tiers":{"ai":{"ariaLabel":"AI steward · SubX","cornerBadge":"/assets/whomark/corner-ai.png","ogBadge":"/assets/whomark/og-ai.png","plainText":"AI steward · SubX","symbolId":"wm-ai","symbolIdSmall":"wm-ai-sm","textLabel":"AI steward · SubX","title":"Operated by SubX using AI tools. Not a real person."},"human":{"ariaLabel":"Human-made","cornerBadge":"/assets/whomark/corner-human.png","ogBadge":"/assets/whomark/og-human.png","plainText":"Human-made","symbolId":"wm-human","symbolIdSmall":"wm-human-sm","textLabel":"Human-made","title":"Human-made"},"hybrid":{"ariaLabel":"Human + AI: {names}","cornerBadge":"/assets/whomark/corner-hybrid.png","ogBadge":"/assets/whomark/og-hybrid.png","plainText":"Human + AI: {names}","symbolId":"wm-hybrid","symbolIdSmall":"wm-hybrid-sm","textLabel":"Human + AI","title":"Human + AI: {names}"}},"version":"d22271159e"}/* @whomark-config-end */;
@@ -25,8 +25,8 @@
     if (cssDone || typeof document === 'undefined' || !document.head) return;
     cssDone = true;
     var st = document.createElement('style');
-    st.textContent = '.wm{display:inline-flex;align-items:center;gap:.3em;vertical-align:middle;line-height:1}' +
-      '.wm-svg{flex:none;overflow:visible}.wm-label{font-size:.85em;font-weight:600}';
+    st.textContent = '.wm{display:inline-flex;align-items:center;gap:.25em;padding:0 4px;vertical-align:middle;white-space:nowrap;line-height:1}' +
+      '.wm-svg{flex:none;overflow:visible;display:block}.wm-label{font-size:.85em;font-weight:600;letter-spacing:.01em}';
     document.head.appendChild(st);
   }
   // whoMark(tier, names, opts) -> HTML. opts: { size: px (default config), label: false to hide the text (ignored at
@@ -60,17 +60,33 @@
   g.whoMarkPlain = whoMarkPlain;
   g.whoMarkBadges = whoMarkBadges;
   g.whoMarkConfig = function () { return JSON.parse(JSON.stringify(CFG)); };
-  // Upgrade factory.js's AI steward text pill (stewardPillHtml) in place. Only the AI pill carries this title, so the
-  // "Sample" and "Steward" pills are left alone. Returns the number of pills upgraded.
+  // Upgrade factory.js's AI steward text pill (stewardPillHtml) and any declarative [data-whomark] element in place.
+  // Only the AI pill carries this title, so the "Sample" and "Steward" pills are left alone. Returns count upgraded.
   var PILL = '.post-steward-pill[title^="Operated by SubX using AI tools"]';
+  var DECL = '[data-whomark]';
+  function collect(root, sel) {
+    var out = [];
+    if (typeof root.matches === 'function' && root.matches(sel)) out.push(root);
+    var found = root.querySelectorAll(sel);
+    for (var i = 0; i < found.length; i++) out.push(found[i]);
+    return out;
+  }
+  function attr(el, k) { return el && typeof el.getAttribute === 'function' ? el.getAttribute(k) : (el && el[k]); }
   function whoMarkUpgrade(root) {
     if (!root || typeof root.querySelectorAll !== 'function') return 0;
-    var list = [];
-    if (typeof root.matches === 'function' && root.matches(PILL)) list.push(root);
-    var found = root.querySelectorAll(PILL);
-    for (var i = 0; i < found.length; i++) list.push(found[i]);
-    var html = whoMark('ai', null, { cls: 'post-steward-pill-wm' }), n = 0;
+    var list = collect(root, PILL), html = whoMark('ai', null, { cls: 'post-steward-pill-wm' }), n = 0;
     for (var j = 0; j < list.length; j++) { if (list[j].parentNode) { list[j].outerHTML = html; n++; } }
+    var decls = collect(root, DECL);
+    for (var k = 0; k < decls.length; k++) {
+      var el = decls[k];
+      if (!el.parentNode) continue;
+      var dh = whoMark(attr(el, 'data-whomark'), attr(el, 'data-whomark-names'), {
+        size: attr(el, 'data-whomark-size'),
+        label: attr(el, 'data-whomark-label') === 'false' ? false : true,
+        cls: attr(el, 'data-whomark-class')
+      });
+      if (dh) { el.outerHTML = dh; n++; }
+    }
     return n;
   }
   g.whoMarkUpgrade = whoMarkUpgrade;

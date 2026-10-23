@@ -177,6 +177,34 @@ ok('whoMarkUpgrade swaps only the AI pill (fake DOM)', () => {
   assert.equal(W.whoMarkUpgrade(null), 0);
 });
 
+
+ok('whoMarkUpgrade upgrades declarative [data-whomark] badges (human, ai, hybrid) and ignores unknown tiers', () => {
+  const decl = (tier, names, size, label, cls) => ({
+    parentNode: {}, outerHTML: null,
+    matches(sel) { return sel === '[data-whomark]'; },
+    getAttribute(k) {
+      return ({ 'data-whomark': tier, 'data-whomark-names': names, 'data-whomark-size': size, 'data-whomark-label': label, 'data-whomark-class': cls })[k] ?? null;
+    }
+  });
+  const h1 = decl('hybrid', 'Jebb Dykstra, Juno, Vesta and Iris', '16', null, 'story-byline-wm');
+  const h2 = decl('human', null, '24', 'false', null);
+  const bad = decl('unknown-tier', null, null, null, null);
+  const rootEl = { matches: () => false, querySelectorAll: (sel) => sel === '[data-whomark]' ? [h1, h2, bad] : [] };
+  assert.equal(W.whoMarkUpgrade(rootEl), 2);
+  assert.equal(h1.outerHTML, W.whoMark('hybrid', 'Jebb Dykstra, Juno, Vesta and Iris', { size: '16', label: true, cls: 'story-byline-wm' }));
+  assert.equal(h2.outerHTML, W.whoMark('human', null, { size: '24', label: false, cls: null }));
+  assert.equal(bad.outerHTML, null);
+});
+
+ok('PEEKAI Round 5 (final-v2) candidate families validate and dry-run cleanly', () => {
+  for (const fam of ['marks/peekai-r5', 'marks/peekai-r5-arms-d', 'marks/peekai-r5-arms-w']) {
+    const r = spawnSync('python3', ['build/whomark.py', '--validate', fam], { cwd: root });
+    assert.equal(r.status, 0, fam + ': ' + r.stderr.toString());
+    const r2 = spawnSync('./swap-marks.sh', [fam, '--dry-run'], { cwd: root });
+    assert.equal(r2.status, 0, fam + ' dry-run: ' + r2.stderr.toString());
+  }
+});
+
 let puppeteer = null;
 const CHROME = process.env.CHROME || '/usr/bin/google-chrome';
 try { if (fs.existsSync(CHROME)) puppeteer = (await import('puppeteer-core')).default; } catch { puppeteer = null; }

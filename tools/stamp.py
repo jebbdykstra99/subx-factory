@@ -72,6 +72,21 @@ def wire_whomark(idx, on):
     v = sha(rd(os.path.join(WHOMARK, 'whomark.js')) + rd(os.path.join(WHOMARK, 'sprite.svg')))[:10]
     return idx[:m.start()] + '%s<script src="/assets/whomark/whomark.js?v=%s"></script>\n' % (m.group(1), v) + idx[m.start():]
 
+
+LLMS_TPL = os.path.join(ROOT, 'factory', 'llms.txt')
+
+def render_llms_txt(entry, site):
+    tpl = rd(LLMS_TPL).decode('utf-8')
+    room = entry['room']
+    dom = site.get('domain') or (room + '.com')
+    tag = (site.get('tagline') or site.get('subtitle') or site.get('title') or room).strip().rstrip('.')
+    age = str(site.get('minAge') or 18)
+    url = 'https://%s/' % dom
+    return (tpl.replace('{{ROOM}}', room)
+               .replace('{{TAGLINE}}', tag)
+               .replace('{{MIN_AGE}}', age)
+               .replace('{{ROOM_URL}}', url)).encode('utf-8')
+
 DEAD = ['app.js', 'firestore.rules', 'storage.rules', 'firebase.indexes.json', 'RULES.md', 'nest_stubs.py']
 
 def deep_merge(dst, src):
@@ -150,6 +165,11 @@ def stamp(entry, release, repo, dry):
     wm = new_site.get('whoMark') is True
     idx = wire_whomark(idx, wm)
     if wm: rep['changes'].append('whoMark on: assets/whomark/ + whomark.js script tag')
+    llms_p = os.path.join(repo, 'llms.txt')
+    stamp_llms = (new_site.get('stampLlmsTxt') is True) or (not os.path.exists(llms_p))
+    llms_bytes = render_llms_txt(entry, new_site) if stamp_llms else rd(llms_p)
+    if stamp_llms and (not os.path.exists(llms_p) or rd(llms_p) != llms_bytes):
+        rep['changes'].append('llms.txt stamped from factory/llms.txt')
     if need: rep['changes'].append('opt-in files: ' + ', '.join(need))
     for needed in ('firebase-app-check-compat', 'firebase-storage-compat'):
         if needed not in idx: rep['blockers'].append('index.html lacks %s script' % needed)
@@ -176,6 +196,7 @@ def stamp(entry, release, repo, dry):
             if not os.listdir(os.path.dirname(wd)): os.rmdir(os.path.dirname(wd))
         open(idx_p, 'w').write(idx)
         if site_changed: open(site_p, 'w').write(new_site_raw)
+        if stamp_llms: open(llms_p, 'wb').write(llms_bytes)
         open(os.path.join(repo, 'FACTORY.lock'), 'w').write(json.dumps(lock, indent=2) + '\n')
     rep['factory_v'] = fv
     return rep, (release['factory'], idx, new_site_raw if site_changed else None, lock, {f: release['optin'][f] for f in need})
