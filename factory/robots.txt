@@ -1,0 +1,25 @@
+# {{ROOM}} robots.txt · PREVIEW LOCK (unchanged posture)
+# Preview only: do not crawl, index, scrape, or use any content for AI training.
+# Agent rules: {{ROOM_URL}}terms.html · {{ROOM_URL}}llms.txt
+# Operator: SubX, LLC (3019 Ocean Park Boulevard, #193, Santa Monica, CA 90405, USA)
+# Contact: takedown@subx.it · +1-650-539-5005
+
+User-agent: *
+Disallow: /
+
+# Named AI crawlers and training bots: also fully disallowed (redundant with *, listed for clarity)
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
+User-agent: ClaudeBot
+User-agent: anthropic-ai
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: PerplexityBot
+User-agent: CCBot
+User-agent: Bytespider
+User-agent: Meta-ExternalAgent
+Disallow: /
+
+# Note: no Allow line for /llms.txt during preview. The file is fetchable directly; robots.txt does not need to
+# carve it out while the room is in preview lock. No Sitemap line during preview.

@@ -1,0 +1,60 @@
+{
+  "family": "peekai-r5-arms-d",
+  "placeholder": false,
+  "note": "PEEKAI Round 5 (final-v2, arms-d): Option A closed ring, capital Ai AI tier, solid-body hybrid with angled-down arms at >=24px. Concept, not cleared, not filed.",
+  "sprite": "/assets/whomark/sprite.svg",
+  "accentVar": "--wm-accent",
+  "accentDefault": "#FF6A4D",
+  "defaultSizePx": 16,
+  "smallBelowPx": 24,
+  "minSizePx": {
+    "human": 14,
+    "ai": 14,
+    "hybrid": 16
+  },
+  "labelRequiredAtOrBelowPx": 14,
+  "badges": {
+    "og": {
+      "px": 128,
+      "bg": "#15151A",
+      "fg": "#B4AFFF"
+    },
+    "corner": {
+      "px": 48,
+      "bg": "#15151A",
+      "fg": "#B4AFFF"
+    }
+  },
+  "tiers": {
+    "human": {
+      "symbolId": "wm-human",
+      "symbolIdSmall": "wm-human-sm",
+      "textLabel": "Human-made",
+      "ariaLabel": "Human-made",
+      "title": "Human-made",
+      "plainText": "Human-made",
+      "ogBadge": "/assets/whomark/og-human.png",
+      "cornerBadge": "/assets/whomark/corner-human.png"
+    },
+    "ai": {
+      "symbolId": "wm-ai",
+      "symbolIdSmall": "wm-ai-sm",
+      "textLabel": "AI steward · SubX",
+      "ariaLabel": "AI steward · SubX",
+      "title": "Operated by SubX using AI tools. Not a real person.",
+      "plainText": "AI steward · SubX",
+      "ogBadge": "/assets/whomark/og-ai.png",
+      "cornerBadge": "/assets/whomark/corner-ai.png"
+    },
+    "hybrid": {
+      "symbolId": "wm-hybrid",
+      "symbolIdSmall": "wm-hybrid-sm",
+      "textLabel": "Human + AI",
+      "ariaLabel": "Human + AI: {names}",
+      "title": "Human + AI: {names}",
+      "plainText": "Human + AI: {names}",
+      "ogBadge": "/assets/whomark/og-hybrid.png",
+      "cornerBadge": "/assets/whomark/corner-hybrid.png"
+    }
+  }
+}

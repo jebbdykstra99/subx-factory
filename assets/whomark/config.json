@@ -1,0 +1,60 @@
+{
+  "family": "placeholder-ring",
+  "placeholder": true,
+  "note": "Temporary art. The mark family vote is pending; replace with ./swap-marks.sh <family-dir>.",
+  "sprite": "/assets/whomark/sprite.svg",
+  "accentVar": "--wm-accent",
+  "accentDefault": "#8a5cf6",
+  "defaultSizePx": 16,
+  "smallBelowPx": 20,
+  "minSizePx": {
+    "human": 14,
+    "ai": 14,
+    "hybrid": 16
+  },
+  "labelRequiredAtOrBelowPx": 14,
+  "badges": {
+    "og": {
+      "px": 128,
+      "bg": "#0f1419",
+      "fg": "#ffffff"
+    },
+    "corner": {
+      "px": 48,
+      "bg": "#0f1419",
+      "fg": "#ffffff"
+    }
+  },
+  "tiers": {
+    "human": {
+      "symbolId": "wm-human",
+      "symbolIdSmall": "wm-human-sm",
+      "textLabel": "Human-made",
+      "ariaLabel": "Human-made",
+      "title": "Human-made",
+      "plainText": "Human-made",
+      "ogBadge": "/assets/whomark/og-human.png",
+      "cornerBadge": "/assets/whomark/corner-human.png"
+    },
+    "ai": {
+      "symbolId": "wm-ai",
+      "symbolIdSmall": "wm-ai-sm",
+      "textLabel": "AI steward · SubX",
+      "ariaLabel": "AI steward · SubX",
+      "title": "Operated by SubX using AI tools. Not a real person.",
+      "plainText": "AI steward · SubX",
+      "ogBadge": "/assets/whomark/og-ai.png",
+      "cornerBadge": "/assets/whomark/corner-ai.png"
+    },
+    "hybrid": {
+      "symbolId": "wm-hybrid",
+      "symbolIdSmall": "wm-hybrid-sm",
+      "textLabel": "Human + AI",
+      "ariaLabel": "Human + AI: {names}",
+      "title": "Human + AI: {names}",
+      "plainText": "Human + AI: {names}",
+      "ogBadge": "/assets/whomark/og-hybrid.png",
+      "cornerBadge": "/assets/whomark/corner-hybrid.png"
+    }
+  }
+}

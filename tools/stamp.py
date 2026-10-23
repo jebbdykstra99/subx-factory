@@ -13,6 +13,9 @@ Writes (inside --repo-dir, never pushes, never touches git history):
   site.json             = deep-merge of rooms.json features / skin / sitePatch (room copy moves out of JS),
                           plus the room's explicit rooms.json accountsOpen (true = sign-ups open, false = closed)
   FACTORY.lock          = release version + sha256 of factory.js and the room-pinned styles.css
+  assets/whomark/       = assets/whomark/ (sprite.svg, whomark.js, badge PNGs), only when site.json "whoMark": true;
+                          index.html gets <script src="/assets/whomark/whomark.js?v=<sprite hash>"> before factory.js.
+                          Off (default) = tag and folder removed. A mark-family swap reaches rooms through this, no per-room edits.
 
 Refuses (exit 2) when:
   - the rooms.json entry has no explicit boolean accountsOpen (every room, including a brand-new one, must say
@@ -57,6 +60,32 @@ def wire_optins(idx, need, fv):
     if not m or not need: return idx
     tags = ''.join('%s<script src="%s?v=%s"></script>\n' % (m.group(1), f, fv) for f in need)
     return idx[:m.start()] + tags + idx[m.start():]
+
+WHOMARK = os.path.join(ROOT, 'assets', 'whomark')
+WHOMARK_FILES = lambda: sorted(f for f in os.listdir(WHOMARK) if f == 'sprite.svg' or f == 'whomark.js' or f.endswith('.png'))
+
+def wire_whomark(idx, on):
+    """whoMark: one <script> before the opt-ins/factory.js when site.json whoMark is true; ?v= = sprite+js hash (cache bust on swap)."""
+    idx = re.sub(r'[ \t]*<script src="/assets/whomark/whomark\.js[^"]*"></script>\n', '', idx)
+    m = re.search(r'^([ \t]*)<script src="factory(?:-gp|-rail)?\.js\?v=', idx, re.M)
+    if not on or not m: return idx
+    v = sha(rd(os.path.join(WHOMARK, 'whomark.js')) + rd(os.path.join(WHOMARK, 'sprite.svg')))[:10]
+    return idx[:m.start()] + '%s<script src="/assets/whomark/whomark.js?v=%s"></script>\n' % (m.group(1), v) + idx[m.start():]
+
+
+LLMS_TPL = os.path.join(ROOT, 'factory', 'llms.txt')
+
+def render_llms_txt(entry, site):
+    tpl = rd(LLMS_TPL).decode('utf-8')
+    room = entry['room']
+    dom = site.get('domain') or (room + '.com')
+    tag = (site.get('tagline') or site.get('subtitle') or site.get('title') or room).strip().rstrip('.')
+    age = str(site.get('minAge') or 18)
+    url = 'https://%s/' % dom
+    return (tpl.replace('{{ROOM}}', room)
+               .replace('{{TAGLINE}}', tag)
+               .replace('{{MIN_AGE}}', age)
+               .replace('{{ROOM_URL}}', url)).encode('utf-8')
 
 DEAD = ['app.js', 'firestore.rules', 'storage.rules', 'firebase.indexes.json', 'RULES.md', 'nest_stubs.py']
 
@@ -133,12 +162,21 @@ def stamp(entry, release, repo, dry):
     need = needed_optins(new_site)
     if fv is not None: idx = wire_optins(idx, need, fv)
     rep['optin'] = need
+    wm = new_site.get('whoMark') is True
+    idx = wire_whomark(idx, wm)
+    if wm: rep['changes'].append('whoMark on: assets/whomark/ + whomark.js script tag')
+    llms_p = os.path.join(repo, 'llms.txt')
+    stamp_llms = (new_site.get('stampLlmsTxt') is True) or (not os.path.exists(llms_p))
+    llms_bytes = render_llms_txt(entry, new_site) if stamp_llms else rd(llms_p)
+    if stamp_llms and (not os.path.exists(llms_p) or rd(llms_p) != llms_bytes):
+        rep['changes'].append('llms.txt stamped from factory/llms.txt')
     if need: rep['changes'].append('opt-in files: ' + ', '.join(need))
     for needed in ('firebase-app-check-compat', 'firebase-storage-compat'):
         if needed not in idx: rep['blockers'].append('index.html lacks %s script' % needed)
     styles = rd(os.path.join(repo, 'styles.css')) if os.path.exists(os.path.join(repo, 'styles.css')) else b''
     lock = {'factory': 'jebbdykstra99/subx-factory', 'version': release['version'], 'room': entry['room'], 'siteId': entry['siteId'],
-            'files': dict([('factory.js', sha(release['factory']))] + [(f, sha(release['optin'][f])) for f in need] + [('styles.css', sha(styles))]),
+            'files': dict([('factory.js', sha(release['factory']))] + [(f, sha(release['optin'][f])) for f in need] + [('styles.css', sha(styles))]
+                          + ([('assets/whomark/' + f, sha(rd(os.path.join(WHOMARK, f)))) for f in WHOMARK_FILES()] if wm else [])),
             'keepFiles': entry.get('keepFiles', []), 'exceptions': 'see subx-factory EXCEPTIONS.md',
             'stampedAt': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}
     rep['ok'] = not rep['blockers']
@@ -148,8 +186,17 @@ def stamp(entry, release, repo, dry):
             fp = os.path.join(repo, f)
             if f in need: open(fp, 'wb').write(release['optin'][f])
             elif os.path.exists(fp): os.remove(fp)
+        wd = os.path.join(repo, 'assets', 'whomark')
+        if wm:
+            if os.path.isdir(wd): shutil.rmtree(wd)
+            os.makedirs(wd)
+            for f in WHOMARK_FILES(): shutil.copyfile(os.path.join(WHOMARK, f), os.path.join(wd, f))
+        elif os.path.isdir(wd):
+            shutil.rmtree(wd)
+            if not os.listdir(os.path.dirname(wd)): os.rmdir(os.path.dirname(wd))
         open(idx_p, 'w').write(idx)
         if site_changed: open(site_p, 'w').write(new_site_raw)
+        if stamp_llms: open(llms_p, 'wb').write(llms_bytes)
         open(os.path.join(repo, 'FACTORY.lock'), 'w').write(json.dumps(lock, indent=2) + '\n')
     rep['factory_v'] = fv
     return rep, (release['factory'], idx, new_site_raw if site_changed else None, lock, {f: release['optin'][f] for f in need})

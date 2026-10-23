@@ -21,3 +21,5 @@ jobs:
       - name: Rebuild is reproducible
         run: build/rebuild.sh --check
       - run: python3 -c "import json; json.load(open('rooms.json'))"
+      - name: whoMark disclosure mark (assets/whomark in sync, unit + swap tests)
+        run: python3 build/whomark.py --check --no-png && node test/whomark.test.js
