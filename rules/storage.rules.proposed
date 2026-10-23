@@ -15,8 +15,15 @@ service firebase.storage {
     }
     // 2026-10-12 (Jebb-approved): rooms with uploads OFF. gpchat: no member photo/story uploads
     // (site.json imageUploads false, stories off). Read and own-file delete still work.
+    // 2026-10-22: 3-room upload pause ('311chat', 'booze', 'popechat') enforced server-side alongside 'gpchat'.
+    // Note on hidden media: Firebase Storage rules cannot inspect a post's reportId/hide state when a
+    // download-token URL is fetched, so media URL revocation on hide/takedown is handled by revoking
+    // metadata.firebaseStorageDownloadTokens via Admin SDK (hide_content.cjs --revoke-token --object-path <path>).
+    function uploadsAllowed(siteId) {
+      return factorySiteId(siteId) && !(siteId in ['gpchat', '311chat', 'booze', 'popechat']);
+    }
     function uploadSiteId(siteId) {
-      return factorySiteId(siteId) && !(siteId in ['gpchat']);
+      return uploadsAllowed(siteId);
     }
 
     match /posts/{siteId}/{uid}/{allPaths=**} {

@@ -58,7 +58,7 @@ jobs:
             fi
             if [ "$DRY" = true ]; then echo "- $ROOM: would stamp" >> "$GITHUB_STEP_SUMMARY"; continue; fi
             cd "work/$ROOM"
-            git config user.name "subx-factory-bot"; git config user.email "jebb@subx.it"
+            git config user.name "subx-factory-bot"; git config user.email "takedown@subx.it"
             git checkout -q -b "$BR"; git add -A
             if git diff --cached --quiet; then cd - >/dev/null; echo "- $ROOM: already current" >> "$GITHUB_STEP_SUMMARY"; continue; fi
             git commit -q -m "factory ${VERSION}: stamp (subx-factory run ${GITHUB_RUN_ID})"

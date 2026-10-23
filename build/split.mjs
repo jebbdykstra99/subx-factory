@@ -22,7 +22,8 @@ const GROUPS = [
       'topicFollowLabel', 'followIconSvg', 'renderFollowBtn', 'paintFollowBtn', 'syncTopicFollowButtons', 'toggleTopicFollow',
       // session seeds
       'sessionSeedList', 'sessionSeedPosts',
-      // watchlist
+      // watchlist + topic feed
+      'taxonomyCatalog', 'activeTopics', 'topicById', 'postHasTopic', 'topicFocusHtml', 'renderTopicFeed',
       'defaultWatchlistIds', 'sanitizeTopicIds', 'watchlistStoreKey', 'savePersonalWatchlist', 'personalWatchlistIds',
       'addToWatchlist', 'removeFromWatchlist', 'watchRowHtml', 'renderWatchlistCatalog', 'renderWatchlist',
       // F1 rail (OpenF1)
@@ -37,6 +38,7 @@ const GROUPS = [
       syncTopicFollowButtons: '',
       toggleTopicFollow: '',
       sessionSeedPosts: 'return [];',
+      renderTopicFeed: '',
       renderWatchlist: "var box = document.getElementById('watchlist');\n    if (box) box.hidden = true;",
       addToWatchlist: '',
       removeFromWatchlist: '',
@@ -66,7 +68,7 @@ const GROUPS = [
     title: 'report loop (A9): report status + admin triage with audit fields, "My reports", report_update notif (site.json features.reportLoop)',
     fns: [
       'reportTriage', 'reportUpdateText', 'setReportStatus', 'syncMyReports', 'openMyReports', 'myReportsHtml', 'closeMyReports',
-      'wireReportLoop'
+      'wireReportLoop', 'restoreHiddenReport', 'adminMassHide'
     ],
     vars: ['REPORT_STATUS', 'reportLoopWired'],
     stubs: {

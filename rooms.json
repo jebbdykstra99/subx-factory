@@ -1,5 +1,5 @@
 {
-  "version": "v1.2.3",
+  "version": "v1.2.5",
   "owner": "jebbdykstra99",
   "rooms": [
     {
@@ -18,7 +18,7 @@
       "features": {},
       "skin": {
         "avatarInitials": "311",
-        "bioDefault": "Unofficial helper — not a substitute for 911.",
+        "bioDefault": "Unofficial helper \u2014 not a substitute for 911.",
         "profileEmpty": "No posts yet. Official 311 is the handoff at the top of Home. Sign in to talk with neighbors."
       },
       "sitePatch": {
@@ -93,7 +93,7 @@
       "features": {},
       "skin": {
         "avatarInitials": "CO",
-        "bioDefault": "Wildlife education — not ownership advice.",
+        "bioDefault": "Wildlife education \u2014 not ownership advice.",
         "profileEmpty": "No posts yet. Hit Post with a species note, myth bust, or story."
       },
       "sitePatch": {
@@ -195,7 +195,7 @@
         "avatarInitials": "CI",
         "bioDefault": "Public sources. Speculation labeled.",
         "exploreEmpty": "Nothing in this reading room matched that.",
-        "profileEmpty": "No posts yet. Cite a public source — or label speculation.",
+        "profileEmpty": "No posts yet. Cite a public source \u2014 or label speculation.",
         "guestHandle": "guestcia",
         "taglineH1": "true",
         "regNamePlaceholder": "A ciachat handle"
@@ -503,7 +503,7 @@
         "avatarInitials": "GP"
       },
       "sitePatch": {
-        "earlyWelcomeCopy": "You're early. This room is live but unfinished. Who do you sit with on the grid — driver, team, or both? Tell the room.",
+        "earlyWelcomeCopy": "You're early. This room is live but unfinished. Who do you sit with on the grid \u2014 driver, team, or both? Tell the room.",
         "pixel": false,
         "redditCrosspost": false,
         "_dropKeys": [

@@ -1,4 +1,16 @@
 rules_version = '2';
+// RETENTION NOTE (2026-10-12, CLO): pixel `hits` rows carry expireAt = createdAt + 90d and are removed
+// by a Firestore TTL policy on `expireAt` (Admin SDK writes; these client rules don't govern them).
+// TTL deletion is not instant: Firestore typically deletes within ~24 h AFTER expireAt, so a raw row
+// can live ~91 days. Aggregates: up to 13 months (expireAt = periodEnd + 395d) if a rollup is added.
+// GPCHAT LIFT (2026-10-18 rebuild): this file = RULES_PASTE_for_Jebb_v2.txt SECTION A2 (v2: follow/mute fix,
+// story guard, burst cap) + the gpchat lift deltas U3 (no uploads/stories in gpchat) and R2 (under-18 suspension).
+// The Oct 17 draft was built on v1 SECTION A and dropped the v2 follow/mute/story fixes for all 20 rooms.
+// AUTOHIDE-ON-REPORT (2026-10-22, Jebb 4:42 PM MT): amended copy of f93194e3d2175c7149b7201b31553b2b.
+// Adds /hides/{hideId} public hide markers (atomic with a hide-eligible report in ['ncii','impersonation','csam']
+// or by admin; ONLY admin o774wL9hUVSi19EkDCgLqQomP8i2 can delete/restore; never updated), splits /posts and
+// /stories read into list + get (denying single-doc get when hidden for non-admin), and adds optional per-user
+// hide rate-limit keys (lastHideAt 60s gap, hideDay/hideDayCount <= 5/UTC day) on /rateLimits/{uid}.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
@@ -9,6 +21,13 @@ service cloud.firestore {
     }
     function isAdmin() {
       return signedIn() && request.auth.uid == 'o774wL9hUVSi19EkDCgLqQomP8i2';
+    }
+    // GROWTH CONSOLE (2026-10-22): authorType is 'human' or 'steward'; only the admin may write 'steward'.
+    // Omitted is still allowed (rooms on factory <= v1.2.0 do not send it).
+    function authorTypeOk(d) {
+      return !d.keys().hasAny(['authorType'])
+        || d.authorType == 'human'
+        || (isAdmin() && d.authorType == 'steward');
     }
     // Short + long siteId forms used across live skins / posts
     function factorySite(data) {
@@ -122,17 +141,22 @@ service cloud.firestore {
 
     // ===== PREVIEW-LIFT GUARD (draft 2026-10-09; Jebb hand-publishes) =====
     // Rooms whose factory.js writes rateLimits/{uid} in the same batch as a post/DM.
-    // Add a siteId here ONLY after that room's factory.js guard PR is live.
-    // PUBLISH ORDER: step 1 publish with [] (no client change needed);
-    // step 2 merge the gpchat factory.js PR; step 3 change to ['gpchat'] and republish.
+    // Add a siteId here ONLY after that room's live factory.js carries the guard block
+    // (check: allrooms/guarded-line.sh prints the exact line). Use the site.json siteId,
+    // NOT the domain: booze, buffet, boyfriend, cia, cobra are short; buffettchat is long.
+    // All 20 live siteIds (verified against live site.json, Oct 9 2026):
+    //   '27chat','311chat','415chat','808chat','airlineschat','amachat','atmchat','bartchat',
+    //   'behindtheblackwall','booze','boyfriend','buffet','buffettchat','cia','cobra',
+    //   'gaichat','gpchat','popechat','recruitchat','samochat'
+    // v2 PUBLISH ORDER: paste with [] (no client change needed); later change ONLY this line.
     function guardedSite(sid) {
-      return sid in [];
+      return sid in ['gpchat'];
     }
     function rlPath() {
       return /databases/$(database)/documents/rateLimits/$(request.auth.uid);
     }
     // The batch that creates the post must also bump rateLimits/{uid}.lastPostAt
-    // to request.time; the rateLimits rule enforces the gap and daily cap.
+    // to request.time; the rateLimits rule enforces the gap, daily cap and burst cap.
     function postThrottled(sid) {
       return isAdmin() || !guardedSite(sid)
         || (existsAfter(rlPath()) && getAfter(rlPath()).data.lastPostAt == request.time);
@@ -169,7 +193,7 @@ service cloud.firestore {
         'siteId', 'parentId', 'authorUid', 'authorName', 'authorHandle', 'text',
         'likes', 'likeCount', 'replyCount', 'reposts', 'repostCount', 'nestSlug',
         'createdAt', 'imageUrl', 'poll', 'repostOf', 'quoteOf', 'topicIds',
-        'steward'
+        'steward', 'authorType'                                // GROWTH CONSOLE
       ]);
     }
     function pollOk(d) {
@@ -220,10 +244,57 @@ service cloud.firestore {
         && !d.keys().hasAny(['role', 'admin', 'isAdmin', 'verified', 'steward'])
       );
     }
+    // v2 (2026-10-10): member stories get the same identity/text guards as posts.
+    // Clients set createdAt from the device clock (Timestamp.now()), so allow +-15 min
+    // instead of == request.time. Stops a 2099 story (never expires) and fake likeCount.
+    function memberStoryOk(d) {
+      return isAdmin() || (
+        d.keys().hasOnly([
+          'siteId', 'authorUid', 'authorName', 'authorHandle', 'type', 'createdAt',
+          'expiresAt', 'likeCount', 'text', 'mediaUrl', 'mediaContentType', 'posterUrl',
+          'authorType'                                         // GROWTH CONSOLE
+        ])
+        && d.createdAt > request.time - duration.value(15, 'm')
+        && d.createdAt < request.time + duration.value(15, 'm')
+        && nameOk(d.authorName)
+        && handleOk(d.authorHandle)
+        && (!d.keys().hasAny(['likeCount']) || d.likeCount == 0)
+        && (!d.keys().hasAny(['text']) || cleanText(d.text))
+        && (!d.keys().hasAny(['mediaUrl'])
+            || (d.mediaUrl is string && d.mediaUrl.size() <= 600
+                && d.mediaUrl.matches('^https://firebasestorage[.]googleapis[.]com/v0/b/subx-skins[.]firebasestorage[.]app/o/stories%2F.*')))
+      );
+    }
+    // GPCHAT LIFT (Oct 17, 2026 local): uploads/stories off per room (CLO U3), R2 under-18 suspension.
+    function noUploadsSite(sid) {
+      return sid in ['gpchat'];
+    }
+    function noUploadFields(d) {
+      return !(noUploadsSite(d.siteId) && d.keys().hasAny(['imageUrl', 'images', 'storyUrl']));
+    }
+    function notSuspended() {
+      return isAdmin() || !exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('suspended', false) != true;
+    }
+    // A member may set suspended:true on themself (R2 self-report under 18) but never clear it.
+    function suspendOk(d) {
+      return isAdmin() || (
+        (!d.keys().hasAny(['suspended']) || d.suspended == true)
+        && (resource == null || resource.data.get('suspended', false) != true
+            || request.resource.data.get('suspended', false) == true)
+        && (!d.keys().hasAny(['ageAttested18']) || d.ageAttested18 is bool)
+        && !(d.get('ageAttested18', false) == true && d.get('suspended', false) == true)
+        && !d.keys().hasAny(['dob', 'birthDate', 'dateOfBirth'])
+      );
+    }
     // ===== END PREVIEW-LIFT GUARD helpers =====
 
     match /posts/{postId} {
-      allow read: if true;
+      // AUTOHIDE-ON-REPORT (2026-10-22): list stays open so room feed queries never fail whole-query;
+      // single-doc get is denied to non-admin once hides/{siteId}_{postId} exists.
+      allow list: if true;
+      allow get: if isAdmin()
+        || !exists(/databases/$(database)/documents/hides/$(resource.data.siteId + '_' + postId));
       allow create: if emailVerified()
         && notKilled(request.resource.data.siteId)
         && request.auth.uid == request.resource.data.authorUid
@@ -231,6 +302,9 @@ service cloud.firestore {
         && hasPostBody(request.resource.data)
         && textOk(request.resource.data)
         && memberPostOk(request.resource.data)                 // PREVIEW-LIFT GUARD
+        && authorTypeOk(request.resource.data)                 // GROWTH CONSOLE
+        && noUploadFields(request.resource.data)               // GPCHAT LIFT U3
+        && notSuspended()                                      // GPCHAT LIFT R2
         && postThrottled(request.resource.data.siteId);        // PREVIEW-LIFT GUARD
       // PREVIEW-LIFT GUARD: admin takedown from the app (was author-only).
       allow delete: if isAdmin() || (signedIn()
@@ -256,7 +330,8 @@ service cloud.firestore {
         && request.resource.data.keys().hasAll(['siteId'])
         && factorySite(request.resource.data)
         && !request.resource.data.keys().hasAny(['email', 'phone', 'phoneNumber'])
-        && profileOk(request.resource.data);                       // PREVIEW-LIFT GUARD
+        && profileOk(request.resource.data)                        // PREVIEW-LIFT GUARD
+        && suspendOk(request.resource.data);                       // GPCHAT LIFT R2
 
       match /blocks/{targetUid} {
         allow read: if signedIn() && request.auth.uid == uid;
@@ -269,14 +344,22 @@ service cloud.firestore {
       }
       match /following/{targetUid} {
         allow read: if signedIn() && request.auth.uid == uid;
-        allow create, update: if ownEdge(targetUid)
-          && request.resource.data.followerUid == uid
+        // v2 fix: follow never worked. ownEdge() is declared outside this match, so it can't see
+        // {uid} (rules error = deny), and live clients omit followerUid. The path already pins the owner.
+        allow create, update: if emailVerified()
+          && request.auth.uid == uid
+          && request.auth.uid != targetUid
+          && factorySite(request.resource.data)
+          && (!request.resource.data.keys().hasAny(['followerUid']) || request.resource.data.followerUid == uid)
           && request.resource.data.targetUid == targetUid;
         allow delete: if signedIn() && request.auth.uid == uid;
       }
       match /mutes/{targetUid} {
         allow read: if signedIn() && request.auth.uid == uid;
-        allow create, update: if ownEdge(targetUid)
+        allow create, update: if emailVerified()
+          && request.auth.uid == uid
+          && request.auth.uid != targetUid
+          && factorySite(request.resource.data)
           && request.resource.data.muterUid == uid
           && request.resource.data.targetUid == targetUid;
         allow delete: if signedIn() && request.auth.uid == uid;
@@ -310,13 +393,14 @@ service cloud.firestore {
           && request.resource.data.fromUid == request.auth.uid
           && request.resource.data.fromUid != uid
           && factorySite(request.resource.data)
-          && request.resource.data.type is string
-          && request.resource.data.type.size() <= 20                                    // PREVIEW-LIFT GUARD
+          && request.resource.data.type in ['reply', 'like', 'follow', 'mention', 'report', 'report_update']  // NOTIFS-REPORTS 2026-10-22 + A9 report_update
+          && request.resource.data.keys().hasOnly(['toUid', 'fromUid', 'type', 'siteId', 'postId', 'read', 'text', 'createdAt'])  // NOTIFS-REPORTS 2026-10-22
           && (!request.resource.data.keys().hasAny(['text'])
               || (request.resource.data.text is string && request.resource.data.text.size() <= 280))
           && (!request.resource.data.keys().hasAny(['createdAt'])
               || request.resource.data.createdAt == request.time)
           && (request.resource.data.type != 'report' || uid == 'o774wL9hUVSi19EkDCgLqQomP8i2')  // CLO #7 report alert goes to Jebb only
+          && (request.resource.data.type != 'report_update' || request.auth.uid == 'o774wL9hUVSi19EkDCgLqQomP8i2')  // A9: report status updates come from Jebb only
           && request.resource.data.read == false;
       }
     }
@@ -328,12 +412,65 @@ service cloud.firestore {
         && request.resource.data.reporterUid == request.auth.uid
         && factorySite(request.resource.data)
         && request.resource.data.postId is string
+        && request.resource.data.postId.size() <= 200                      // NOTIFS-REPORTS 2026-10-22
         && request.resource.data.reason is string
         && request.resource.data.reason.size() <= 40                       // PREVIEW-LIFT GUARD
+        && request.resource.data.keys().hasOnly(['siteId', 'postId', 'storyId', 'targetUid', 'reporterUid', 'reason', 'status', 'createdAt'])  // NOTIFS-REPORTS 2026-10-22
+        && (!request.resource.data.keys().hasAny(['status'])
+            || request.resource.data.status == 'open')                     // NOTIFS-REPORTS 2026-10-22: a reporter cannot pre-close a report
         && (!request.resource.data.keys().hasAny(['createdAt'])
             || request.resource.data.createdAt == request.time);           // PREVIEW-LIFT GUARD
       allow update, delete: if isAdmin();
     }
+
+    // ===== AUTOHIDE-ON-REPORT (2026-10-22) =====
+    // Public hide marker { siteId, postId, reportId, reporterUid, createdAt } — carries NO post text,
+    // NO media URL, NO reason string. Every client subscribes to hides for its room and strips hidden
+    // postIds / parentIds / storyIds before any text or image renders.
+    // Created either by admin (CLI / console / mass-hide) or by a verified member in the SAME atomic
+    // batch as a /reports/{reportId} doc whose reason is in ['ncii', 'copyright', 'violent_offensive', 'hate', 'impersonation', 'csam'].
+    // ONLY Jebb (isAdmin, uid o774wL9hUVSi19EkDCgLqQomP8i2) can restore by deleting the hide doc.
+    match /hides/{hideId} {
+      function hideTargetExists(d) {
+        return !d.postId.matches('^uid:.*')
+          && (d.postId.matches('^story:.*')
+            ? exists(/databases/$(database)/documents/stories/$(d.postId[6:]))
+            : exists(/databases/$(database)/documents/posts/$(d.postId)));
+      }
+      function hideReportOk(d) {
+        return d.reportId is string
+          && d.reportId.size() > 0
+          && d.reportId.size() <= 120
+          && hideTargetExists(d)
+          && existsAfter(/databases/$(database)/documents/reports/$(d.reportId))
+          && getAfter(/databases/$(database)/documents/reports/$(d.reportId)).data.reporterUid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/reports/$(d.reportId)).data.siteId == d.siteId
+          && getAfter(/databases/$(database)/documents/reports/$(d.reportId)).data.postId == d.postId
+          && getAfter(/databases/$(database)/documents/reports/$(d.reportId)).data.reason in ['ncii', 'copyright', 'violent_offensive', 'hate', 'impersonation', 'csam'];
+      }
+      function hideRateOk() {
+        return existsAfter(rlPath())
+          && getAfter(rlPath()).data.lastHideAt == request.time;
+      }
+      allow read: if true;
+      allow create: if (isAdmin() || emailVerified())
+        && factorySite(request.resource.data)
+        && request.resource.data.postId is string
+        && request.resource.data.postId.size() > 0
+        && request.resource.data.postId.size() <= 200
+        && hideId == request.resource.data.siteId + '_' + request.resource.data.postId
+        && request.resource.data.keys().hasOnly(['siteId', 'postId', 'reportId', 'reporterUid', 'createdAt', 'reason'])
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && (isAdmin() || (
+          !request.resource.data.keys().hasAny(['reason'])
+          && hideReportOk(request.resource.data)
+          && hideRateOk()
+        ));
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+    // ===== END AUTOHIDE-ON-REPORT =====
 
     match /sites/{siteId} {
       allow read: if true;
@@ -365,11 +502,35 @@ service cloud.firestore {
     }
 
     // ===== PREVIEW-LIFT GUARD: per-user write throttle =====
-    // rateLimits/{uid}: { lastPostAt, lastMsgAt, day, dayCount }
+    // rateLimits/{uid}: { lastPostAt, lastMsgAt, day, dayCount, burstStart, burstCount }
     // Gap: 20s between posts/replies, 2s between DMs. Daily cap: 50 posts+replies (UTC day).
+    // Burst cap (2026-10-12): at most 5 posts+replies per 10-minute window (window opens at the
+    // first post after the previous window ends). Steward admin o774wL9h... is exempt (postThrottled
+    // skips the rateLimits check for isAdmin(); Path A drips also run outside rules).
     match /rateLimits/{uid} {
       function rlKeysOk(d) {
-        return d.keys().hasOnly(['lastPostAt', 'lastMsgAt', 'day', 'dayCount']);
+        return d.keys().hasOnly([
+          'lastPostAt', 'lastMsgAt', 'day', 'dayCount', 'burstStart', 'burstCount',
+          'lastHideAt', 'hideDay', 'hideDayCount'
+        ]);
+      }
+      function hideBump(before, after) {
+        return after.lastHideAt == request.time
+          && (!before.keys().hasAny(['lastHideAt'])
+              || request.time > before.lastHideAt + duration.value(60, 's'))
+          && (!after.keys().hasAny(['hideDay', 'hideDayCount']) || (
+            after.hideDay == request.time.date()
+            && ((before.keys().hasAny(['hideDay']) && before.hideDay == request.time.date())
+                  ? (after.hideDayCount == before.hideDayCount + 1 && after.hideDayCount <= 5)
+                  : after.hideDayCount == 1)
+          ));
+      }
+      function burstOk(before, after) {
+        return (before.keys().hasAll(['burstStart', 'burstCount'])
+                && request.time < before.burstStart + duration.value(10, 'm'))
+          ? (after.burstStart == before.burstStart
+              && after.burstCount == before.burstCount + 1 && after.burstCount <= 5)
+          : (after.burstStart == request.time && after.burstCount == 1);
       }
       function postBump(before, after) {
         return after.lastPostAt == request.time
@@ -378,7 +539,8 @@ service cloud.firestore {
           && after.day == request.time.date()
           && ((before.keys().hasAny(['day']) && before.day == request.time.date())
                 ? (after.dayCount == before.dayCount + 1 && after.dayCount <= 50)
-                : after.dayCount == 1);
+                : after.dayCount == 1)
+          && burstOk(before, after);
       }
       function msgBump(before, after) {
         return after.lastMsgAt == request.time
@@ -391,28 +553,42 @@ service cloud.firestore {
       allow read: if signedIn() && request.auth.uid == uid;
       allow create: if signedIn() && request.auth.uid == uid
         && rlKeysOk(request.resource.data)
-        && request.resource.data.keys().hasAny(['lastPostAt', 'lastMsgAt'])
+        && request.resource.data.keys().hasAny(['lastPostAt', 'lastMsgAt', 'lastHideAt'])
         && (!request.resource.data.keys().hasAny(['lastPostAt']) || postBump({}, request.resource.data))
-        && (!request.resource.data.keys().hasAny(['lastMsgAt']) || msgBump({}, request.resource.data));
+        && (!request.resource.data.keys().hasAny(['lastMsgAt']) || msgBump({}, request.resource.data))
+        && (!request.resource.data.keys().hasAny(['lastHideAt']) || hideBump({}, request.resource.data));
       allow update: if signedIn() && request.auth.uid == uid
         && rlKeysOk(request.resource.data)
         && (
-          (changed(resource.data, request.resource.data).hasOnly(['lastPostAt', 'day', 'dayCount'])
+          (changed(resource.data, request.resource.data).hasOnly(['lastPostAt', 'day', 'dayCount', 'burstStart', 'burstCount'])
             && postBump(resource.data, request.resource.data))
           || (changed(resource.data, request.resource.data).hasOnly(['lastMsgAt'])
             && msgBump(resource.data, request.resource.data))
+          || (changed(resource.data, request.resource.data).hasOnly(['lastHideAt', 'hideDay', 'hideDayCount'])
+            && hideBump(resource.data, request.resource.data))
         );
       allow delete: if isAdmin();
     }
     // ===== END PREVIEW-LIFT GUARD throttle =====
 
     match /stories/{storyId} {
-      allow read: if factorySite(resource.data);
+      // AUTOHIDE-ON-REPORT (2026-10-22): single-doc get is denied to non-admin when story is hidden.
+      allow list: if factorySite(resource.data);
+      allow get: if factorySite(resource.data) && (
+        isAdmin()
+        || (
+          !exists(/databases/$(database)/documents/hides/$(resource.data.siteId + '_story:' + storyId))
+          && !exists(/databases/$(database)/documents/hides/$(resource.data.siteId + '_' + storyId))
+        )
+      );
       allow create: if emailVerified()
         && notKilled(request.resource.data.siteId)
         && request.auth.uid == request.resource.data.authorUid
         && factorySite(request.resource.data)
-        && hasStoryFields(request.resource.data);
+        && !noUploadsSite(request.resource.data.siteId)      // GPCHAT LIFT U3: stories off
+        && hasStoryFields(request.resource.data)
+        && memberStoryOk(request.resource.data)                 // v2 GUARD
+        && authorTypeOk(request.resource.data);                 // GROWTH CONSOLE
       allow update: if false;
       allow delete: if isAdmin()
         || (signedIn() && resource.data.authorUid == request.auth.uid);
@@ -449,6 +625,7 @@ service cloud.firestore {
               || (request.auth.uid in conv().participants && factorySite(conv())));
         allow create: if emailVerified()
           && request.resource.data.fromUid == request.auth.uid
+          && authorTypeOk(request.resource.data)                   // GROWTH CONSOLE
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 1000
@@ -463,5 +640,15 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
+
+    // GROWTH CONSOLE (2026-10-22): daily human vs steward stats. Admin only, read and write.
+    // The nightly script writes with admin OAuth over REST (bypasses rules); this keeps every client out.
+    match /stats/{siteId} {
+      allow read, write: if isAdmin();
+      match /daily/{day} {
+        allow read, write: if isAdmin();
+      }
+    }
   }
 }
+
