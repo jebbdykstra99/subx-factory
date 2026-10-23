@@ -4359,7 +4359,7 @@
       return;
     }
     if (liveUid() !== ADMIN_UID) {
-      chatErr('Welcome sends need the factory admin Google (jebb.dykstra@gmail.com). This signed-in account is not that admin.');
+      chatErr('Welcome sends require the factory admin account. This signed-in account is not that admin.');
       return;
     }
     if (!requireVerified('chat')) return;

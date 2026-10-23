@@ -861,5 +861,8 @@ for ind_fn in ['wireEvents', 'wireComposeToolbar', 'sendDm', 'ensureShareSheet',
     blk = m.group(0)
     blk2 = re.sub(r'\n    ', '\n   ', blk)
     src = src.replace(blk, blk2, 1)
+# Legal/privacy string sweeps (Workstream 1 d09ef72):
+src = src.replace("/rail (jebb@subx.it)", "/rail (takedown@subx.it)")
+src = src.replace("Welcome sends need the factory admin Google (jebb.dykstra@gmail.com). This signed-in account is not that admin.", "Welcome sends require the factory admin account. This signed-in account is not that admin.")
 src = banner + src
 open('factory.js', 'w').write(src)
