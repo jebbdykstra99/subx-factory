@@ -14,7 +14,7 @@ const browser = await puppeteer.launch({ executablePath: process.env.CHROME || '
 let bad = 0, n = 0;
 for (const dir of dirs) {
   const room = path.basename(dir); const base = JSON.parse(fs.readFileSync(path.join(dir, 'site.json'), 'utf8'));
-  // Re-scoped 2026-10-22 (Jebb: anyone can sign up). Closed ONLY on accountsOpen:false or accounts:'closed'.
+  // Re-scoped 2026-10-22 (SubX: anyone can sign up). Closed ONLY on accountsOpen:false or accounts:'closed'.
   // preview:true is the banner only; a missing flag is open.
   const cases = [
     ['(a/b) preview:true, no accounts flag', variant(base, { preview: true }, ['accountsOpen', 'accounts']), 'open'],
