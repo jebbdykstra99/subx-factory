@@ -196,8 +196,8 @@ ok('whoMarkUpgrade upgrades declarative [data-whomark] badges (human, ai, hybrid
   assert.equal(bad.outerHTML, null);
 });
 
-ok('PEEKAI Round 5 (final-v2) candidate families validate and dry-run cleanly', () => {
-  for (const fam of ['marks/peekai-r5', 'marks/peekai-r5-arms-d', 'marks/peekai-r5-arms-w']) {
+ok('Mark R5 (final-v2) candidate families validate and dry-run cleanly', () => {
+  for (const fam of ['marks/mark-r5', 'marks/mark-r5-arms-d', 'marks/mark-r5-arms-w']) {
     const r = spawnSync('python3', ['build/whomark.py', '--validate', fam], { cwd: root });
     assert.equal(r.status, 0, fam + ': ' + r.stderr.toString());
     const r2 = spawnSync('./swap-marks.sh', [fam, '--dry-run'], { cwd: root });

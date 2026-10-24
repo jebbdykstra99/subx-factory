@@ -1,7 +1,7 @@
 {
-  "family": "peekai-r5-arms-d",
+  "family": "mark-r5",
   "placeholder": false,
-  "note": "PEEKAI Round 5 (final-v2, arms-d): Option A closed ring, capital Ai AI tier, solid-body hybrid with angled-down arms at >=24px. Concept, not cleared, not filed.",
+  "note": "Mark R5 (final-v2): Option A closed ring, capital Ai AI tier, solid-body hybrid (baselinefix, no arms). Concept, not cleared, not filed.",
   "sprite": "/assets/whomark/sprite.svg",
   "accentVar": "--wm-accent",
   "accentDefault": "#FF6A4D",
