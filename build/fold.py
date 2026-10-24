@@ -49,8 +49,8 @@ R['renderFeed'] = ed(G['renderFeed'],
     "    var scopeReady = nestView ? nestReady : liveReady;\n"
     "    if (scopeError && !seeds.length) {\n"
     "      el.innerHTML = '<div class=\"post-empty\">' + (nestView\n"
-    "        ? 'This nest could not load. The error is in the compose line above — this is not an empty room.'\n"
-    "        : 'Live feed could not load. The error is in the compose line above — this is not an empty room.') + '</div>';\n"
+    "        ? 'This nest could not load. The error is in the compose line above. This is not an empty room.'\n"
+    "        : 'Live feed could not load. The error is in the compose line above. This is not an empty room.') + '</div>';\n"
     "      refreshPorchUi();\n"
     "      return;\n"
     "    }\n"
@@ -164,7 +164,7 @@ R['syncProfile'] = ed(G['syncProfile'], 'currentUser.bio || "Talking about the c
 R['renderSidebarAuth'] = ed(T['renderSidebarAuth'], 'av.textContent = "CO";', "av.textContent = skin('avatarInitials', String(SITE_ID || 'S').replace(/chat$/i, '').slice(0, 3).toUpperCase());")
 s = T['stubSignIn']
 s = ed(s, "(handle || 'guest311')", "(handle || 'guest')"); s = ed(s, "|| 'guest311',", "|| 'guest',")
-s = ed(s, 'bio: "Unofficial helper — not a substitute for 911.",', "bio: skin('bioDefault', ''),")
+s = ed(s, 'bio: "Unofficial helper, not a substitute for 911.",', "bio: skin('bioDefault', ''),")
 R['stubSignIn'] = s
 for k in ['syncEarlyWelcome', 'renderExplore', 'storyGroups', 'ensureStoriesComposer', 'renderStoriesTray', 'initStories', 'renderNestNav']:
     R[k] = T[k]
@@ -479,7 +479,7 @@ src = ed(src, "  function stopPreviewLift() {\n", """  // Report loop (factory-r
   }
   function reportUpdateText(status, note) {
     var t = status === 'reviewing' ? 'Your report is under review.' :
-      (status === 'actioned' || status === 'action_taken') ? 'We reviewed and took action on your report.' : 'We reviewed your report. No action was needed.';
+      (status === 'actioned' || status === 'action_taken') ? 'SubX reviewed and took action on your report.' : 'SubX reviewed your report. No action was needed.';
     return t + (note ? ' ' + note : '');
   }
   function setReportStatus(id, status, reporterUid) {
@@ -786,7 +786,7 @@ src = ed(src, "    el.innerHTML = rows.map(function (r) {\n      var post = find
   """    el.innerHTML = rows.map(function (r) {
       var isHid = !!(hiddenIds[r.postId] || HIDE_REASONS[r.reason]);
       var post = isHid ? null : findPost(r.postId);
-      var snippet = isHid ? ('[Hidden — ' + (r.reason || 'reported') + ' · ' + r.postId + ']') :
+      var snippet = isHid ? ('[Hidden: ' + (r.reason || 'reported') + ' · ' + r.postId + ']') :
         ((post && post.text) ? String(post.text).replace(/\\s+/g, ' ').trim().slice(0, 180) : '(post not loaded)');
       var count = reporterCount(r.postId);
       return '<div class="notif-item"' + (isHid ? ' style="opacity:0.65"' : '') + '>' +
@@ -870,5 +870,12 @@ _sp_new = "    if (post && (post.steward || post.isAdminAuthor)) {\n"
 _sp_drop = "    if (post && post.isAdminAuthor) return '<span class=\"post-steward-pill\">Steward</span>';\n"
 assert src.count(_sp_old) == 1 and src.count(_sp_drop) == 1, 'stewardPillHtml fallback sweep'
 src = src.replace(_sp_old, _sp_new, 1).replace(_sp_drop, '', 1)
+# Copy sweep (FACT bar 2026-10-24): no em/en dashes in visible strings. These three come from
+# merge hunks or gpchat functions, so they are swept here instead of in the template.
+for _a, _b in [("<strong>Following \u2014 Soon.</strong>", "<strong>Following: Soon.</strong>"),
+               ("<strong>Notifications \u2014 Soon.</strong>", "<strong>Notifications: Soon.</strong>"),
+               ("'Reply in the compose box \u2014 this is a session ask.'", "'Reply in the compose box. This is a session ask.'")]:
+    assert src.count(_a) == 1, ('copy sweep', _a)
+    src = src.replace(_a, _b)
 src = banner + src
 open('factory.js', 'w').write(src)

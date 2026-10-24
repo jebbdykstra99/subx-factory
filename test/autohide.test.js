@@ -287,7 +287,7 @@ assert.ok(
   );
 
   ctx.renderReports();
-  assert.ok(listHtml.includes('[Hidden — ncii · p1]'), 'hidden report renders placeholder instead of post text');
+  assert.ok(listHtml.includes('[Hidden: ncii · p1]'), 'hidden report renders placeholder instead of post text');
   assert.ok(!listHtml.includes('SENSITIVE TEXT THAT MUST NEVER RENDER FOR HIDDEN POSTS (p1)'), 'hidden post text is never rendered in report row');
   assert.ok(listHtml.includes('style="opacity:0.65"'), 'hidden report row is greyed out');
   assert.ok(listHtml.includes('SENSITIVE TEXT THAT MUST NEVER RENDER FOR HIDDEN POSTS (p2)'), 'non-hidden abuse report still shows snippet');

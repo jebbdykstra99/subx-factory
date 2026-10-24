@@ -61,7 +61,7 @@
   }
   function reportUpdateText(status, note) {
     var t = status === 'reviewing' ? 'Your report is under review.' :
-      (status === 'actioned' || status === 'action_taken') ? 'We reviewed and took action on your report.' : 'We reviewed your report. No action was needed.';
+      (status === 'actioned' || status === 'action_taken') ? 'SubX reviewed and took action on your report.' : 'SubX reviewed your report. No action was needed.';
     return t + (note ? ' ' + note : '');
   }
   function setReportStatus(id, status, reporterUid) {
