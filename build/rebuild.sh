@@ -133,9 +133,11 @@ main() {
   script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
   cd "$script_dir"
   local GP_PR31=${GP_PR31:-43a1936032e6ea2e54613257536b652920903905}
-  local T
+  # T stays global. The EXIT trap runs after main returns, and a local is
+  # already gone by then; with set -u that failed the script even when the
+  # copy itself succeeded.
   T=$(mktemp -d)
-  trap 'rm -rf "$T" template.js base_gpchat_7553762.js gpchat_pr31.js merged_raw.js merged.js factory.js factory-gp.js factory-rail.js factory-reports.js' EXIT
+  trap 'rm -rf "${T:-}" template.js base_gpchat_7553762.js gpchat_pr31.js merged_raw.js merged.js factory.js factory-gp.js factory-rail.js factory-reports.js' EXIT
   git clone -q https://github.com/jebbdykstra99/gpchat "$T/gp"
   git -C "$T/gp" fetch -q origin "$GP_PR31" 2>/dev/null || git -C "$T/gp" fetch -q origin 'refs/pull/31/head'
   git -C "$T/gp" show 7553762:factory.js > base_gpchat_7553762.js
