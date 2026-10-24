@@ -157,6 +157,9 @@ a = ed(a, "authNote.textContent = site.trustBlurb || ('Unofficial helper. Not a 
 R['applySiteChrome'] = a
 R['postPermalink'] = ed(T['postPermalink'], "|| '311chat.com';", "|| ((site && site.domain) || 'subx.it');")
 R['dmSiteId'] = ed(T['dmSiteId'], "return SITE_ID || '311chat';", "return SITE_ID;")
+# Whole function is the gpchat body (G), not factory/factory.js. The New message
+# picker filter lives here; a hand edit in factory/factory.js is not read back.
+# build/rebuild.sh refuses to overwrite a committed file that differs.
 R['openAdminPicker'] = ed(G['openAdminPicker'], "'<div class=\"soon-panel\">No gpchat users yet.</div>'", "'<div class=\"soon-panel\">No ' + escapeHtml((site && site.name) || SITE_ID) + ' users yet.</div>'")
 R['paintProfile'] = ed(T['paintProfile'], "'<div class=\"empty-note\" id=\"profile-posts-empty\">No posts yet. Official 311 is the handoff at the top of Home. Sign in to talk with neighbors.</div>'",
   "'<div class=\"empty-note\" id=\"profile-posts-empty\">' + escapeHtml(skin('profileEmpty', 'No posts yet.')) + '</div>'")
