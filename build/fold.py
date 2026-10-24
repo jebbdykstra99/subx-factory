@@ -867,7 +867,8 @@ for ind_fn in ['wireEvents', 'wireComposeToolbar', 'sendDm', 'ensureShareSheet',
 # Legal/privacy string sweeps (Workstream 1 d09ef72):
 # Legacy rail UA contact (any non-takedown local part) -> takedown@. takedown@ is left as is.
 src = re.sub(r"/rail \((?!takedown@)[a-z][a-z.]*@subx\.it\)", "/rail (takedown@subx.it)", src)
-src = src.replace("Welcome sends need the factory admin Google (jebb.dykstra@gmail.com). This signed-in account is not that admin.", "Welcome sends require the factory admin account. This signed-in account is not that admin.")
+# Legacy welcome-send error named a personal admin gmail; normalize any such address in that exact sentence.
+src = re.sub(r"Welcome sends need the factory admin Google \([a-z0-9.]+@gmail\.com\)\. This signed-in account is not that admin\.", "Welcome sends require the factory admin account. This signed-in account is not that admin.", src)
 # AI steward label: admin-authored posts without steward:true get the same pill as steward:true (2026-10-24).
 _sp_old = "    if (post && post.steward) {\n"
 _sp_new = "    if (post && (post.steward || post.isAdminAuthor)) {\n"
