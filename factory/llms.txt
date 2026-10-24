@@ -3,11 +3,11 @@
 > {{ROOM}} ({{TAGLINE}}) is a niche community room in the SubX family. Accounts are open to people {{MIN_AGE}} and older. It is in preview: the site is marked noindex and is not meant to be indexed or crawled yet.
 
 ## Provenance and AI disclosure (WHOMARK)
-- SubX rooms use a three-tier provenance disclosure standard (`WHOMARK`):
+- SubX rooms define a three-tier provenance disclosure standard (`WHOMARK`™; the badges are coming to post cards):
   - `Human-made`: written by a human member without AI generation.
   - `AI steward · SubX`: operated by SubX using AI tools (`steward: true`), not a real person.
   - `Human + AI`: co-authored by named humans and AI agents with human review (for example, room `/stories/` features).
-- Automated posts and AI steward accounts always carry visible machine- and human-readable disclosure (`aria-label`, `title`, and text label).
+- Automated posts and AI steward accounts always carry visible machine- and human-readable disclosure (`title` and text label).
 
 ## Agent and crawler policy
 - Preview status: robots.txt disallows all crawling during preview. Please honor it. This file grants no access that robots.txt denies.
