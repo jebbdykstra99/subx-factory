@@ -6,7 +6,7 @@ rules_version = '2';
 // GPCHAT LIFT (2026-10-18 rebuild): this file = RULES_PASTE_for_Jebb_v2.txt SECTION A2 (v2: follow/mute fix,
 // story guard, burst cap) + the gpchat lift deltas U3 (no uploads/stories in gpchat) and R2 (under-18 suspension).
 // The Oct 17 draft was built on v1 SECTION A and dropped the v2 follow/mute/story fixes for all 20 rooms.
-// AUTOHIDE-ON-REPORT (2026-10-22, Jebb 4:42 PM MT): amended copy of f93194e3d2175c7149b7201b31553b2b.
+// AUTOHIDE-ON-REPORT (2026-10-22, 4:42 PM MT): amended copy of f93194e3d2175c7149b7201b31553b2b.
 // Adds /hides/{hideId} public hide markers (atomic with a hide-eligible report in ['ncii','impersonation','csam']
 // or by admin; ONLY admin o774wL9hUVSi19EkDCgLqQomP8i2 can delete/restore; never updated), splits /posts and
 // /stories read into list + get (denying single-doc get when hidden for non-admin), and adds optional per-user
@@ -139,7 +139,7 @@ service cloud.firestore {
     }
 
 
-    // ===== PREVIEW-LIFT GUARD (draft 2026-10-09; Jebb hand-publishes) =====
+    // ===== PREVIEW-LIFT GUARD (draft 2026-10-09; SubX hand-publishes) =====
     // Rooms whose factory.js writes rateLimits/{uid} in the same batch as a post/DM.
     // Add a siteId here ONLY after that room's live factory.js carries the guard block
     // (check: allrooms/guarded-line.sh prints the exact line). Use the site.json siteId,
@@ -165,7 +165,7 @@ service cloud.firestore {
       return isAdmin() || !guardedSite(sid)
         || (existsAfter(rlPath()) && getAfter(rlPath()).data.lastMsgAt == request.time);
     }
-    // At most 2 links per text; no common spam patterns. Severe-term list = Jebb decision D4.
+    // At most 2 links per text; no common spam patterns. Severe-term list = decision D4.
     function linksOk(t) {
       return !t.lower().matches('(?s).*(https?://|www[.]).*(https?://|www[.]).*(https?://|www[.]).*');
     }
@@ -399,8 +399,8 @@ service cloud.firestore {
               || (request.resource.data.text is string && request.resource.data.text.size() <= 280))
           && (!request.resource.data.keys().hasAny(['createdAt'])
               || request.resource.data.createdAt == request.time)
-          && (request.resource.data.type != 'report' || uid == 'o774wL9hUVSi19EkDCgLqQomP8i2')  // CLO #7 report alert goes to Jebb only
-          && (request.resource.data.type != 'report_update' || request.auth.uid == 'o774wL9hUVSi19EkDCgLqQomP8i2')  // A9: report status updates come from Jebb only
+          && (request.resource.data.type != 'report' || uid == 'o774wL9hUVSi19EkDCgLqQomP8i2')  // CLO #7 report alert goes to the admin only
+          && (request.resource.data.type != 'report_update' || request.auth.uid == 'o774wL9hUVSi19EkDCgLqQomP8i2')  // A9: report status updates come from the admin only
           && request.resource.data.read == false;
       }
     }
@@ -429,7 +429,7 @@ service cloud.firestore {
     // postIds / parentIds / storyIds before any text or image renders.
     // Created either by admin (CLI / console / mass-hide) or by a verified member in the SAME atomic
     // batch as a /reports/{reportId} doc whose reason is in ['ncii', 'copyright', 'violent_offensive', 'hate', 'impersonation', 'csam'].
-    // ONLY Jebb (isAdmin, uid o774wL9hUVSi19EkDCgLqQomP8i2) can restore by deleting the hide doc.
+    // ONLY the admin (isAdmin, uid o774wL9hUVSi19EkDCgLqQomP8i2) can restore by deleting the hide doc.
     match /hides/{hideId} {
       function hideTargetExists(d) {
         return !d.postId.matches('^uid:.*')

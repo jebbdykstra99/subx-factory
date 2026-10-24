@@ -89,7 +89,7 @@ await t('31 write email into users doc denied', assertFails(db('u42').doc('users
 await t('31b write phone into users doc denied', assertFails(db('u42').doc('users/u42').set({ siteId: 'gpchat', displayName: 'x', phone: '+15555550100' })));
 await t('31c own following/notifications reads ok', assertSucceeds(Promise.all([db('u40').collection('users/u40/following').get(), db('u40').collection('users/u40/notifications').get()])));
 await t('31d other user notifications read denied', assertFails(db('u41').collection('users/u40/notifications').get()));
-await t('32 report alert notif to Jebb ok', assertSucceeds(db('u43').collection('users/' + ADMIN + '/notifications').add({ toUid: ADMIN, fromUid: 'u43', type: 'report', siteId: 'gpchat', postId: 'p2', read: false, text: 'Reported post p2', createdAt: FV.serverTimestamp() })));
+await t('32 report alert notif to admin ok', assertSucceeds(db('u43').collection('users/' + ADMIN + '/notifications').add({ toUid: ADMIN, fromUid: 'u43', type: 'report', siteId: 'gpchat', postId: 'p2', read: false, text: 'Reported post p2', createdAt: FV.serverTimestamp() })));
 await t('32b report-type notif to a non-admin denied', assertFails(db('u43').collection('users/u40/notifications').add({ toUid: 'u40', fromUid: 'u43', type: 'report', siteId: 'gpchat', read: false, createdAt: FV.serverTimestamp() })));
 await t('32c reply notif (legacy shape) still ok', assertSucceeds(db('u43').collection('users/u40/notifications').add({ toUid: 'u40', fromUid: 'u43', type: 'reply', siteId: 'gpchat', postId: 'p2', read: false, text: 'nice', createdAt: FV.serverTimestamp() })));
 await t('33 member sets steward:true denied', assertFails(guardedPost(db('u44'), 'u44', base('u44', 'gpchat', { steward: true }))));

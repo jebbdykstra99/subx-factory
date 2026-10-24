@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
 
 /*
- * Accounts gate, re-scoped 2026-10-22 (Jebb: anyone can sign up). Closed ONLY when site.json says accountsOpen:false
+ * Accounts gate, re-scoped 2026-10-22 (SubX: anyone can sign up). Closed ONLY when site.json says accountsOpen:false
  * or accounts:'closed'. A missing flag is open; preview:true is the banner only and never closes sign-ups.
  * Also checks every write path still carries its guard, every rooms.json room has an explicit boolean accountsOpen,
  * and tools/stamp.py refuses a room without one. Run: node test/accounts-gate.test.js
