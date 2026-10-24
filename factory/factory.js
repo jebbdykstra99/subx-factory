@@ -865,7 +865,7 @@
     el.innerHTML = rows.map(function (r) {
       var isHid = !!(hiddenIds[r.postId] || HIDE_REASONS[r.reason]);
       var post = isHid ? null : findPost(r.postId);
-      var snippet = isHid ? ('[Hidden — ' + (r.reason || 'reported') + ' · ' + r.postId + ']') :
+      var snippet = isHid ? ('[Hidden: ' + (r.reason || 'reported') + ' · ' + r.postId + ']') :
         ((post && post.text) ? String(post.text).replace(/\s+/g, ' ').trim().slice(0, 180) : '(post not loaded)');
       var count = reporterCount(r.postId);
       return '<div class="notif-item"' + (isHid ? ' style="opacity:0.65"' : '') + '>' +
@@ -1305,7 +1305,7 @@
     if (!site) return;
     var title = site.name || SITE_ID || 'SubX';
     var tag = site.tagline || '';
-    document.title = tag ? (title + ' — ' + tag) : title;
+    document.title = tag ? (title + ', ' + tag) : title;
     var brandTitle = document.querySelector('.brand-title');
     var brandSub = document.querySelector('.brand-sub');
     var brandMark = document.querySelector('.brand-mark');
@@ -1995,7 +1995,7 @@
     if (!key) return 'Add a slug.';
     if (key.indexOf('/') !== -1) return 'One level only.';
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(key)) return 'Use lowercase letters, numbers, and hyphens.';
-    if (key.length < 2 || key.length > 40) return 'Slug must be 2–40 characters.';
+    if (key.length < 2 || key.length > 40) return 'Slug must be 2 to 40 characters.';
     if (NEST_RESERVED[key]) return 'That slug is reserved.';
     if (findNest(key)) return 'That room already exists.';
     return '';
@@ -2247,8 +2247,8 @@
     var title = (site && site.name) || SITE_ID || 'room';
     var tag = (site && site.tagline) || '';
     document.title = nest
-      ? ((nest.label || nest.slug) + ' — ' + title)
-      : (tag ? (title + ' — ' + tag) : title);
+      ? ((nest.label || nest.slug) + ', ' + title)
+      : (tag ? (title + ', ' + tag) : title);
     var brandSub = document.querySelector('.brand-sub');
     if (brandSub) brandSub.textContent = nest ? (nest.label || nest.slug) : tag;
     var input = document.getElementById('thoughts-compose-input');
@@ -2797,7 +2797,7 @@
 
     if (currentTab === 'following') {
       if (!followingLive()) {
-        el.innerHTML = '<div class="post-empty soon-panel"><strong>Following — Soon.</strong> There is no follows graph in this preview. The live room is on For You.</div>';
+        el.innerHTML = '<div class="post-empty soon-panel"><strong>Following: Soon.</strong> There is no follows graph in this preview. The live room is on For You.</div>';
         refreshPorchUi();
         return;
       }
@@ -2811,8 +2811,8 @@
     var scopeReady = nestView ? nestReady : liveReady;
     if (scopeError && !seeds.length) {
       el.innerHTML = '<div class="post-empty">' + (nestView
-        ? 'This nest could not load. The error is in the compose line above — this is not an empty room.'
-        : 'Live feed could not load. The error is in the compose line above — this is not an empty room.') + '</div>';
+        ? 'This nest could not load. The error is in the compose line above. This is not an empty room.'
+        : 'Live feed could not load. The error is in the compose line above. This is not an empty room.') + '</div>';
       refreshPorchUi();
       return;
     }
@@ -3713,7 +3713,7 @@
     syncNotifChrome();
     if (!el) return;
     if (!notifsLive()) {
-      el.innerHTML = '<div class="soon-panel"><strong>Notifications — Soon.</strong><p>No live alerts in this preview. Dummy copy stays in site.json as sample only and is not shown as real activity.</p></div>';
+      el.innerHTML = '<div class="soon-panel"><strong>Notifications: Soon.</strong><p>No live alerts in this preview. Dummy copy stays in site.json as sample only and is not shown as real activity.</p></div>';
       return;
     }
     var list = siteNotifs();
@@ -4055,7 +4055,7 @@
     var ph = document.getElementById('chat-placeholder');
     var view = document.getElementById('chat-thread-view');
     if (!dmsOn()) {
-      if (title) title.textContent = 'Chat — Soon';
+      if (title) title.textContent = 'Chat: Soon';
       if (sub) sub.textContent = 'Direct messages are not live in this preview. No DMs graph. Sample thread copy in site.json is not a real inbox.';
       if (ph) ph.hidden = false;
       if (view) view.hidden = true;
@@ -4145,7 +4145,7 @@
     const el = document.getElementById('chat-thread-list');
     if (!el) return;
     if (!dmsOn()) {
-      el.innerHTML = '<div class="soon-panel soon-panel-pad"><strong>Chat — Soon.</strong><p>Direct messages are not live. Sample thread copy in site.json is not a real inbox.</p></div>';
+      el.innerHTML = '<div class="soon-panel soon-panel-pad"><strong>Chat: Soon.</strong><p>Direct messages are not live. Sample thread copy in site.json is not a real inbox.</p></div>';
       return;
     }
     if (!isLiveUser()) {
@@ -5022,7 +5022,7 @@
     if (!fbDb || !postId) return;
     var post = findPost(postId);
     if (isSessionSeedPost(post)) {
-      composeErr('Reply in the compose box — this is a session ask.');
+      composeErr('Reply in the compose box. This is a session ask.');
       return;
     }
     var likedBy = (post && post.likedBy) || {};
@@ -6036,7 +6036,7 @@
     if (!storiesOn()) return;
     if (!force && !requireVerified('add a story')) return;
     if (!force && storiesPostedToday() >= STORIES_PER_DAY) {
-      composeErr('Easy — a few stories a day is enough. Try again tomorrow.');
+      composeErr('Easy, a few stories a day is enough. Try again tomorrow.');
       return;
     }
     ensureStoriesComposer();
@@ -6081,7 +6081,7 @@
     if (!fbDb) { storiesErr('Stories are not connected.'); return; }
     if (siteKilled) { storiesErr('This room is paused.'); return; }
     if (storiesPostedToday() >= STORIES_PER_DAY) {
-      storiesErr('Easy — a few stories a day is enough.');
+      storiesErr('Easy, a few stories a day is enough.');
       return;
     }
     var live = fbAuth && fbAuth.currentUser;

@@ -109,7 +109,7 @@ assert.deepStrictEqual(notifs[0], {
   to: 'uR',
   type: 'report_update',
   postId: '',
-  text: 'We reviewed and took action on your report. Removed the post.',
+  text: 'SubX reviewed and took action on your report. Removed the post.',
   id: 'report_update_r1_actioned'
 });
 assert.strictEqual(toasts[0], 'Report: Action taken');
@@ -141,7 +141,7 @@ click({ 'data-report-status': 'dismissed', 'data-report-id': 'r3', 'data-report-
 await new Promise((r) => setImmediate(r));
 assert.strictEqual(updates.length, 3); assert.strictEqual(notifs.length, 3);
 // notif text always fits sendNotif (180) and the rules (280)
-assert.ok('We reviewed your report. No action was needed. '.length + 120 <= 180);
+assert.ok('SubX reviewed your report. No action was needed. '.length + 120 <= 180);
 
 // reporter: My reports entry, query scoped to me + this room (rules: reporter reads own only)
 api.syncMyReports();
@@ -183,7 +183,7 @@ const sctx = {
 };
 vm.createContext(sctx);
 vm.runInContext('function liveUid(){return "' + ADMIN + '";} function isEmailVerified(){return true;}\n' + fnSrc(core, 'sendNotif'), sctx);
-const okRes = await sctx.sendNotif('uR', 'report_update', '', 'We reviewed and took action on your report.', 'report_update_r1_actioned');
+const okRes = await sctx.sendNotif('uR', 'report_update', '', 'SubX reviewed and took action on your report.', 'report_update_r1_actioned');
 assert.strictEqual(okRes, true);
 assert.strictEqual(sctx.docId, 'report_update_r1_actioned');
 const allowed = ['toUid', 'fromUid', 'type', 'siteId', 'postId', 'read', 'text', 'createdAt'];
