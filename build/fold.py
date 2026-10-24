@@ -276,9 +276,9 @@ banner = """/* SubX factory.js (subx-factory master). DO NOT EDIT IN A ROOM REPO
 src = ed(src, 'boot({ siteId: "311chat", name: "311chat", tagline: "Non-emergency city help. Find your 311." });',
   "boot({ siteId: (location.hostname || 'room').replace(/^www\\./, '').replace(/\\.[a-z]+$/, ''), name: (location.hostname || 'SubX').replace(/^www\\./, ''), tagline: '' });")
 src = src.replace("name: 'Grid', symbolPrefix", "name: 'Topics', symbolPrefix").replace("tax.name || 'Grid'", "tax.name || 'Topics'").replace("(taxName || 'Grid')", "(taxName || 'Topics')").replace("'Not on the Grid'", "'Not in this room'").replace("That topic is not on the Grid.", "That topic is not in this room.")
-# Jebb rule (2026-10-22): no 13+ anywhere. A room without site.json minAge gets the 18+ gate.
+# SubX rule (2026-10-22): no 13+ anywhere. A room without site.json minAge gets the 18+ gate.
 src = ed(src, "    if (!isFinite(n) || n < 1) return 13;\n", "    if (!isFinite(n) || n < 1) return 18;\n")
-# Accounts gate (2026-10-22). Ported from gpchat accountsOpen()/applyAccountsGate(). Re-scoped the same day after Jebb's
+# Accounts gate (2026-10-22). Ported from gpchat accountsOpen()/applyAccountsGate(). Re-scoped the same day after SubX's
 # "anyone can sign up" call: a room is CLOSED only when site.json says accountsOpen:false or accounts:'closed'. A missing
 # flag is OPEN. preview:true is the banner only (static index.html markup) and never closes sign-ups. New rooms can't
 # land without a decision: tools/stamp.py requires an explicit rooms.json accountsOpen. Closed: no Register / Google join,
@@ -373,7 +373,7 @@ src = ed(src, "  function nestSlugNorm(s) {\n    return String(s || '').replace(
 assert len(re.findall(r'\bnestSlugNorm\b', src)) == 16, len(re.findall(r'\bnestSlugNorm\b', src))
 src = re.sub(r'\bnestSlugNorm\(', 'nestKey(', src)
 assert 'nestSlugNorm' not in src
-# ---- Notifications + reports write real docs in every room (2026-10-22, Jebb: "make sure notifications and reports
+# ---- Notifications + reports write real docs in every room (2026-10-22, SubX: "make sure notifications and reports
 # are created and exist"). Root cause: only replies wrote users/{to}/notifications, and only where site.json
 # features.notifs was on (and only if the bell listener had not errored). Like/follow/mention were rendered by
 # notifLine() but never written. Reports carried no status, and report errors went to the compose box, which can be
@@ -452,7 +452,7 @@ src = ed(src, "  function composeErr(msg) {\n", """  function toast(m) {
   }
   function composeErr(msg) {
 """)
-# ---- A9 pieces 2+3: report loop (2026-10-22, Jebb: "report status, My reports and triage; report_update notification").
+# ---- A9 pieces 2+3: report loop (2026-10-22, SubX: "report status, My reports and triage; report_update notification").
 # Lifecycle open -> reviewing -> actioned | dismissed. Admin triage writes status + reviewedBy/reviewedAt (+ optional
 # resolution note, history entry) and sends the reporter a 'report_update' notif. Reporters get "My reports" (status of
 # each report they filed in this room). Code lives in the opt-in factory-reports.js (site.json features.reportLoop), so
@@ -582,10 +582,10 @@ src = ed(src, "  function stopPreviewLift() {\n", """  // Report loop (factory-r
   }
   function stopPreviewLift() {
 """)
-# ---- Auto-hide on report + instant alert (2026-10-22, Jebb: "Even having an image up for an hour, could cause irreparable harm").
+# ---- Auto-hide on report + instant alert (2026-10-22, SubX: "Even having an image up for an hour, could cause irreparable harm").
 # Client batch-writes reports/{autoId} + hides/{siteId}_{postId} for ncii/copyright/violent_offensive/hate/impersonation/csam
 # (falling back to report-only if the hides rule is not published yet). Every feed/story/profile/notif ingress point filters
-# hidden postIds so neither text nor imageUrl/mediaUrl renders on any client. Only Jebb (ADMIN_UID) can restore by deleting hides/{id}.
+# hidden postIds so neither text nor imageUrl/mediaUrl renders on any client. Only the admin (ADMIN_UID) can restore by deleting hides/{id}.
 src = ed(src, "  var reportItems = [];\n  var reportsUnsub = null;\n  var reportedMem = {};\n",
   "  var reportItems = [];\n  var reportsUnsub = null;\n  var reportedMem = {};\n  var hiddenIds = {};\n  var hidesUnsub = null;\n  var HIDE_REASONS = { ncii: 1, copyright: 1, violent_offensive: 1, hate: 1, impersonation: 1, csam: 1 };\n")
 src = ed(src, "  function isAdminUser() {\n    return liveUid() === ADMIN_UID;\n  }\n", """  function isAdminUser() {

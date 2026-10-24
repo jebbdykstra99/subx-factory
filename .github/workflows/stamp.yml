@@ -3,7 +3,7 @@ name: stamp
 # The job refuses to run — no room clone, no branch, no PR — until rules_step1_live is YES.
 # After that, a non-dry run pushes a NEW branch factory/<version>-<run_id> and skips the room if that branch exists.
 # Needs secret ROOMS_TOKEN: fine-grained PAT (owner jebbdykstra99), repos = the room repos, Contents: write,
-# Pull requests: write. Nothing else. Rules are NOT touched (Jebb hand-publishes Firestore/Storage rules).
+# Pull requests: write. Nothing else. Rules are NOT touched (SubX hand-publishes Firestore/Storage rules).
 on:
   workflow_dispatch:
     inputs:
