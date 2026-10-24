@@ -701,10 +701,9 @@
   }
   function stewardPillHtml(post) {
     if (isSessionSeedPost(post)) return '<span class="post-steward-pill">Sample</span>';
-    if (post && post.steward) {
+    if (post && (post.steward || post.isAdminAuthor)) {
       return '<span class="post-steward-pill" title="Operated by SubX using AI tools. Not a real person.">AI steward · SubX</span>';
     }
-    if (post && post.isAdminAuthor) return '<span class="post-steward-pill">Steward</span>';
     return '';
   }
   function postOverflowHtml(post) {

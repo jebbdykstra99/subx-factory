@@ -864,5 +864,11 @@ for ind_fn in ['wireEvents', 'wireComposeToolbar', 'sendDm', 'ensureShareSheet',
 # Legal/privacy string sweeps (Workstream 1 d09ef72):
 src = src.replace("/rail (jebb@subx.it)", "/rail (takedown@subx.it)")
 src = src.replace("Welcome sends need the factory admin Google (jebb.dykstra@gmail.com). This signed-in account is not that admin.", "Welcome sends require the factory admin account. This signed-in account is not that admin.")
+# AI steward label: admin-authored posts without steward:true get the same pill as steward:true (2026-10-24).
+_sp_old = "    if (post && post.steward) {\n"
+_sp_new = "    if (post && (post.steward || post.isAdminAuthor)) {\n"
+_sp_drop = "    if (post && post.isAdminAuthor) return '<span class=\"post-steward-pill\">Steward</span>';\n"
+assert src.count(_sp_old) == 1 and src.count(_sp_drop) == 1, 'stewardPillHtml fallback sweep'
+src = src.replace(_sp_old, _sp_new, 1).replace(_sp_drop, '', 1)
 src = banner + src
 open('factory.js', 'w').write(src)
