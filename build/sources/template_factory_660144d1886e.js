@@ -4123,7 +4123,7 @@
   }
 
   function uploadImage(file, uid) {
-    if (!fbStorage) return Promise.reject(new Error('Storage not ready'));
+    if (!fbStorage || site.imageUploads === false) return Promise.reject(new Error('Storage not ready'));
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
     const path = 'posts/' + SITE_ID + '/' + uid + '/' + Date.now() + '.' + ext;
     const ref = fbStorage.ref(path);
@@ -5244,7 +5244,7 @@
     return true;
   }
   function uploadStoryMedia(file, uid, storyId) {
-    if (!fbStorage) return Promise.reject(new Error('Storage not ready'));
+    if (!fbStorage || !storiesOn()) return Promise.reject(new Error('Storage not ready'));
     var ext = (file.name.split('.').pop() || (storyType === 'video' ? 'mp4' : 'jpg')).toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
     var path = 'stories/' + SITE_ID + '/' + uid + '/' + storyId + '.' + ext;
     var ref = fbStorage.ref(path);
@@ -5258,7 +5258,7 @@
   }
   function submitStory() {
     if (!requireVerified('add a story')) return;
-    if (!fbDb) { storiesErr('Stories are not connected.'); return; }
+    if (!fbDb || !storiesOn()) { storiesErr('Stories are not connected.'); return; }
     if (siteKilled) { storiesErr('This room is paused.'); return; }
     if (storiesPostedToday() >= STORIES_PER_DAY) {
       storiesErr('Easy, a few stories a day is enough.');
