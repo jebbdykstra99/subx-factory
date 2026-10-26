@@ -877,7 +877,12 @@ src = src.replace(_sp_old, _sp_new, 1).replace(_sp_drop, '', 1)
 # merge hunks or gpchat functions, so they are swept here instead of in the template.
 for _a, _b in [("<strong>Following \u2014 Soon.</strong>", "<strong>Following: Soon.</strong>"),
                ("<strong>Notifications \u2014 Soon.</strong>", "<strong>Notifications: Soon.</strong>"),
-               ("'Reply in the compose box \u2014 this is a session ask.'", "'Reply in the compose box. This is a session ask.'")]:
+               ("'Reply in the compose box \u2014 this is a session ask.'", "'Reply in the compose box. This is a session ask.'"),
+               # Iris Key 1 (2026-10-26): B7 pill operator name; drop "preview" that goes stale at lift.
+               ('title="Operated by SubX using AI tools.', 'title="Operated by SubX, LLC using AI tools.'),
+               (" or older and agree to the preview Terms and Privacy pages.'", " or older and agree to the Terms and Privacy pages.'"),
+               ("There is no follows graph in this preview.", "There is no follows graph yet."),
+               ("No live alerts in this preview.", "No live alerts yet.")]:
     assert src.count(_a) == 1, ('copy sweep', _a)
     src = src.replace(_a, _b)
 src = banner + src

@@ -330,7 +330,7 @@
     return n;
   }
   function ageGateMessage() {
-    return 'Confirm you are ' + siteMinAge() + ' or older and agree to the preview Terms and Privacy pages.';
+    return 'Confirm you are ' + siteMinAge() + ' or older and agree to the Terms and Privacy pages.';
   }
   function paintAgeLabels() {
     var n = String(siteMinAge());
@@ -702,7 +702,7 @@
   function stewardPillHtml(post) {
     if (isSessionSeedPost(post)) return '<span class="post-steward-pill">Sample</span>';
     if (post && (post.steward || post.isAdminAuthor)) {
-      return '<span class="post-steward-pill" title="Operated by SubX using AI tools. Not a real person.">AI steward · SubX</span>';
+      return '<span class="post-steward-pill" title="Operated by SubX, LLC using AI tools. Not a real person.">AI steward · SubX</span>';
     }
     return '';
   }
@@ -2797,7 +2797,7 @@
 
     if (currentTab === 'following') {
       if (!followingLive()) {
-        el.innerHTML = '<div class="post-empty soon-panel"><strong>Following: Soon.</strong> There is no follows graph in this preview. The live room is on For You.</div>';
+        el.innerHTML = '<div class="post-empty soon-panel"><strong>Following: Soon.</strong> There is no follows graph yet. The live room is on For You.</div>';
         refreshPorchUi();
         return;
       }
@@ -3713,7 +3713,7 @@
     syncNotifChrome();
     if (!el) return;
     if (!notifsLive()) {
-      el.innerHTML = '<div class="soon-panel"><strong>Notifications: Soon.</strong><p>No live alerts in this preview. Dummy copy stays in site.json as sample only and is not shown as real activity.</p></div>';
+      el.innerHTML = '<div class="soon-panel"><strong>Notifications: Soon.</strong><p>No live alerts yet. Dummy copy stays in site.json as sample only and is not shown as real activity.</p></div>';
       return;
     }
     var list = siteNotifs();
