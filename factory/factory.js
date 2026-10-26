@@ -4837,6 +4837,7 @@
   }
   function setImagePreview(file) {
     if (!file) return;
+    if (site && site.imageUploads === false) { composeErr('Photo uploads are off in this room.'); return; }
     if (isVideoFile(file)) {
       composeErr('Images only. No video yet.');
       return;

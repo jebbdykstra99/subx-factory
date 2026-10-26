@@ -1,8 +1,8 @@
 {
-  "version": "v1.2.5",
+  "version": "v1.2.6",
   "factory.js": {
-    "sha256": "4d9966698975cb4676a77cb81913223762eebfd3612a969ddcfd7740ecf37fe7",
-    "bytes": 254778
+    "sha256": "42c13e21d1f8fec3df8c831a312cb9577e8349d0689cbb03b322aad84ca432ce",
+    "bytes": 254886
   },
   "sources": {
     "template": "build/sources/template_factory_660144d1886e.js (T0 pin, nest-feed query edited in place)",
@@ -10,7 +10,7 @@
     "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)",
     "split": "build/split.mjs (opt-in files out of the folded single-file build: gp, rail, reports)"
   },
-  "built": "2026-10-22 (MT)",
+  "built": "2026-10-25 (MT)",
   "optIn": {
     "factory-gp.js": {
       "sha256": "89501b0b3827e0dd3e275fa1f2ab27087f2993e236f3868b9629ef24faaa68af",
