@@ -4056,7 +4056,7 @@
     var view = document.getElementById('chat-thread-view');
     if (!dmsOn()) {
       if (title) title.textContent = 'Chat: Soon';
-      if (sub) sub.textContent = 'Direct messages are not live in this preview. No DMs graph. Sample thread copy in site.json is not a real inbox.';
+      if (sub) sub.textContent = 'Direct messages are not live yet. No DMs graph. Sample thread copy in site.json is not a real inbox.';
       if (ph) ph.hidden = false;
       if (view) view.hidden = true;
       return;

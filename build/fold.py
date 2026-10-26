@@ -882,7 +882,8 @@ for _a, _b in [("<strong>Following \u2014 Soon.</strong>", "<strong>Following: S
                ('title="Operated by SubX using AI tools.', 'title="Operated by SubX, LLC using AI tools.'),
                (" or older and agree to the preview Terms and Privacy pages.'", " or older and agree to the Terms and Privacy pages.'"),
                ("There is no follows graph in this preview.", "There is no follows graph yet."),
-               ("No live alerts in this preview.", "No live alerts yet.")]:
+               ("No live alerts in this preview.", "No live alerts yet."),
+               ("'Direct messages are not live in this preview.", "'Direct messages are not live yet.")]:
     assert src.count(_a) == 1, ('copy sweep', _a)
     src = src.replace(_a, _b)
 src = banner + src
