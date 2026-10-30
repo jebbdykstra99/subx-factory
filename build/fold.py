@@ -277,7 +277,7 @@ banner = """/* SubX factory.js (subx-factory master). DO NOT EDIT IN A ROOM REPO
  * Room differences belong in site.json (features, skin, rail, nests, minAge) or in EXCEPTIONS.md. */
 """
 src = ed(src, 'boot({ siteId: "311chat", name: "311chat", tagline: "Non-emergency city help. Find your 311." });',
-  "boot({ siteId: (location.hostname || 'room').replace(/^www\\./, '').replace(/\\.[a-z]+$/, ''), name: (location.hostname || 'SubX').replace(/^www\\./, ''), tagline: '' });")
+  "boot({ siteId: (location.hostname || 'room').replace(/^www\\./, '').replace(/\\.[a-z]+$/, ''), name: (location.hostname || 'SubX').replace(/^www\\./, ''), tagline: '', imageUploads: false });")
 src = src.replace("name: 'Grid', symbolPrefix", "name: 'Topics', symbolPrefix").replace("tax.name || 'Grid'", "tax.name || 'Topics'").replace("(taxName || 'Grid')", "(taxName || 'Topics')").replace("'Not on the Grid'", "'Not in this room'").replace("That topic is not on the Grid.", "That topic is not in this room.")
 # SubX rule (2026-10-22): no 13+ anywhere. A room without site.json minAge gets the 18+ gate.
 src = ed(src, "    if (!isFinite(n) || n < 1) return 13;\n", "    if (!isFinite(n) || n < 1) return 18;\n")
@@ -877,7 +877,13 @@ src = src.replace(_sp_old, _sp_new, 1).replace(_sp_drop, '', 1)
 # merge hunks or gpchat functions, so they are swept here instead of in the template.
 for _a, _b in [("<strong>Following \u2014 Soon.</strong>", "<strong>Following: Soon.</strong>"),
                ("<strong>Notifications \u2014 Soon.</strong>", "<strong>Notifications: Soon.</strong>"),
-               ("'Reply in the compose box \u2014 this is a session ask.'", "'Reply in the compose box. This is a session ask.'")]:
+               ("'Reply in the compose box \u2014 this is a session ask.'", "'Reply in the compose box. This is a session ask.'"),
+               # Iris Key 1 (2026-10-26): B7 pill operator name; drop "preview" that goes stale at lift.
+               ('title="Operated by SubX using AI tools.', 'title="Operated by SubX, LLC using AI tools.'),
+               (" or older and agree to the preview Terms and Privacy pages.'", " or older and agree to the Terms and Privacy pages.'"),
+               ("There is no follows graph in this preview.", "There is no follows graph yet."),
+               ("No live alerts in this preview.", "No live alerts yet."),
+               ("'Direct messages are not live in this preview.", "'Direct messages are not live yet.")]:
     assert src.count(_a) == 1, ('copy sweep', _a)
     src = src.replace(_a, _b)
 src = banner + src

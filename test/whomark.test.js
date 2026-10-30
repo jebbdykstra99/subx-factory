@@ -157,7 +157,7 @@ ok('an incomplete family is refused', () => {
 });
 
 const SRC = fs.readFileSync(path.join(root, 'factory', 'factory.js'), 'utf8');
-const TEXT = '<span class="post-steward-pill" title="Operated by SubX using AI tools. Not a real person.">AI steward · SubX</span>';
+const TEXT = '<span class="post-steward-pill" title="Operated by SubX, LLC using AI tools. Not a real person.">AI steward · SubX</span>';
 ok('factory.js untouched; the AI steward pill whomark.js upgrades is still the factory text pill', () => {
   assert.ok(!/whoMark/.test(SRC), 'no whoMark code in factory.js');
   const i = SRC.indexOf('  function stewardPillHtml(post) {');
@@ -167,8 +167,8 @@ ok('factory.js untouched; the AI steward pill whomark.js upgrades is still the f
 });
 ok('whoMarkUpgrade swaps only the AI pill (fake DOM)', () => {
   const el = (cls, title) => ({ cls, title, parentNode: {}, outerHTML: null,
-    matches(sel) { return sel.startsWith('.post-steward-pill[title^="Operated by SubX') && this.cls === 'post-steward-pill' && /^Operated by SubX using AI tools/.test(this.title || ''); } });
-  const ai = el('post-steward-pill', 'Operated by SubX using AI tools. Not a real person.'), sample = el('post-steward-pill', ''), stew = el('post-steward-pill', '');
+    matches(sel) { return sel.startsWith('.post-steward-pill[title^="Operated by SubX') && this.cls === 'post-steward-pill' && /^Operated by SubX/.test(this.title || ''); } });
+  const ai = el('post-steward-pill', 'Operated by SubX, LLC using AI tools. Not a real person.'), sample = el('post-steward-pill', ''), stew = el('post-steward-pill', '');
   const all = [ai, sample, stew];
   const rootEl = { matches: () => false, querySelectorAll: (sel) => all.filter((e) => e.matches(sel)) };
   assert.equal(W.whoMarkUpgrade(rootEl), 1);

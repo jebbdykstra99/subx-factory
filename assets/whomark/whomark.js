@@ -62,7 +62,7 @@
   g.whoMarkConfig = function () { return JSON.parse(JSON.stringify(CFG)); };
   // Upgrade factory.js's AI steward text pill (stewardPillHtml) and any declarative [data-whomark] element in place.
   // Only the AI pill carries this title, so the "Sample" and "Steward" pills are left alone. Returns count upgraded.
-  var PILL = '.post-steward-pill[title^="Operated by SubX using AI tools"]';
+  var PILL = '.post-steward-pill[title^="Operated by SubX"]';
   var DECL = '[data-whomark]';
   function collect(root, sel) {
     var out = [];

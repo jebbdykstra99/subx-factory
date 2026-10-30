@@ -1,5 +1,5 @@
 {
-  "version": "v1.2.5",
+  "version": "v1.2.6",
   "owner": "jebbdykstra99",
   "rooms": [
     {
@@ -172,6 +172,10 @@
       "skin": {},
       "sitePatch": {
         "redditCrosspost": false,
+        "imageUploads": false,
+        "stories": {
+          "enabled": false
+        },
         "_dropKeys": [
           "redditSr"
         ]
