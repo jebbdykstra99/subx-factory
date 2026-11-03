@@ -429,9 +429,10 @@ with tempfile.TemporaryDirectory() as t:
     ok(st(d)[0] == 'OK', 'same room with the pin on index.html = OK')
     tk = b'/* takedown */\n'
     write(d, 'takedown.js', tk); write(d, 'terms.html', '<html><script src="takedown.js" defer></script></html>')
-    write(d, 'nest.html', "<html><script>location.replace('/')</script></html>")
+    # (C14: a bare location.replace('/') is now a redirect stub, so this C12 case uses a non-redirect inline script)
+    write(d, 'nest.html', "<html><script>document.title='nest'</script></html>")
     reshell(d, lambda sh: sh.update(keep=[{'file': 'takedown.js', 'sha256': sha(tk), 'reason': 't'}],
-                                    overrides={'inline': [{'page': 'nest.html', 'sha256': sha(b"location.replace('/')"), 'reason': 'nest bounce'}]}))
+                                    overrides={'inline': [{'page': 'nest.html', 'sha256': sha(b"document.title='nest'"), 'reason': 'nest title'}]}))
     s_, f_, w_ = st(d); ok(s_ == 'DRIFT' and any('terms.html loads room JS (takedown.js) but runs no shell' in x for x in f_),
                           'terms.html loading a keep file without the shell, not in noShell = DRIFT')
     reshell(d, lambda sh: sh.update(noShell=['terms.html']))
@@ -545,6 +546,70 @@ for name, (st, needle, wneedle) in sorted(ADV4_EXPECT.items()):
             and (wneedle is None or any(wneedle in x for x in r['warnings']))
         ok(good, 'adv4 %s = %s%s (%s %s %s)' % (name, st, ' with "%s"' % needle if needle else '', r['status'], r['findings'], r['warnings']))
 
+# adv5 (Juno, Key 2 on #30): noShell inline limits; b2/b3 need C15
+ADV5 = os.path.join(ROOT, 'test', 'fixtures', 'shell_drift', 'adv5')
+ADV6 = os.path.join(ROOT, 'test', 'fixtures', 'shell_drift', 'adv6')
+ADV5_EXPECT = {
+    'b1_noshell_inline_dynimport': ('DRIFT', 'injects or evaluates code at runtime', None),
+    'b2_noshell_inline_injects_declared': ('DRIFT', 'noShell page declares inline code with "injects"', None),
+    'b3_noshell_inline_fbmodule': ('DRIFT', 'noShell page loads Firebase SDK', None),
+    'b4_keep_imports_module': ('DRIFT', 'but imports modules', None),
+    'b5_handler_only_unlisted': ('DRIFT', 'about.html loads room JS (<body onload=>) but runs no shell', None),
+    'b6_noshell_runs_shell': ('WARN', None, 'listed in shell.noShell but runs the shell'),
+}
+# adv6: C14 redirect stubs (s*) and C15 Firebase-host imports on noShell pages (f*)
+ADV6_EXPECT = {
+    's0_stubs_ok': ('OK', None, None),
+    's1_redirects_declared': ('OK', None, None),
+    's2_near_template_fetch': ('DRIFT', 'carries the nest_stubs.py marker but is not a redirect stub: its inline script is neither', None),
+    's3_cross_origin': ('DRIFT', 'go.html loads room JS (inline <script>) but runs no shell', None),
+    's3b_cross_origin_declared': ('DRIFT', 'go.html is listed in shell.redirects but is not a redirect stub', None),
+    's4_extra_inline': ('DRIFT', 'not a redirect stub: it has 2 scripts', None),
+    's5_handler': ('DRIFT', 'not a redirect stub: it has on*= handlers', None),
+    's6_iframe': ('DRIFT', 'not a redirect stub: it has frames', None),
+    's7_form': ('DRIFT', 'not a redirect stub: it has a form', None),
+    's8_external_script': ('DRIFT', 'loads undeclared remote script https://evil.example/x.js', None),
+    's9_protocol_relative': ('DRIFT', 'go.html loads room JS (inline <script>) but runs no shell', None),
+    's9b_backslash': ('DRIFT', 'go.html loads room JS (inline <script>) but runs no shell', None),
+    's9c_refresh_protocol_relative': ('DRIFT', 'not a redirect stub: its meta refresh does not stay on the origin', None),
+    's10_slug_breakout': ('DRIFT', 'carries the nest_stubs.py marker but is not a redirect stub', None),
+    's11_redirects_not_stub': ('DRIFT', 'terms.html is listed in shell.redirects but is not a redirect stub', None),
+    'f1_noshell_dyn_firebase': ('DRIFT', 'noShell page loads Firebase SDK (inline <script> names gstatic.com/firebasejs/)', None),
+    'f2_noshell_esm_firebase': ('DRIFT', 'noShell page declares remote "imports" https://esm.sh/firebase', None),
+}
+for tag, base, expect in (('adv5', ADV5, ADV5_EXPECT), ('adv6', ADV6, ADV6_EXPECT)):
+    ok(sorted(expect) == sorted(x for x in os.listdir(base) if os.path.isdir(os.path.join(base, x))), 'every %s fixture room has an expectation' % tag)
+    for name, (st, needle, wneedle) in sorted(expect.items()):
+        with tempfile.TemporaryDirectory() as t:
+            d = os.path.join(t, name); shutil.copytree(os.path.join(base, name), d)
+            r = run(d)
+            good = r['status'] == st and (needle is None or any(needle in x for x in r['findings'])) \
+                and (wneedle is None or any(wneedle in x for x in r['warnings']))
+            if st == 'OK':
+                good = good and not r['findings'] and not r['warnings']
+            ok(good, '%s %s = %s%s (%s %s %s)' % (tag, name, st, ' with "%s"' % needle if needle else '', r['status'], r['findings'], r['warnings']))
+
+# C15 is scoped to noShell pages: the b2 page running the pin keeps its declared "injects"
+with tempfile.TemporaryDirectory() as t:
+    d = os.path.join(t, 'b2'); shutil.copytree(os.path.join(ADV5, 'b2_noshell_inline_injects_declared'), d)
+    s_ = json.load(open(os.path.join(d, 'site.json'))); s_['shell'].pop('noShell'); json.dump(s_, open(os.path.join(d, 'site.json'), 'w'))
+    pin_tag = re.search(r'<script[^>]*shell/v[^>]*></script>', open(os.path.join(d, 'index.html')).read()).group(0)
+    terms = open(os.path.join(d, 'terms.html')).read().replace('<html>', '<html>' + pin_tag, 1)
+    open(os.path.join(d, 'terms.html'), 'w').write(terms)
+    r = run(d); ok(r['status'] == 'OK' and not any('injects' in x for x in r['findings']),
+                   'C15: declared "injects" on a page that runs the pin is not a noShell finding (%s %s)' % (r['status'], r['findings']))
+
+# C14 on the real-shape rooms: nest stubs need no noShell; only non-stub pages (404, legal) are named without it
+for name in ('gaichat', '415chat', 'atmchat'):
+    with tempfile.TemporaryDirectory() as t:
+        d = os.path.join(t, name); shutil.copytree(os.path.join(REAL, name), d)
+        s_ = json.load(open(os.path.join(d, 'site.json'))); ns_ = s_['shell'].pop('noShell')
+        json.dump(s_, open(os.path.join(d, 'site.json'), 'w'))
+        r = run(d)
+        named = {x.split(' ')[0] for x in r['findings']}
+        ok(r['status'] == 'DRIFT' and '404.html' in named and len(named) < len(ns_) and r['layers'].get('redirectStubs', 0) > 0,
+           'C14 real-shape %s: stubs drop out of noShell (%d listed, %d still need it: %s)' % (name, len(ns_), len(named), sorted(named)))
+
 # CSP3: every integrity hash on the tag must be listed in the policy, not just one
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
@@ -553,6 +618,27 @@ two = INTEG + ' sha512-' + 'A' * 86 + '=='
 ok(SD.csp_allows_pin({'script-src': ["'%s'" % INTEG]}, URL, INTEG, None), 'csp_allows_pin: the single pin hash listed = allowed')
 ok(not SD.csp_allows_pin({'script-src': ["'%s'" % INTEG]}, URL, two, None), 'csp_allows_pin: only one of two integrity hashes listed = blocked')
 ok(SD.csp_allows_pin({'script-src': ["'%s'" % x for x in two.split()]}, URL, two, None), 'csp_allows_pin: all integrity hashes listed = allowed')
+
+# C14 unit cases on the parser
+def stub_of(html):
+    p_ = SD._Page(); p_.feed(html); return SD.redirect_stub(p_)
+TPL = SD.NEST_TEMPLATE.replace('{slug}', 'boston')
+ok(stub_of('<script>%s</script>' % TPL)[0], 'C14: nest_stubs.py template = redirect stub')
+ok(stub_of('<script>%s</script>' % TPL.replace('\n', '\r\n'))[0], 'C14: CRLF nest_stubs.py template = redirect stub')
+ok(not stub_of('<script>%s</script>' % SD.NEST_TEMPLATE.replace('{slug}', 'Boston')).__getitem__(0), 'C14: non-slug path literal is not a stub')
+ok(not stub_of(open(os.path.join(REAL, 'atmchat', '404.html')).read())[0], 'C14: the 404.html restore script is not a stub (it stays noShell)')
+ok(stub_of("<script>location.replace('/')</script>")[0] and stub_of('<script>window.location.replace("/#explore");</script>')[0],
+   'C14: bare same-origin location.replace = redirect stub')
+for bad in ("location.replace('//e.example')", "location.replace('/\\\\e.example')", "location.replace('/\\t/e.example')",
+            "location.replace(' //e.example')", "location.replace('https://e.example/')", "location.replace('/x');fetch('/y')",
+            "location.href='/'", "location.replace('javascript:alert(1)')"):
+    ok(not stub_of('<script>%s</script>' % bad)[0], 'C14: %s is not a stub' % bad)
+ok(not stub_of('<script type="module">%s</script>' % TPL)[0], 'C14: a module script is not a stub')
+ok(not stub_of('<script>%s</script><a href="javascript:void(0)">x</a>' % TPL)[0], 'C14: a javascript: URL disqualifies a stub')
+ok(not stub_of('<base href="https://e.example/"><script>%s</script>' % TPL)[0], 'C14: <base href> disqualifies a stub')
+ok(not stub_of('<link rel="modulepreload" href="/x.js"><script>%s</script>' % TPL)[0], 'C14: a script preload disqualifies a stub')
+ok(not stub_of('<button formaction="https://e.example/">x</button><script>%s</script>' % TPL)[0], 'C14: formaction disqualifies a stub')
+ok(stub_of('<meta http-equiv="refresh" content="0;url=/#explore"><script>%s</script>' % TPL)[0], 'C14: same-origin meta refresh keeps a stub')
 
 print('\n%d failure(s)' % len(fails))
 sys.exit(1 if fails else 0)
