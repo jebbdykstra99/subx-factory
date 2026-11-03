@@ -1,0 +1,1 @@
+firebase.firestore().collection('msgs').add({t:1});

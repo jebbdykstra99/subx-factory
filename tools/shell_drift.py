@@ -23,7 +23,11 @@ node_modules, dot-dirs). Besides <script>:
     nomodule, no query/fragment on the URL, not inside <template>, <noscript>, raw-text or foreign (svg/math, so
     also <foreignObject>) elements, no duplicated attributes, and not blocked by a CSP (meta tag, or a header rule in
     _headers / firebase.json / netlify.toml / vercel.json); other header CSP is left to the C4 preview
-  - index.html must run a pin, and so must every page that loads room JS unless it is listed in shell.noShell
+  - index.html must run a pin, and so must every page that runs room JS (local scripts, the Firebase SDK, declared
+    inline code) unless it is listed in shell.noShell; a noShell page may load only keep files (noShellOk ones once
+    any keep entry uses the flag) and declared inline code: modules, Firebase, remote scripts and frames are DRIFT
+  - a meta CSP after the pin or in <body> is treated as applying (conservative); a hash-only CSP must list every
+    integrity hash on the pin
   - SVG <script href|xlink:href> is a script source; <meta http-equiv=refresh> to javascript:/data: or an undeclared
     remote URL is DRIFT (declared in overrides.refresh = WARN); remote modulepreload and CSS @import are WARN
   - static import / export-from in inline or local JS: remote specifiers must be listed in the declaring entry's
@@ -255,9 +259,9 @@ def csp_allows_pin(policy, url, integrity, nonce):
     if srcs is None:
         return True
     low = [x.lower() for x in srcs]
-    for tok in (integrity or '').split():
-        if "'%s'" % tok in srcs:
-            return True
+    toks = [t.split('?', 1)[0] for t in (integrity or '').split() if re.match(r'^sha(?:256|384|512)-', t)]
+    if toks and all("'%s'" % t in srcs for t in toks):  # CSP3: every integrity hash must be listed
+        return True
     if nonce and "'nonce-%s'" % nonce in srcs:
         return True
     if "'strict-dynamic'" in low:  # host and scheme sources are ignored
@@ -496,6 +500,8 @@ def check(room, mans):
         elif not os.path.isfile(os.path.join(room, x)):
             f.append('shell.noShell page %s does not exist' % x)
     layers['noShell'] = sorted(no_shell)
+    # C11: once any keep entry sets noShellOk, only flagged keep files may load on noShell pages
+    ns_flag = any(isinstance(e, dict) and 'noShellOk' in e for e in (sh.get('keep') or []))
     hdr_rules, hdr_warn = header_csps(room)
     w.extend(hdr_warn)
     used_inline, used_frames, used_refresh = set(), set(), set()
@@ -504,7 +510,12 @@ def check(room, mans):
     layers['fork'] = fork
 
     shell_tags, loaded_local = [], {}
-    running, needs = set(), {}  # pages with a running factory.js / fork tag; pages loading room JS -> first such src
+    running, needs = set(), {}  # pages with a running factory.js / fork tag; pages running room JS -> first such item
+    ns_items = {}  # page -> [(where, what, allowed)] for the C11 noShell restriction
+    ns_keep = {}   # keep file -> first noShell page loading it
+
+    def ns_add(page, where, what, ok):
+        ns_items.setdefault(page, []).append((where, what, ok))
     inline_js = []  # (where, text, decl) for import scanning
 
     def code_block(page, where, text, kind):
@@ -560,6 +571,7 @@ def check(room, mans):
                 f.append('%s:%d <base href=%r> retargets every relative src (not allowed)' % (page, b['line'], b['attrs']['href']))
         for c in pg.code:
             code_block(page, '%s:%d' % (page, c['line']), c['text'], c['kind'])
+            needs.setdefault(page, c['kind'])  # C12: declared inline code is room JS
         for fr in pg.frames:
             a, where, tag = fr['attrs'], '%s:%d' % (page, fr['line']), fr['tag']
             if fr['dup']:
@@ -570,10 +582,12 @@ def check(room, mans):
                     used_frames.add((page, h))
                 else:
                     f.append('%s undeclared <%s srcdoc> (sha256 %s)' % (where, tag, h[:12]))
+                ns_add(page, where, '<%s srcdoc>' % tag, False)
                 continue
             src = (a.get('src') if tag in ('iframe', 'frame', 'embed') else a.get('data')) or ''
             src = src.strip()
             if tag in ('object', 'embed'):
+                ns_add(page, where, '<%s>' % tag, False)
                 if (page, src) in frame_decl:
                     used_frames.add((page, src))
                 else:
@@ -581,6 +595,7 @@ def check(room, mans):
                 continue
             if not src or src == 'about:blank':
                 continue
+            ns_add(page, where, '<%s src=%s>' % (tag, src[:60]), False)
             if re.match(r'^(?:data|blob|javascript|filesystem):', re.sub(r'[\x00-\x20]', '', src), re.I):
                 f.append('%s <%s> with a %s source' % (where, tag, src.split(':', 1)[0].lower()))
             elif REMOTE_RE.match(src):
@@ -601,13 +616,17 @@ def check(room, mans):
                     continue
                 decl = code_block(page, where, s['text'], 'inline <script>')
                 inline_js.append((where + ' inline', s['text'], decl))
+                needs.setdefault(page, 'inline <script>')  # C12
                 continue
             src = src.strip()
             runs = typ in JS_TYPES and 'nomodule' not in a and not s['inert'] and not s['dup']
             if FIREBASE_RE.match(src):
+                needs.setdefault(page, 'Firebase SDK')  # C12
+                ns_add(page, where, 'Firebase SDK', False)
                 continue
             em = EMOJI_RE.match(src)
             if em:
+                ns_add(page, where, 'remote script %s' % src, False)
                 if not EXACT_VER.match(em.group(1)) or not a.get('integrity'):
                     w.append('%s emoji-picker-element@%s has no SRI pin (mutable range / no integrity)' % (where, em.group(1)))
                 continue
@@ -645,6 +664,7 @@ def check(room, mans):
                 continue
             if REMOTE_RE.match(src):
                 f.append('%s loads undeclared remote script %s' % (where, src))
+                ns_add(page, where, 'remote script %s' % src, False)
                 continue
             rel = local_ref(page, src)
             if rel is None:
@@ -659,6 +679,13 @@ def check(room, mans):
                     f.append('%s fork file tag is inert or type=module: it does not run as the shell' % where)
             else:
                 needs.setdefault(page, rel)
+                if rel in keep and (not ns_flag or keep[rel].get('noShellOk') is True):
+                    ns_add(page, where, 'keep file %s' % rel, True)
+                    if page in no_shell:
+                        ns_keep.setdefault(rel, page)
+                else:
+                    ns_add(page, where, ('module %s' % rel) if rel in modules else
+                           ('keep file %s (not flagged noShellOk)' % rel) if rel in keep else ('script %s' % rel), False)
             if fork and rel == fork_file or rel in modules or rel in keep:
                 pass
             elif posixpath.basename(rel) in SHELL_FILES:
@@ -700,6 +727,7 @@ def check(room, mans):
         static_imports(text, where, where.split(':', 1)[0], decl)
     for q in queue:
         needs.setdefault(q[1].split(':', 1)[0], q[0])
+        ns_add(q[1].split(':', 1)[0], q[1], 'module %s (imported by inline code)' % q[0], False)
         if q[0] not in loaded_local and q[0] not in modules and q[0] not in keep:
             f.append('%s imports undeclared local module %s' % (q[1], q[0]))
         loaded_local.setdefault(q[0], q[1])
@@ -721,6 +749,9 @@ def check(room, mans):
         decl = modules.get(rel) or keep.get(rel) or {}
         text = open(p, encoding='utf-8', errors='replace').read()
         f.extend(injection_findings(text, rel, bool(decl.get('injects'))))
+        if rel in ns_keep and import_specs(text):
+            f.append('%s is loaded on noShell page %s but imports modules (a noShell page may run only keep files and '
+                     'declared inline code)' % (rel, ns_keep[rel]))
         static_imports(text, rel, rel, decl)
 
     # F1: the main page, and every page that loads room JS (modules, keep files, other local scripts), runs the shell
@@ -732,6 +763,15 @@ def check(room, mans):
         if pg_ != 'index.html' and pg_ not in running and pg_ not in no_shell:
             f.append('%s loads room JS (%s) but runs no shell; list it in shell.noShell if it is meant to run without the shell'
                      % (pg_, needs[pg_]))
+    # C11: a noShell page runs without the kill switch and moderation, so it may load only keep files and inline code
+    for pg_ in sorted(no_shell - {'index.html'}):
+        if pg_ in running:
+            w.append('%s is listed in shell.noShell but runs the shell; remove it from noShell' % pg_)
+            continue
+        for where, what, ok in ns_items.get(pg_, []):
+            if not ok:
+                f.append('%s noShell page loads %s: a noShell page may load only keep files%s and declared inline code'
+                         % (where, what, ' flagged noShellOk' if ns_flag else ''))
 
     # any local shell copy anywhere in the room that is not the declared fork
     hashes = shell_hashes(mans)
@@ -776,8 +816,11 @@ def suggest(room):
     out = {'inline': [], 'frames': [], 'scripts': [], 'noShell': []}
     for page, pg in pages(room):
         pinned = any(PIN_RE.match((s.get('attrs') or {}).get('src', '').strip()) for s in pg.out)
-        if page != 'index.html' and not pinned and any(
-                s['attrs'].get('src') and not REMOTE_RE.match(s['attrs']['src'].strip()) for s in pg.out):
+        if page != 'index.html' and not pinned and (pg.code or any(
+                (s['attrs'].get('src') and (not REMOTE_RE.match(s['attrs']['src'].strip())
+                                            or FIREBASE_RE.match(s['attrs']['src'].strip())))
+                or (s['attrs'].get('src') is None and (s['attrs'].get('type') or '').lower() not in DATA_TYPES
+                    and s['text'].strip()) for s in pg.out)):
             out['noShell'].append(page)
         for c in pg.code:
             out['inline'].append({'page': page, 'sha256': sha256b(c['text'].encode('utf-8')), 'reason': 'TODO ' + c['kind']})

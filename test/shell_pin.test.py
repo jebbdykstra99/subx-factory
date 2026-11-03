@@ -435,7 +435,35 @@ with tempfile.TemporaryDirectory() as t:
     s_, f_, w_ = st(d); ok(s_ == 'DRIFT' and any('terms.html loads room JS (takedown.js) but runs no shell' in x for x in f_),
                           'terms.html loading a keep file without the shell, not in noShell = DRIFT')
     reshell(d, lambda sh: sh.update(noShell=['terms.html']))
-    s_, f_, w_ = st(d); ok(s_ == 'OK', 'terms.html in shell.noShell = OK; inline-only nest page needs no shell (%s)' % f_)
+    s_, f_, w_ = st(d); ok(s_ == 'DRIFT' and f_ == ['nest.html loads room JS (inline <script>) but runs no shell; list it in shell.noShell '
+                                                   'if it is meant to run without the shell'],
+                          'C12: declared inline code on an unpinned page counts as room JS (nest.html not in noShell = DRIFT) (%s)' % f_)
+    reshell(d, lambda sh: sh.update(noShell=['terms.html', 'nest.html']))
+    s_, f_, w_ = st(d); ok(s_ == 'OK', 'terms.html + nest.html in shell.noShell = OK (%s)' % f_)
+    # C11: a noShell page may load only keep files (noShellOk when the room uses the flag) and declared inline code
+    reshell(d, lambda sh: sh.update(keep=[{'file': 'takedown.js', 'sha256': sha(tk), 'reason': 't', 'noShellOk': False}]))
+    s_, f_, w_ = st(d); ok(s_ == 'DRIFT' and any('keep file takedown.js (not flagged noShellOk)' in x for x in f_),
+                          'C11: keep file with noShellOk false on a noShell page = DRIFT (%s)' % f_)
+    reshell(d, lambda sh: sh.update(keep=[{'file': 'takedown.js', 'sha256': sha(tk), 'reason': 't', 'noShellOk': True}]))
+    ok(st(d)[0] == 'OK', 'C11: keep file flagged noShellOk on a noShell page = OK')
+    for extra, needle in (('<script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js" type="module"></script>', 'remote script'),
+                          (FB, 'Firebase SDK'),
+                          ('<iframe src="https://www.youtube-nocookie.com/embed/x"></iframe>', '<iframe src='),
+                          ('<object data="x.pdf"></object>', '<object>')):
+        write(d, 'terms.html', '<html><script src="takedown.js" defer></script>%s</html>' % extra)
+        s_, f_, w_ = st(d); ok(s_ == 'DRIFT' and any('noShell page loads' in x and needle in x for x in f_),
+                              'C11: %s on a noShell page = DRIFT (%s)' % (needle, f_))
+    imp = b'import "./mod.js";\n'; write(d, 'mod.js', b'window.y=1;\n')
+    write(d, 'takedown.js', imp); write(d, 'terms.html', '<html><script src="takedown.js" defer></script></html>')
+    reshell(d, lambda sh: sh.update(keep=[{'file': 'takedown.js', 'sha256': sha(imp), 'reason': 't'},
+                                          {'file': 'mod.js', 'sha256': sha(b'window.y=1;\n'), 'reason': 't'}]))
+    s_, f_, w_ = st(d); ok(s_ == 'DRIFT' and any('loaded on noShell page terms.html but imports modules' in x for x in f_),
+                          'C11: keep file that imports modules on a noShell page = DRIFT (%s)' % f_)
+    write(d, 'takedown.js', tk)
+    reshell(d, lambda sh: sh.update(keep=[{'file': 'takedown.js', 'sha256': sha(tk), 'reason': 't'}]))
+    put3(d, FB + PIN3, 'terms.html')
+    s_, f_, w_ = st(d); ok(s_ == 'WARN' and any('terms.html is listed in shell.noShell but runs the shell' in x for x in w_),
+                          'noShell page that runs the shell = WARN, remove it (%s %s)' % (f_, w_))
     reshell(d, lambda sh: sh.update(noShell=['terms.html', 'index.html', 'gone.html']))
     s_, f_, w_ = st(d); ok(s_ == 'DRIFT' and any('noShell lists index.html' in x for x in f_) and any('gone.html does not exist' in x for x in f_),
                           'noShell listing index.html or a missing page = DRIFT')
@@ -479,8 +507,52 @@ for name in sorted(os.listdir(REAL)):
         s = json.load(open(os.path.join(d, 'site.json')))
         if s['shell'].get('noShell'):
             s['shell'].pop('noShell'); json.dump(s, open(os.path.join(d, 'site.json'), 'w'))
-            r = run(d); ok(r['status'] == 'DRIFT' and all('but runs no shell' in x for x in r['findings']),
-                           'real-shape %s without noShell = DRIFT only on the legal pages' % name)
+            r = run(d); ok(r['status'] == 'DRIFT' and all('but runs no shell' in x for x in r['findings'])
+                           and any(x.startswith('404.html loads room JS (inline <script>)') for x in r['findings']),
+                           'real-shape %s without noShell = DRIFT only on the unlisted pages, 404.html included' % name)
+
+# adv4 (Juno, Key 2 at 5a7dbbc): noShell restrictions (C11/C12) and more CSP placements
+ADV4 = os.path.join(ROOT, 'test', 'fixtures', 'shell_drift', 'adv4')
+ADV4_EXPECT = {
+    'n1_noshell_keep': ('OK', None, None),
+    'n2_noshell_module': ('DRIFT', 'noShell page loads module ext/room.js', None),
+    'n3_noshell_keep_writer': ('DRIFT', 'noShell page loads Firebase SDK', None),
+    'n4_inline_noshell_unlisted': ('DRIFT', 'about.html loads room JS (Firebase SDK) but runs no shell', None),
+    'n5_noshell_dotindex': ('DRIFT', 'shell.noShell lists index.html', None),
+    'n6_noshell_undeclared': ('DRIFT', 'undeclared local script x.js', None),
+    'c1_two_meta': ('DRIFT', 'pin is blocked by', None),
+    'c2_comma_policies': ('DRIFT', 'pin is blocked by', None),
+    'c3_nonce_ok': ('OK', None, None),
+    'c4_nonce_bad': ('DRIFT', 'pin is blocked by', None),
+    'c5_meta_after_pin': ('DRIFT', 'pin is blocked by', None),
+    'c6_report_only': ('OK', None, None),
+    'c7_hash_only': ('OK', None, None),
+    'c8_headers_root': ('DRIFT', '_headers header CSP for /', None),
+    'c9_netlify_root': ('DRIFT', 'netlify.toml header CSP for /', None),
+    'c10_firebase_bad': ('WARN', None, 'covered only by the C4 preview'),
+    'c11_elem_overrides': ('OK', None, None),
+    'c12_strict_dynamic_host': ('DRIFT', 'pin is blocked by', None),
+    'c13_meta_in_body': ('DRIFT', 'pin is blocked by', None),
+    'c14_vercel_root': ('DRIFT', 'vercel.json header CSP for /', None),
+    'c15_firebase_glob': ('DRIFT', 'firebase.json header CSP for **', None),
+}
+ok(sorted(ADV4_EXPECT) == sorted(x for x in os.listdir(ADV4) if os.path.isdir(os.path.join(ADV4, x))), 'every adv4 fixture room has an expectation')
+for name, (st, needle, wneedle) in sorted(ADV4_EXPECT.items()):
+    with tempfile.TemporaryDirectory() as t:
+        d = os.path.join(t, name); shutil.copytree(os.path.join(ADV4, name), d)
+        r = run(d)
+        good = r['status'] == st and (needle is None or any(needle in x for x in r['findings'])) \
+            and (wneedle is None or any(wneedle in x for x in r['warnings']))
+        ok(good, 'adv4 %s = %s%s (%s %s %s)' % (name, st, ' with "%s"' % needle if needle else '', r['status'], r['findings'], r['warnings']))
+
+# CSP3: every integrity hash on the tag must be listed in the policy, not just one
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.join(ROOT, 'tools'))
+import shell_drift as SD  # noqa: E402
+two = INTEG + ' sha512-' + 'A' * 86 + '=='
+ok(SD.csp_allows_pin({'script-src': ["'%s'" % INTEG]}, URL, INTEG, None), 'csp_allows_pin: the single pin hash listed = allowed')
+ok(not SD.csp_allows_pin({'script-src': ["'%s'" % INTEG]}, URL, two, None), 'csp_allows_pin: only one of two integrity hashes listed = blocked')
+ok(SD.csp_allows_pin({'script-src': ["'%s'" % x for x in two.split()]}, URL, two, None), 'csp_allows_pin: all integrity hashes listed = allowed')
 
 print('\n%d failure(s)' % len(fails))
 sys.exit(1 if fails else 0)

@@ -73,6 +73,20 @@
     "sha256": "2e21b678c241d282b4a0997a5ccf69121a8674df26f1a5eae431a781c5dbbb8c",
     "reason": "migration sim"
    }
+  ],
+  "noShell": [
+   "404.html",
+   "asia.html",
+   "ask-atm.html",
+   "europe.html",
+   "explore.html",
+   "fee-free.html",
+   "network-wars.html",
+   "outages.html",
+   "rural.html",
+   "surcharge.html",
+   "travel-cash.html",
+   "us.html"
   ]
  }
 }
