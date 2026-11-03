@@ -55,10 +55,10 @@ Order of preference. Use the first layer that can express the difference.
 | 2a. Theme | room `styles.css`, CSS variables, icons, og images, assets | `overrides.theme: ["styles.css", "assets/…"]` | files must exist |
 | 2b. Copy | room strings: site.json keys (`skin.*`, `tagline`, `trustBlurb`, `emptyState` …) or a copy file | `overrides.copy: ["site.json:skin", "copy.json"]` | files must exist |
 | 2c. Legal | Terms, Privacy, DMCA, age-gate markup, footer, report page. **Per room and never changed by a shell release** | `overrides.legal: ["terms.html", "privacy.html", "index.html#age-gate"]` | files must exist; listed so nobody "fixes" them into the shell |
-| 2d. Modules | a small room extension file through a documented hook (below) | `overrides.modules: [{file, sha256, hooks, load, reason, injects?}]`; inline scripts: `overrides.inline: [{page, sha256, reason}]` | file must match its sha256; any undeclared local script is drift |
+| 2d. Modules | a small room extension file through a documented hook (below) | `overrides.modules: [{file, sha256, hooks, load, reason, injects?, imports?}]`; inline code: `overrides.inline: [{page, sha256, reason, injects?, imports?}]`; frames: `overrides.frames: [{page, src or sha256, reason}]` | file must match its sha256; any undeclared local script is drift |
 | 3. Fork | a full room `factory.js` pinned to a named base | `fork: true, base, file, sha256, reason, exception` | file must match its sha256; diff size vs base is reported |
 
-Room content (nests, posts, steward copy) and posting rules stay per room in site.json and Firestore, as today. Non-shell room scripts that are not modules (`gate.js`, `takedown.js`, `ref.js`) go in `shell.keep` as `{file, sha256, reason}`. Executable inline `<script>` blocks are declared in `overrides.inline` as `{page, sha256, reason}` (sha256 of the exact script text; the same hashes a future CSP would list). `tools/shell_drift.py --suggest ROOM` prints these entries for a room PR.
+Room content (nests, posts, steward copy) and posting rules stay per room in site.json and Firestore, as today. Non-shell room scripts that are not modules (`gate.js`, `takedown.js`, `ref.js`) go in `shell.keep` as `{file, sha256, reason}`. Executable inline `<script>` blocks, `on*=` event handlers and `javascript:` URLs are declared in `overrides.inline` as `{page, sha256, reason}` (sha256 of the exact script text or attribute value; the same hashes a future CSP would list). `<iframe srcdoc>` (sha256 of the srcdoc), `<object>`/`<embed>` and remote `<iframe src>` are declared in `overrides.frames`. Remote ES module imports are listed in the declaring entry's `imports`. `tools/shell_drift.py --suggest ROOM` prints these entries for a room PR.
 
 Example: `site.shell.example.json`.
 
@@ -90,12 +90,17 @@ Read-only. Status per room:
 - `WARN`: OK, plus non-blocking notes. Today that is `emoji-picker-element@1` loaded without SRI (a mutable range); pin an exact version with `integrity` to clear it.
 - `FORK`: declared fork; the diff size against its base is shown.
 - `DRIFT`: anything undeclared. That includes:
-  - no `shell` block, or no pinned shell `<script>` on any page (for example a pin inside an HTML comment)
+  - no `shell` block, or no shell pin that will actually run on any page. A pin counts only if its `type` is empty, a JavaScript type or `module`, it has no `nomodule`, it is not inside `<template>`, `<noscript>`, a raw-text element (`textarea`, `title`, `iframe`, ...) or `<svg>`/`<math>`, and the tag has no duplicated attributes. A pin inside an HTML comment does not count either.
   - an unpinned or integrity-less shell tag, any host other than `cdn.jsdelivr.net`
-  - an undeclared local or remote script (quoted, single-quoted or unquoted `src`), on any `*.html` at any depth
-  - an undeclared or edited inline `<script>` (`application/ld+json` and other data blocks are ignored)
-  - a module, keep or inline entry without a matching sha256
-  - runtime script injection (`createElement('script')`, `import()`, `importScripts`, `document.write('<script')`) in inline or loaded room JS without a declared `"injects": "<reason>"`; injection that names a factory/shell file is always drift
+  - an undeclared local or remote script (any `src` quoting, `data:`/`blob:` included) on any page-like file at any depth (`.html`, `.htm`, `.xhtml`, `.shtml`, `.svg`, `.php`, `.phtml`)
+  - an undeclared or edited inline `<script>`, `on*=` handler or `javascript:` URL (`application/ld+json` and other data blocks are ignored)
+  - `<base href>` (it retargets every relative `src`, including declared modules; it cannot be declared)
+  - an undeclared `<iframe srcdoc>`, `<object>` or `<embed>`, or a `data:`/`blob:`/`javascript:` frame source. A remote `<iframe src>` that is not declared is `WARN`.
+  - a static `import`/`export … from` of a remote or bare specifier not listed in the declaring entry's `imports`, of an undeclared local module (local imports are followed transitively), or of any factory/shell file
+  - a module, keep, inline or frames entry without a match (sha256 or src)
+  - runtime injection or evaluation (below) without a declared `"injects": "<reason>"`; one that names a factory/shell file is always drift
   - any local `.js` anywhere in the room that is a shell copy (release hash or SubX factory header) and is not the declared fork
+
+**Injection detection is best-effort.** It is static pattern matching over inline code and every local JS file a page loads or imports: `createElement('script')` or a non-literal `createElement(x)`, `import()`, `importScripts`, `document.write('<script')`, `eval`, `new Function`, `new Worker`/`SharedWorker`, `serviceWorker.register`. Obfuscated code, string building, `fetch` plus indirect evaluation or DOM tricks it does not know can still evade it. It is not a security boundary. What holds is the sha256 pin: every declared module, keep file and inline block is pinned to the bytes a human reviewed, so each one must be read in its room PR, not just hashed.
 
 `--strict` exits 1 on any DRIFT.

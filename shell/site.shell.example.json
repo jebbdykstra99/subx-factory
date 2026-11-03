@@ -24,6 +24,9 @@
         ],
         "inline": [
           { "page": "index.html", "sha256": "<sha256 of the exact inline script text>", "reason": "boot snippet" }
+        ],
+        "frames": [
+          { "page": "about.html", "src": "https://www.youtube-nocookie.com/embed/<id>", "reason": "explainer video" }
         ]
       }
     }

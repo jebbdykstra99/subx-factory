@@ -1,0 +1,1 @@
+{"siteId": "h5_modimport", "shell": {"base": "v1.2.6", "fork": false, "overrides": {"modules": [{"file": "ext/room.js", "sha256": "321497748b55974290aaf378f4a4484ea06f11a56d5cc86bfb6d97dc2d85e8d9", "hooks": ["__subxPlugins"], "load": "before", "reason": "t"}]}}}
