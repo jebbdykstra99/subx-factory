@@ -19,8 +19,13 @@ node_modules, dot-dirs). Besides <script>:
   - iframe/frame srcdoc, object, embed are DRIFT unless declared in overrides.frames; a remote iframe/frame src is
     WARN unless declared; data:/blob:/javascript: frame sources are DRIFT
   - <base href> is DRIFT (it retargets every relative src, including declared modules)
-  - a pin counts only if it will run: type empty/JS/module, no nomodule, not inside <template>, <noscript>, raw-text
-    or foreign (svg/math) elements, and no duplicated attributes on the tag
+  - a pin counts only if it will run: classic type (empty/JS; type=module is DRIFT since currentScript is null), no
+    nomodule, no query/fragment on the URL, not inside <template>, <noscript>, raw-text or foreign (svg/math, so
+    also <foreignObject>) elements, no duplicated attributes, and not blocked by a CSP (meta tag, or a header rule in
+    _headers / firebase.json / netlify.toml / vercel.json); other header CSP is left to the C4 preview
+  - index.html must run a pin, and so must every page that loads room JS unless it is listed in shell.noShell
+  - SVG <script href|xlink:href> is a script source; <meta http-equiv=refresh> to javascript:/data: or an undeclared
+    remote URL is DRIFT (declared in overrides.refresh = WARN); remote modulepreload and CSS @import are WARN
   - static import / export-from in inline or local JS: remote specifiers must be listed in the declaring entry's
     "imports"; local ones must themselves be declared modules/keep files (scanned transitively)
 Runtime injection detection is BEST-EFFORT static analysis: createElement('script') or a non-literal createElement,
@@ -91,6 +96,7 @@ class _Page(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=False)
         self.out, self.code, self.frames, self.bases, self._cur = [], [], [], [], None
+        self.metas, self.links, self.styles, self._style = [], [], [], None
         self._ctx = {t: 0 for t in INERT_CTX}
 
     def _attrs(self, tag, attrs, line):
@@ -112,6 +118,12 @@ class _Page(HTMLParser):
         line = self.getpos()[0]
         a, dup = self._attrs(tag, attrs, line)
         if tag == 'script':
+            # SVG <script> loads its source from href / xlink:href, not src (C7)
+            if 'src' not in a and (self._ctx['svg'] or self._ctx['math']):
+                for k in ('href', 'xlink:href'):
+                    if a.get(k) is not None:
+                        a['src'] = a[k]
+                        break
             rec = {'attrs': a, 'dup': dup, 'inert': [t for t in INERT_CTX if self._ctx[t]], 'line': line}
             if closed:
                 rec['text'] = ''
@@ -122,6 +134,12 @@ class _Page(HTMLParser):
             return
         if tag == 'base':
             self.bases.append({'line': line, 'attrs': a})
+        if tag == 'meta' and a.get('http-equiv'):
+            self.metas.append({'line': line, 'equiv': a['http-equiv'].strip().lower(), 'content': a.get('content') or ''})
+        if tag == 'link':
+            self.links.append({'line': line, 'attrs': a})
+        if tag == 'style' and not closed:
+            self._style = {'line': line, 'text': []}
         if tag in ('iframe', 'frame', 'object', 'embed'):
             self.frames.append({'line': line, 'tag': tag, 'attrs': a, 'dup': dup})
         if tag in self._ctx and not closed:
@@ -136,12 +154,18 @@ class _Page(HTMLParser):
     def handle_data(self, data):
         if self._cur is not None:
             self._cur['text'].append(data)
+        elif self._style is not None:
+            self._style['text'].append(data)
 
     def handle_endtag(self, tag):
         if tag == 'script' and self._cur is not None:
             self._cur['text'] = ''.join(self._cur['text'])
             self.out.append(self._cur)
             self._cur = None
+        elif tag == 'style' and self._style is not None:
+            self._style['text'] = ''.join(self._style['text'])
+            self.styles.append(self._style)
+            self._style = None
         elif tag in self._ctx and self._ctx[tag]:
             self._ctx[tag] -= 1
 
@@ -203,6 +227,189 @@ def import_specs(text):
 
 def shell_hashes(mans):
     return {meta['sha256'] for m in mans.values() for meta in m['files'].values()}
+
+
+# ---- CSP (F2): does a policy let the pinned <script> load? ----
+PIN_HOST, PIN_PATH = 'cdn.jsdelivr.net', '/gh/jebbdykstra99/subx-factory@'
+HOST_SRC_RE = re.compile(r'^(?:([a-z][a-z0-9+.-]*)://)?(\*|\*\.[^/:]+|[^/:*]+)(?::(\d+|\*))?(/.*)?$', re.I)
+
+
+def csp_policies(text):
+    """A Content-Security-Policy value -> list of policies, each {directive: [sources]} (comma = several policies)."""
+    out = []
+    for pol in (text or '').split(','):
+        d = {}
+        for part in pol.split(';'):
+            toks = part.split()
+            if toks and toks[0].lower() not in d:  # first occurrence of a directive wins
+                d[toks[0].lower()] = toks[1:]
+        if d:
+            out.append(d)
+    return out
+
+
+def csp_allows_pin(policy, url, integrity, nonce):
+    """True if this one policy lets <script src=url integrity=... nonce=...> load. Directive order for a script
+    element: script-src-elem, script-src, default-src; no such directive = allowed."""
+    srcs = next((policy[k] for k in ('script-src-elem', 'script-src', 'default-src') if k in policy), None)
+    if srcs is None:
+        return True
+    low = [x.lower() for x in srcs]
+    for tok in (integrity or '').split():
+        if "'%s'" % tok in srcs:
+            return True
+    if nonce and "'nonce-%s'" % nonce in srcs:
+        return True
+    if "'strict-dynamic'" in low:  # host and scheme sources are ignored
+        return False
+    path = url.split('://', 1)[1].split('/', 1)
+    upath = '/' + (path[1] if len(path) > 1 else '')
+    for x in low:
+        if x in ('*', 'https:', 'http:'):
+            return True
+        if x.startswith("'"):
+            continue
+        m = HOST_SRC_RE.match(x)
+        if not m:
+            continue
+        scheme, host, port, p = m.groups()
+        if scheme not in (None, 'https', 'http'):
+            continue
+        if not (host == PIN_HOST or host == '*' or (host.startswith('*.') and PIN_HOST.endswith(host[1:]))):
+            continue
+        if port not in (None, '443', '*'):
+            continue
+        if p and not (upath.startswith(p) if p.endswith('/') else upath == p):
+            continue
+        return True
+    return False
+
+
+def _pat_re(pat, kind):
+    """Header-rule path pattern -> regex. kind: 'splat' (_headers / netlify.toml), 'glob' (firebase), 'ptr' (vercel)."""
+    pat = re.sub(r'^https?://[^/]+', '', pat.strip()) or '/'
+    out, i = '', 0
+    while i < len(pat):
+        c = pat[i]
+        if kind == 'glob' and pat.startswith('**', i):
+            out += '.*'; i += 2; continue
+        if c == '*':
+            out += '.*' if kind != 'glob' else '[^/]*'
+        elif kind == 'glob' and c == '?':
+            out += '[^/]'
+        elif kind == 'glob' and c == '{':
+            j = pat.find('}', i)
+            if j < 0:
+                return None
+            out += '(?:%s)' % '|'.join(re.escape(x) for x in pat[i + 1:j].split(',')); i = j + 1; continue
+        elif kind == 'ptr' and c == '(':
+            depth, j = 0, i
+            while j < len(pat):
+                depth += {'(': 1, ')': -1}.get(pat[j], 0)
+                if depth == 0:
+                    break
+                j += 1
+            out += pat[i:j + 1]; i = j + 1; continue
+        elif c == ':' and kind != 'glob' and re.match(r'[A-Za-z_]', pat[i + 1:i + 2]):
+            m = re.match(r':[A-Za-z_]\w*([*+?])?', pat[i:])
+            out += '.*' if m.group(1) in ('*', '+') else '[^/]+'
+            i += len(m.group(0)); continue
+        else:
+            out += re.escape(c)
+        i += 1
+    try:
+        return re.compile('^%s$' % out)
+    except re.error:
+        return None
+
+
+def header_csps(room):
+    """Header CSP rules from hosting config: [(file, pattern, compiled-or-None, value)], plus parse warnings."""
+    rules, warns = [], []
+    p = os.path.join(room, '_headers')
+    if os.path.isfile(p):
+        pat = None
+        for line in open(p, encoding='utf-8', errors='replace').read().splitlines():
+            if not line.strip() or line.lstrip().startswith('#'):
+                continue
+            if not line[:1].isspace():
+                pat = line.strip()
+                continue
+            k, _, v = line.strip().partition(':')
+            if pat and k.strip().lower() == 'content-security-policy':
+                rules.append(('_headers', pat, _pat_re(pat, 'splat'), v.strip()))
+    p = os.path.join(room, 'firebase.json')
+    if os.path.isfile(p):
+        try:
+            h = json.load(open(p)).get('hosting') or []
+            for site in (h if isinstance(h, list) else [h]):
+                for e in site.get('headers') or []:
+                    for kv in e.get('headers') or []:
+                        if str(kv.get('key', '')).lower() == 'content-security-policy':
+                            if e.get('regex'):
+                                try:
+                                    rx = re.compile(e['regex'])
+                                except re.error:
+                                    rx = None
+                                rules.append(('firebase.json', e['regex'], rx, kv.get('value', '')))
+                            else:
+                                src = e.get('source', '**')
+                                rules.append(('firebase.json', src, _pat_re(src if src.startswith('/') else '/' + src, 'glob'), kv.get('value', '')))
+        except Exception as ex:
+            warns.append('firebase.json unreadable (%s): its header CSP is not checked; covered only by the C4 preview' % ex)
+    p = os.path.join(room, 'netlify.toml')
+    if os.path.isfile(p):
+        try:
+            import tomllib
+            for e in tomllib.load(open(p, 'rb')).get('headers') or []:
+                for k, v in (e.get('values') or {}).items():
+                    if k.lower() == 'content-security-policy':
+                        rules.append(('netlify.toml', e.get('for', '/*'), _pat_re(e.get('for', '/*'), 'splat'), v))
+        except Exception as ex:
+            warns.append('netlify.toml unreadable (%s): its header CSP is not checked; covered only by the C4 preview' % ex)
+    p = os.path.join(room, 'vercel.json')
+    if os.path.isfile(p):
+        try:
+            for e in json.load(open(p)).get('headers') or []:
+                for kv in e.get('headers') or []:
+                    if str(kv.get('key', '')).lower() == 'content-security-policy':
+                        rules.append(('vercel.json', e.get('source', '/(.*)'), _pat_re(e.get('source', '/(.*)'), 'ptr'), kv.get('value', '')))
+        except Exception as ex:
+            warns.append('vercel.json unreadable (%s): its header CSP is not checked; covered only by the C4 preview' % ex)
+    return rules, warns
+
+
+def page_urls(page):
+    """URL paths a page is served at (for header rule matching): /a.html, /a, and / or /dir/ for index.html."""
+    u = ['/' + page]
+    if page.endswith('.html'):
+        u.append('/' + page[:-5])
+    if posixpath.basename(page) == 'index.html':
+        d = posixpath.dirname(page)
+        u.append('/' + (d + '/' if d else ''))
+    return u
+
+
+def refresh_url(content):
+    m = re.match(r'^\s*[\d.]*\s*[;,]?\s*(?:url\s*=\s*)?(.*)$', content or '', re.I | re.S)
+    u = (m.group(1) if m else '').strip()
+    if u[:1] in '\'"' and u:
+        u = u[1:].split(u[0], 1)[0]
+    return u.strip()
+
+
+CSS_IMPORT_RE = re.compile(r"""@import\s+(?:url\(\s*)?['"]?([^'")\s;]+)""", re.I)
+CSS_JSURL_RE = re.compile(r"""url\(\s*['"]?\s*javascript:""", re.I)
+
+
+def css_notes(text):
+    out = []
+    for m in CSS_IMPORT_RE.finditer(text):
+        if REMOTE_RE.match(m.group(1)) and not m.group(1).lower().startswith('data:'):
+            out.append('CSS @import of remote %s' % m.group(1))
+    if CSS_JSURL_RE.search(text):
+        out.append('CSS url(javascript:...) (inert in current browsers)')
+    return out
 
 
 def check(room, mans):
@@ -272,12 +479,32 @@ def check(room, mans):
             f.append('frames entry %r must be {page, src | sha256 (of srcdoc), reason}' % (e,))
             continue
         frame_decl[(e['page'], key)] = e
-    used_inline, used_frames = set(), set()
+    refresh_decl = {}
+    for e in ov.get('refresh') or []:
+        if not isinstance(e, dict) or not e.get('page') or not e.get('url') or not e.get('reason'):
+            f.append('refresh entry %r must be {page, url, reason}' % (e,))
+            continue
+        refresh_decl[(e['page'], e['url'])] = e
+    no_shell = sh.get('noShell') or []
+    if not isinstance(no_shell, list) or not all(isinstance(x, str) for x in no_shell):
+        f.append('shell.noShell must be a list of page paths')
+        no_shell = []
+    no_shell = {posixpath.normpath(x.lstrip('/')) for x in no_shell}
+    for x in sorted(no_shell):
+        if x == 'index.html':
+            f.append('shell.noShell lists index.html: the main page must run the shell')
+        elif not os.path.isfile(os.path.join(room, x)):
+            f.append('shell.noShell page %s does not exist' % x)
+    layers['noShell'] = sorted(no_shell)
+    hdr_rules, hdr_warn = header_csps(room)
+    w.extend(hdr_warn)
+    used_inline, used_frames, used_refresh = set(), set(), set()
     layers['inline'] = len(inline_decl)
     layers['frames'] = len(frame_decl)
     layers['fork'] = fork
 
     shell_tags, loaded_local = [], {}
+    running, needs = set(), {}  # pages with a running factory.js / fork tag; pages loading room JS -> first such src
     inline_js = []  # (where, text, decl) for import scanning
 
     def code_block(page, where, text, kind):
@@ -292,7 +519,42 @@ def check(room, mans):
             f.extend(injection_findings(text, where + ' ' + kind, bool(decl.get('injects'))))
         return decl
 
+    all_pages = []
     for page, pg in pages(room):
+        all_pages.append(page)
+        # F2: every CSP that applies to the page (meta tags + hosting header rules) must allow the pin
+        csp = []
+        for mt in pg.metas:
+            if mt['equiv'] == 'content-security-policy':
+                csp += [('%s:%d <meta> CSP' % (page, mt['line']), pol) for pol in csp_policies(mt['content'])]
+        for fn_, pat, rx, val in hdr_rules:
+            if rx is None or any(rx.match(u) for u in page_urls(page)):
+                csp += [('%s header CSP for %s' % (fn_, pat), pol) for pol in csp_policies(val)]
+        # C8: meta refresh navigates the room away
+        for mt in pg.metas:
+            if mt['equiv'] != 'refresh':
+                continue
+            u, where = refresh_url(mt['content']), '%s:%d' % (page, mt['line'])
+            if not u:
+                continue
+            if _jsurl(u) or re.match(r'^(?:data|blob|vbscript|filesystem):', re.sub(r'[\x00-\x20]', '', u), re.I):
+                f.append('%s <meta http-equiv=refresh> to a %s URL' % (where, u.split(':', 1)[0].lower()))
+            elif REMOTE_RE.match(u):
+                if (page, u) in refresh_decl:
+                    used_refresh.add((page, u))
+                    w.append('%s <meta http-equiv=refresh> to remote %s (declared)' % (where, u))
+                else:
+                    f.append('%s undeclared <meta http-equiv=refresh> to remote %s (declare it in overrides.refresh)' % (where, u))
+        # C8: remote modulepreload / preload-as-script / HTML import (no code runs from these alone)
+        for ln in pg.links:
+            rel_ = (ln['attrs'].get('rel') or '').lower().split()
+            href = (ln['attrs'].get('href') or '').strip()
+            if href and REMOTE_RE.match(href) and ('modulepreload' in rel_ or 'import' in rel_ or
+                                                    ('preload' in rel_ and (ln['attrs'].get('as') or '').lower() in ('script', 'worker'))):
+                w.append('%s:%d remote <link rel=%s href=%s>' % (page, ln['line'], ' '.join(rel_), href))
+        for st in pg.styles:
+            for wmsg in css_notes(st['text']):
+                w.append('%s:%d <style> %s' % (page, st['line'], wmsg))
         for b in pg.bases:
             if b['attrs'].get('href') is not None:
                 f.append('%s:%d <base href=%r> retargets every relative src (not allowed)' % (page, b['line'], b['attrs']['href']))
@@ -349,16 +611,31 @@ def check(room, mans):
                 if not EXACT_VER.match(em.group(1)) or not a.get('integrity'):
                     w.append('%s emoji-picker-element@%s has no SRI pin (mutable range / no integrity)' % (where, em.group(1)))
                 continue
+            bare = re.split(r'[?#]', src, maxsplit=1)[0]
+            if bare != src and (PIN_RE.match(bare) or PRE_RE.match(bare)):
+                f.append('%s pin URL carries a query or fragment (%s): pins must be the bare pinned URL, no ?v=' % (where, src[len(bare):][:40]))
+                continue
             m = PIN_RE.match(src)
             pre = PRE_RE.match(src)
             if m or (pre and man and pre.group(1) == man.get('sourceCommit')):
                 ver, fn = (m.group(2), m.group(3)) if m else (base, pre.group(2))
+                if typ == 'module':
+                    f.append('%s %s pin has type=module: document.currentScript is null there, so the shell ignores data-site '
+                             '(and runs deferred); use a classic <script>' % (where, fn))
+                    continue
                 if not runs:
                     why = ([('type=%s' % typ)] if typ not in JS_TYPES else []) + (['nomodule'] if 'nomodule' in a else []) \
                         + (['inside <%s>' % t for t in s['inert']]) + (['duplicated attributes'] if s['dup'] else [])
                     f.append('%s %s pin is inert (%s): it does not run' % (where, fn, ', '.join(why)))
                     continue
+                blocked = [lbl for lbl, pol in csp if not csp_allows_pin(pol, src, a.get('integrity'), a.get('nonce'))]
+                if blocked:
+                    f.append('%s %s pin is blocked by %s (script-src/default-src allows neither https://cdn.jsdelivr.net '
+                             'nor the pin hash): it does not run' % (where, fn, '; '.join(dict.fromkeys(blocked))))
+                    continue
                 shell_tags.append((page, fn))
+                if fn == 'factory.js':
+                    running.add(page)
                 if ver != base:
                     f.append('%s loads shell %s but shell.base is %s' % (where, ver, base))
                 elif man and man['files'].get(fn, {}).get('integrity') != a.get('integrity'):
@@ -375,11 +652,14 @@ def check(room, mans):
                 continue
             loaded_local.setdefault(rel, where)
             if fork and rel == fork_file:
-                if runs:
+                if runs and typ != 'module':
                     shell_tags.append((page, 'factory.js'))
+                    running.add(page)
                 else:
-                    f.append('%s fork file tag is inert: it does not run' % where)
-            elif rel in modules or rel in keep:
+                    f.append('%s fork file tag is inert or type=module: it does not run as the shell' % where)
+            else:
+                needs.setdefault(page, rel)
+            if fork and rel == fork_file or rel in modules or rel in keep:
                 pass
             elif posixpath.basename(rel) in SHELL_FILES:
                 f.append('%s loads local %s (not a declared fork)' % (where, rel))
@@ -388,6 +668,12 @@ def check(room, mans):
             if not os.path.isfile(os.path.join(room, rel)):
                 f.append('%s loads %s, which does not exist' % (where, rel))
 
+    for key in sorted(set(refresh_decl) - used_refresh):
+        f.append('refresh declaration for %s (%s) matches no <meta http-equiv=refresh>' % key)
+    for p in walk(room, ('.css',)):
+        relc = os.path.relpath(p, room).replace(os.sep, '/')
+        for wmsg in css_notes(open(p, encoding='utf-8', errors='replace').read()):
+            w.append('%s %s' % (relc, wmsg))
     for key in sorted(set(inline_decl) - used_inline):
         f.append('inline declaration for %s (sha256 %s) matches no script, handler or URL' % (key[0], key[1][:12]))
     for key in sorted(set(frame_decl) - used_frames):
@@ -413,6 +699,7 @@ def check(room, mans):
     for where, text, decl in inline_js:
         static_imports(text, where, where.split(':', 1)[0], decl)
     for q in queue:
+        needs.setdefault(q[1].split(':', 1)[0], q[0])
         if q[0] not in loaded_local and q[0] not in modules and q[0] not in keep:
             f.append('%s imports undeclared local module %s' % (q[1], q[0]))
         loaded_local.setdefault(q[0], q[1])
@@ -435,6 +722,16 @@ def check(room, mans):
         text = open(p, encoding='utf-8', errors='replace').read()
         f.extend(injection_findings(text, rel, bool(decl.get('injects'))))
         static_imports(text, rel, rel, decl)
+
+    # F1: the main page, and every page that loads room JS (modules, keep files, other local scripts), runs the shell
+    if 'index.html' not in all_pages:
+        f.append('no index.html: the main page must run the pinned shell')
+    elif 'index.html' not in running:
+        f.append('index.html runs no shell (no live, running factory.js pin): the main page must run it')
+    for pg_ in sorted(needs):
+        if pg_ != 'index.html' and pg_ not in running and pg_ not in no_shell:
+            f.append('%s loads room JS (%s) but runs no shell; list it in shell.noShell if it is meant to run without the shell'
+                     % (pg_, needs[pg_]))
 
     # any local shell copy anywhere in the room that is not the declared fork
     hashes = shell_hashes(mans)
@@ -476,8 +773,12 @@ def check(room, mans):
 
 def suggest(room):
     """Print the inline/frames/keep entries a room PR would declare (helper; not a check)."""
-    out = {'inline': [], 'frames': [], 'scripts': []}
+    out = {'inline': [], 'frames': [], 'scripts': [], 'noShell': []}
     for page, pg in pages(room):
+        pinned = any(PIN_RE.match((s.get('attrs') or {}).get('src', '').strip()) for s in pg.out)
+        if page != 'index.html' and not pinned and any(
+                s['attrs'].get('src') and not REMOTE_RE.match(s['attrs']['src'].strip()) for s in pg.out):
+            out['noShell'].append(page)
         for c in pg.code:
             out['inline'].append({'page': page, 'sha256': sha256b(c['text'].encode('utf-8')), 'reason': 'TODO ' + c['kind']})
         for fr in pg.frames:

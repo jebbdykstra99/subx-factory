@@ -1,0 +1,78 @@
+{
+ "siteId": "atmchat",
+ "shell": {
+  "base": "v1.2.6",
+  "fork": false,
+  "overrides": {
+   "inline": [
+    {
+     "page": "404.html",
+     "sha256": "421d2d2497abdc2a92207f5aae11e5aabe416d653e7283e09dbff8e91da61d1f",
+     "reason": "migration sim"
+    },
+    {
+     "page": "asia.html",
+     "sha256": "402135baa8aed82866d86b83141f853e8144098bc7a396f1a9b6b3af34809e9b",
+     "reason": "migration sim"
+    },
+    {
+     "page": "ask-atm.html",
+     "sha256": "9cf518ab172d29ee0e7f5b59e5b843112fb9dfb1960b42b39b791c1d82162bbe",
+     "reason": "migration sim"
+    },
+    {
+     "page": "europe.html",
+     "sha256": "b0dbacba8c9fc35cac21186a43b955ea375e8af393c046e61528f7bf10dc7263",
+     "reason": "migration sim"
+    },
+    {
+     "page": "explore.html",
+     "sha256": "38bf2e25dfefb7c87fcbb54756cb74994991c2da42a01bb90e1d5c6e4928244d",
+     "reason": "migration sim"
+    },
+    {
+     "page": "fee-free.html",
+     "sha256": "fb43c912ced2bb7f9d8a9c9614071c27f9d074f7eafce874f6701f2707769bf0",
+     "reason": "migration sim"
+    },
+    {
+     "page": "network-wars.html",
+     "sha256": "1f73b04eef7377c7240d8c8b24c4061e78b3a6d8e4d82414ffc4b9299d5a6424",
+     "reason": "migration sim"
+    },
+    {
+     "page": "outages.html",
+     "sha256": "744262ad13b9521aebe3451021bcd7b9d07b858b0797dfa6280590c12181f970",
+     "reason": "migration sim"
+    },
+    {
+     "page": "rural.html",
+     "sha256": "2cd988c3b65e1d945cc1d5284a453fbd390ae52ecd7ed43484e4a5fbe5293266",
+     "reason": "migration sim"
+    },
+    {
+     "page": "surcharge.html",
+     "sha256": "48a84cf441239f0da731e6fa93acc775a818abe73f0c964c06602421f2bc432e",
+     "reason": "migration sim"
+    },
+    {
+     "page": "travel-cash.html",
+     "sha256": "c502615b68c7a83c88eae6be9fb61d84eb688a6bc27b1e62edd45e1fc7c8e4a7",
+     "reason": "migration sim"
+    },
+    {
+     "page": "us.html",
+     "sha256": "e539158e5ae181f377fce84e84d6b1c43127a6ed79c1a8360533f4937d273017",
+     "reason": "migration sim"
+    }
+   ]
+  },
+  "keep": [
+   {
+    "file": "gate.js",
+    "sha256": "2e21b678c241d282b4a0997a5ccf69121a8674df26f1a5eae431a781c5dbbb8c",
+    "reason": "migration sim"
+   }
+  ]
+ }
+}
