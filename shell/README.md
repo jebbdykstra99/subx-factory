@@ -63,9 +63,29 @@ Order of preference. Use the first layer that can express the difference.
 
 Room content (nests, posts, steward copy) and posting rules stay per room in site.json and Firestore, as today. Non-shell room scripts that are not modules (`gate.js`, `takedown.js`, `ref.js`) go in `shell.keep` as `{file, sha256, reason}`. Executable inline `<script>` blocks, `on*=` event handlers and `javascript:` URLs are declared in `overrides.inline` as `{page, sha256, reason}` (sha256 of the exact script text or attribute value; the same hashes a future CSP would list). `<iframe srcdoc>` (sha256 of the srcdoc), `<object>`/`<embed>` and remote `<iframe src>` are declared in `overrides.frames`. A `<meta http-equiv=refresh>` to a remote URL is declared in `overrides.refresh: [{page, url, reason}]` (it still shows as `WARN`). Remote ES module imports are listed in the declaring entry's `imports`.
 
-`index.html` must run the pinned shell. So must every other page that runs room JS: a module, a keep file, any other local script, the Firebase SDK, or declared inline code (inline `<script>`, `on*=` handlers, `javascript:` URLs). A page that is meant to run without the shell is listed in `shell.noShell: ["terms.html", ...]`; `index.html` cannot be listed. Today that is each room's static legal pages (`terms.html`, `privacy.html`, `guidelines.html`, `report.html` loading `takedown.js`), its `404.html`, and its nest bounce pages (inline redirect only). Pages with no script at all need neither.
+`index.html` must run the pinned shell. So must every other page that runs room JS: a module, a keep file, any other local script, the Firebase SDK, or declared inline code (inline `<script>`, `on*=` handlers, `javascript:` URLs). A page that is meant to run without the shell is listed in `shell.noShell: ["terms.html", ...]`; `index.html` cannot be listed. Today that is each room's static legal pages (`terms.html`, `privacy.html`, `guidelines.html`, `report.html` loading `takedown.js`), and its `404.html`. Nest bounce pages that are plain redirect stubs (below) need neither. Pages with no script at all need neither.
 
 A noShell page runs without the kill switch and moderation, so it may load **only** `keep` files and declared inline code. A module, the Firebase SDK, any remote script (emoji picker included), an `<iframe>`/`<frame>`/`<object>`/`<embed>`/`srcdoc`, or a keep file that imports modules is drift there. Once any `keep` entry sets `"noShellOk"`, only keep entries with `"noShellOk": true` may load on noShell pages. A noShell page that does run the shell is a `WARN` (remove it from the list). `tools/shell_drift.py --suggest ROOM` prints the inline, frames, keep and noShell entries for a room PR.
+
+### Redirect stubs and `shell.redirects`
+
+A redirect stub is a page whose only job is to send the visitor to a page on the same site, such as a nest bounce page. It needs no `noShell` entry and no inline sha256, but only if it is really that simple:
+
+- Its only code is one classic inline `<script>`. That script is either the `tools/nest_stubs.py` template (only the nest name may differ) or a bare `location.replace('/some/path')` to a path on the same site.
+- It has no other script (local, remote or module), no `on*=` handler, no `javascript:` URL, no frame, `<object>` or `<embed>`, no form, no `<base href>` and no preload of a remote script.
+- A `<meta http-equiv=refresh>`, if any, stays on the same site.
+- It has none of the comment ends described under the drift check.
+- `index.html` is never a stub, even when it looks like one. The main page always runs the shell.
+
+List the stubs in `shell.redirects: ["nest/cats.html", ...]` (pages carrying the `nest_stubs.py` marker are checked too). A listed page that fails any rule above is drift, and the message says which rule. Each entry must be a page path inside the room: an entry with `..`, a backslash, `%`-encoding, a scheme such as `https:`, or a leading `//` is drift, as is a page that does not exist.
+
+### Limits on noShell pages
+
+A noShell page has no kill switch, so its declared inline code is limited too:
+
+- Inline code there may not declare `injects` (it may not add scripts at runtime) or remote `imports`.
+- Inline code that names a Firebase SDK address (`gstatic.com/firebasejs`, `/__/firebase/`, or a firebase package on an npm CDN) counts as loading the Firebase SDK, which is drift there.
+- The same check applies to the text of every keep file loaded on a noShell page. Declaring `injects` on the keep entry does not exempt it.
 
 Example: `site.shell.example.json`.
 
@@ -110,6 +130,12 @@ Read-only. Status per room:
   - a module, keep, inline or frames entry without a match (sha256 or src)
   - runtime injection or evaluation (below) without a declared `"injects": "<reason>"`; one that names a factory/shell file is always drift
   - any local `.js` anywhere in the room that is a shell copy (release hash or SubX factory header) and is not the declared fork
+
+**How the check reads pages and URLs.** It reads them the way a browser does, so a trick that fools a simple parser but not a browser does not get through:
+
+- Comment ends. Browsers end an HTML comment at `<!-->`, `<!--->` and `--!>`, and run whatever comes next. Some versions of Python's parser keep reading the comment. Any of the three, anywhere on a page, is drift, whatever Python version runs the check. Write comments as `<!-- ... -->`.
+- URLs. Before deciding whether a script `src`, link `href`, frame `src`, import or refresh URL is local or remote, the check decodes HTML entities (once, as the browser does), strips leading and trailing control characters and spaces, removes tabs and line breaks anywhere, and reads `\` as `/`. Anything that then starts with `//` or a scheme is remote. So `/\evil.example/x.js` and `/&#9;/evil.example/x.js` are remote scripts even if a file with that literal name sits in the room. Local paths are also `%`-decoded before the check makes sure they stay inside the room.
+- A keep or module entry whose file name contains a space, a control character, a backslash or `%` is drift, because a browser would never request that literal path.
 
 **Injection detection is best-effort.** It is static pattern matching over inline code and every local JS file a page loads or imports: `createElement('script')` or a non-literal `createElement(x)`, `import()`, `importScripts`, `document.write('<script')`, `eval`, `new Function`, `new Worker`/`SharedWorker`, `serviceWorker.register`. Obfuscated code, string building, `fetch` plus indirect evaluation or DOM tricks it does not know can still evade it. It is not a security boundary. What holds is the sha256 pin: every declared module, keep file and inline block is pinned to the bytes a human reviewed, so each one must be read in its room PR, not just hashed.
 

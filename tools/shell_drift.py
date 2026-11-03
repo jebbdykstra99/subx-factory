@@ -36,10 +36,12 @@ node_modules, dot-dirs). Besides <script>:
     (only the slug literal may differ) or a bare location.replace('/<same-origin path>'), with no other scripts, no
     on*= handlers or javascript: URLs, no frames, no forms, no <base href>, no remote script preloads and no meta
     refresh off the origin, is a redirect stub: it needs neither shell.noShell nor a per-page inline sha256. Pages
-    listed in shell.redirects (or carrying the nest_stubs.py marker) that fail this test are DRIFT with the reason
+    listed in shell.redirects (or carrying the nest_stubs.py marker) that fail this test are DRIFT with the reason;
+    a shell.redirects entry with .., a backslash, %-encoding, a scheme or a leading // is DRIFT. index.html is never
+    a stub
   - C15 noShell inline limits: on a noShell page, declared inline code may not carry "injects" or remote "imports",
     and inline code naming a Firebase SDK URL (gstatic.com/firebasejs, /__/firebase/, an npm CDN firebase package)
-    counts as loading the Firebase SDK
+    counts as loading the Firebase SDK; so does a keep file loaded on a noShell page whose text names one
   - Comment ends: browsers end a comment at <!-->, <!---> and --!>, which some Python html.parser versions do not.
     Any of the three anywhere in a page is DRIFT (independent of the Python version), so markup hidden behind one
     can never be skipped by the checker while a browser runs it
