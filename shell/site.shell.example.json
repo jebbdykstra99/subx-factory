@@ -1,0 +1,42 @@
+{
+  "_comment": "Examples of the site.json \"shell\" block. Use one per room. Values here are placeholders.",
+  "pinned_with_overrides": {
+    "shell": {
+      "base": "v1.2.6",
+      "fork": false,
+      "optIn": ["factory-rail.js"],
+      "keep": [
+        { "file": "gate.js", "sha256": "<sha256 of gate.js>", "reason": "E1 handoff gate" },
+        { "file": "takedown.js", "sha256": "<sha256 of takedown.js>", "reason": "takedown form" }
+      ],
+      "overrides": {
+        "theme": ["styles.css", "favicon.svg", "og.png"],
+        "copy": ["site.json:skin", "site.json:tagline"],
+        "legal": ["terms.html", "privacy.html", "dmca.html", "report.html", "index.html#age-gate"],
+        "modules": [
+          {
+            "file": "ext/room.js",
+            "sha256": "<sha256 of ext/room.js>",
+            "hooks": ["__subxPlugins"],
+            "load": "before",
+            "reason": "room-only rail cards"
+          }
+        ],
+        "inline": [
+          { "page": "index.html", "sha256": "<sha256 of the exact inline script text>", "reason": "boot snippet" }
+        ]
+      }
+    }
+  },
+  "declared_fork": {
+    "shell": {
+      "base": "v1.2.6",
+      "fork": true,
+      "file": "factory.js",
+      "sha256": "<sha256 of the room factory.js>",
+      "reason": "room-only code with no hook yet; port to a module or a site.json flag",
+      "exception": "E7",
+      "overrides": { "legal": ["terms.html", "privacy.html"] }
+    }
+  }
+}
