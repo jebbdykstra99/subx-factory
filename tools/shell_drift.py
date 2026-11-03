@@ -889,6 +889,9 @@ def check(room, mans):
         if rel in ns_keep and import_specs(text):
             f.append('%s is loaded on noShell page %s but imports modules (a noShell page may run only keep files and '
                      'declared inline code)' % (rel, ns_keep[rel]))
+        if rel in ns_keep and FIREBASE_SDK_RE.search(text):
+            f.append('%s is loaded on noShell page %s and names the Firebase SDK (%s): a noShell page may not load '
+                     'Firebase' % (rel, ns_keep[rel], FIREBASE_SDK_RE.search(text).group(0)))
         static_imports(text, rel, rel, decl)
 
     # F1: the main page, and every page that loads room JS (modules, keep files, other local scripts), runs the shell

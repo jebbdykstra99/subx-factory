@@ -606,6 +606,9 @@ for i in range(4):
 # B6: shell.redirects entries outside the room (the test also puts a stub at <tmp>/outside.html, next to the room)
 for i in range(7):
     ADV7_EXPECT['d%d_redirects_outside' % i] = 'is not a page path inside the room'
+# B7: keep files on noShell pages are scanned for the C15 Firebase-host patterns
+for i in range(3):
+    ADV7_EXPECT['f%d_noshell_keep_firebase' % i] = 'takedown.js is loaded on noShell page terms.html and names the Firebase SDK'
 # ADV7 more
 ok(sorted(ADV7_EXPECT) == sorted(x for x in os.listdir(ADV7) if os.path.isdir(os.path.join(ADV7, x))), 'every adv7 fixture room has an expectation')
 for name, needle in sorted(ADV7_EXPECT.items()):

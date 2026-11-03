@@ -28,3 +28,9 @@ for i, u in enumerate(['/\\evil.example/', '/&#9;/evil.example/', '\\\\evil.exam
 for i, x in enumerate(['../outside.html', '/../outside.html', 'nest\\go.html', 'https://evil.example/go.html', '%2e%2e/outside.html',
                        '//evil.example/go.html', 'nest/../../outside.html']):
     mk('d%d_redirects_outside' % i, PIN, {'redirects': [x]}, {'nest/go.html': STUB % ''})
+# B7: a keep file loaded on a noShell page may not name the Firebase SDK (even with "injects" declared)
+for i, body in enumerate(["import('https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js');\n",
+                          "var s=document.createElement('script');s.src='/__/firebase/init.js';document.head.appendChild(s);\n",
+                          "/* https://cdn.jsdelivr.net/npm/firebase@10/firebase-app.js */\n"]):
+    e = keep('takedown.js', body); e['injects'] = 'loader'
+    mk('f%d_noshell_keep_firebase' % i, PIN, {'noShell': ['terms.html'], 'keep': [e]}, {'takedown.js': body}, {'terms.html': NSP % ''})
