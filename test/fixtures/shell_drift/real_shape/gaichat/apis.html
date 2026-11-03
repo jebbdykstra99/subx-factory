@@ -1,0 +1,11 @@
+<!doctype html><html><head>
+<script>
+    (function () {
+      var path = location.pathname || '/apis';
+      if (path.charAt(0) !== '/') path = '/' + path;
+      path = path.replace(/\.html$/, '');
+      try { sessionStorage.setItem('subx.restorePath', path + (location.search || '') + (location.hash || '')); } catch (e) {}
+      location.replace('/' + (location.search || '') + (location.hash || ''));
+    })();
+  </script>
+</head><body></body></html>

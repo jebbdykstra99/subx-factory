@@ -20,6 +20,9 @@ Host: **jsDelivr's GitHub mirror** of this public repo. No new service, no accou
 ```
 
 - Pin rule: full commit SHA only. Never `@main`, a branch, `@latest`, or a semver range (those are mutable and break SRI). `tools/shell_drift.py` reports anything else as drift.
+- The pin URL is bare: **no `?v=` or any other query string, and no `#fragment`** (the SHA already busts caches). A pin with a query is drift.
+- The pin is a classic `<script>`: **not `type="module"`**. In a module `document.currentScript` is null, so the shell would ignore `data-site` (and run deferred). A module-type pin is drift.
+- If a page or the hosting config sets a Content-Security-Policy, its `script-src` (or `default-src` when there is no `script-src`) must allow `https://cdn.jsdelivr.net` or the pin's sha384 hash.
 - `integrity` comes from `shell/<version>/SHELL.json`. `crossorigin="anonymous"` is required for SRI on a cross-origin script.
 - `data-site` stays on the tag. The shell reads it from `document.currentScript` and fetches `site.json` relative to the **page**, so config, `localStorage`, Firebase Auth domains and App Check stay per room origin.
 - Opt-in files (`factory-gp.js`, `factory-rail.js`, `factory-reports.js`) load the same way, **before** `factory.js`, each with its own `integrity`.
@@ -55,10 +58,12 @@ Order of preference. Use the first layer that can express the difference.
 | 2a. Theme | room `styles.css`, CSS variables, icons, og images, assets | `overrides.theme: ["styles.css", "assets/…"]` | files must exist |
 | 2b. Copy | room strings: site.json keys (`skin.*`, `tagline`, `trustBlurb`, `emptyState` …) or a copy file | `overrides.copy: ["site.json:skin", "copy.json"]` | files must exist |
 | 2c. Legal | Terms, Privacy, DMCA, age-gate markup, footer, report page. **Per room and never changed by a shell release** | `overrides.legal: ["terms.html", "privacy.html", "index.html#age-gate"]` | files must exist; listed so nobody "fixes" them into the shell |
-| 2d. Modules | a small room extension file through a documented hook (below) | `overrides.modules: [{file, sha256, hooks, load, reason, injects?}]`; inline scripts: `overrides.inline: [{page, sha256, reason}]` | file must match its sha256; any undeclared local script is drift |
+| 2d. Modules | a small room extension file through a documented hook (below) | `overrides.modules: [{file, sha256, hooks, load, reason, injects?, imports?}]`; inline code: `overrides.inline: [{page, sha256, reason, injects?, imports?}]`; frames: `overrides.frames: [{page, src or sha256, reason}]` | file must match its sha256; any undeclared local script is drift |
 | 3. Fork | a full room `factory.js` pinned to a named base | `fork: true, base, file, sha256, reason, exception` | file must match its sha256; diff size vs base is reported |
 
-Room content (nests, posts, steward copy) and posting rules stay per room in site.json and Firestore, as today. Non-shell room scripts that are not modules (`gate.js`, `takedown.js`, `ref.js`) go in `shell.keep` as `{file, sha256, reason}`. Executable inline `<script>` blocks are declared in `overrides.inline` as `{page, sha256, reason}` (sha256 of the exact script text; the same hashes a future CSP would list). `tools/shell_drift.py --suggest ROOM` prints these entries for a room PR.
+Room content (nests, posts, steward copy) and posting rules stay per room in site.json and Firestore, as today. Non-shell room scripts that are not modules (`gate.js`, `takedown.js`, `ref.js`) go in `shell.keep` as `{file, sha256, reason}`. Executable inline `<script>` blocks, `on*=` event handlers and `javascript:` URLs are declared in `overrides.inline` as `{page, sha256, reason}` (sha256 of the exact script text or attribute value; the same hashes a future CSP would list). `<iframe srcdoc>` (sha256 of the srcdoc), `<object>`/`<embed>` and remote `<iframe src>` are declared in `overrides.frames`. A `<meta http-equiv=refresh>` to a remote URL is declared in `overrides.refresh: [{page, url, reason}]` (it still shows as `WARN`). Remote ES module imports are listed in the declaring entry's `imports`.
+
+`index.html` must run the pinned shell. So must every other page that loads room JS (a module, a keep file or any other local script). Static pages that load room JS but are meant to run without the shell (`terms.html`, `privacy.html`, `guidelines.html`, `report.html` loading `takedown.js`) are listed in `shell.noShell: ["terms.html", ...]`; `index.html` cannot be listed. Pages with only declared inline code (nest bounce pages, `404.html`) need neither. `tools/shell_drift.py --suggest ROOM` prints the inline, frames, keep and noShell entries for a room PR.
 
 Example: `site.shell.example.json`.
 
@@ -87,15 +92,23 @@ python3 tools/shell_drift.py ../room1 ../room2 [--md out.md] [--json out.json] [
 Read-only. Status per room:
 
 - `OK`: pinned shell + only declared overrides.
-- `WARN`: OK, plus non-blocking notes. Today that is `emoji-picker-element@1` loaded without SRI (a mutable range); pin an exact version with `integrity` to clear it.
+- `WARN`: OK, plus non-blocking notes: `emoji-picker-element@1` loaded without SRI (a mutable range; pin an exact version with `integrity` to clear it), an undeclared remote `<iframe>`/`<frame>`, a declared remote meta refresh, a remote `<link rel=modulepreload|import>` or preload-as-script, a remote CSS `@import` (in `<style>` or a room `.css` file), CSS `url(javascript:)`, or a hosting config file the tool cannot parse.
 - `FORK`: declared fork; the diff size against its base is shown.
 - `DRIFT`: anything undeclared. That includes:
-  - no `shell` block, or no pinned shell `<script>` on any page (for example a pin inside an HTML comment)
+  - no `shell` block; no live, running shell pin on `index.html`; or a page that loads room JS without a running pin and is not in `shell.noShell`. A pin counts only if its `type` is empty or a classic JavaScript type, it has no `nomodule`, it is not inside `<template>`, `<noscript>`, a raw-text element (`textarea`, `title`, `iframe`, ...) or `<svg>`/`<math>`, the tag has no duplicated attributes, and no CSP on that page blocks it. A pin inside an HTML comment does not count either. A pin inside `<svg><foreignObject>` is **treated as inert** (conservative: some browsers would run it; move it out of the SVG).
+  - a `type="module"` pin, or a pin URL with a query (`?v=`) or fragment
+  - a CSP that blocks the pin: a `<meta http-equiv="Content-Security-Policy">` on the page, or a header CSP in the room's `_headers`, `firebase.json`, `netlify.toml` or `vercel.json` whose rule matches the page, where `script-src-elem` / `script-src` / `default-src` (first present) allows neither `https://cdn.jsdelivr.net` (host, `*.jsdelivr.net`, `https:` or `*`, with a matching path) nor the pin's `'sha384-…'` hash, or uses `'strict-dynamic'` without the hash. `Content-Security-Policy-Report-Only` does not block. **Any other header CSP** (Cloudflare or GitHub Pages settings, a proxy, a `<meta>` injected at runtime, a hosting file the tool cannot read) is covered only by the C4 preview check on each room PR.
   - an unpinned or integrity-less shell tag, any host other than `cdn.jsdelivr.net`
-  - an undeclared local or remote script (quoted, single-quoted or unquoted `src`), on any `*.html` at any depth
-  - an undeclared or edited inline `<script>` (`application/ld+json` and other data blocks are ignored)
-  - a module, keep or inline entry without a matching sha256
-  - runtime script injection (`createElement('script')`, `import()`, `importScripts`, `document.write('<script')`) in inline or loaded room JS without a declared `"injects": "<reason>"`; injection that names a factory/shell file is always drift
+  - an undeclared local or remote script (any `src` quoting, `data:`/`blob:` included; an SVG `<script href>` / `xlink:href` is a script source) on any page-like file at any depth (`.html`, `.htm`, `.xhtml`, `.shtml`, `.svg`, `.php`, `.phtml`)
+  - a `<meta http-equiv=refresh>` to a `javascript:`/`data:` URL, or to an undeclared remote URL
+  - an undeclared or edited inline `<script>`, `on*=` handler or `javascript:` URL (`application/ld+json` and other data blocks are ignored)
+  - `<base href>` (it retargets every relative `src`, including declared modules; it cannot be declared)
+  - an undeclared `<iframe srcdoc>`, `<object>` or `<embed>`, or a `data:`/`blob:`/`javascript:` frame source. A remote `<iframe src>` that is not declared is `WARN`.
+  - a static `import`/`export … from` of a remote or bare specifier not listed in the declaring entry's `imports`, of an undeclared local module (local imports are followed transitively), or of any factory/shell file
+  - a module, keep, inline or frames entry without a match (sha256 or src)
+  - runtime injection or evaluation (below) without a declared `"injects": "<reason>"`; one that names a factory/shell file is always drift
   - any local `.js` anywhere in the room that is a shell copy (release hash or SubX factory header) and is not the declared fork
+
+**Injection detection is best-effort.** It is static pattern matching over inline code and every local JS file a page loads or imports: `createElement('script')` or a non-literal `createElement(x)`, `import()`, `importScripts`, `document.write('<script')`, `eval`, `new Function`, `new Worker`/`SharedWorker`, `serviceWorker.register`. Obfuscated code, string building, `fetch` plus indirect evaluation or DOM tricks it does not know can still evade it. It is not a security boundary. What holds is the sha256 pin: every declared module, keep file and inline block is pinned to the bytes a human reviewed, so each one must be read in its room PR, not just hashed.
 
 `--strict` exits 1 on any DRIFT.

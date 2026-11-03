@@ -1,0 +1,1 @@
+{"siteId": "h13_worker", "shell": {"base": "v1.2.6", "fork": false, "overrides": {"modules": [{"file": "ext/room.js", "sha256": "9e8475f82ccba929b5f9496087756c20bcf433de1213525723c19a6eb51b4692", "hooks": ["__subxPlugins"], "load": "before", "reason": "t"}]}}}

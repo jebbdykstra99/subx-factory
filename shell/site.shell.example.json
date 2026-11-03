@@ -5,6 +5,7 @@
       "base": "v1.2.6",
       "fork": false,
       "optIn": ["factory-rail.js"],
+      "noShell": ["terms.html", "privacy.html", "report.html"],
       "keep": [
         { "file": "gate.js", "sha256": "<sha256 of gate.js>", "reason": "E1 handoff gate" },
         { "file": "takedown.js", "sha256": "<sha256 of takedown.js>", "reason": "takedown form" }
@@ -24,6 +25,9 @@
         ],
         "inline": [
           { "page": "index.html", "sha256": "<sha256 of the exact inline script text>", "reason": "boot snippet" }
+        ],
+        "frames": [
+          { "page": "about.html", "src": "https://www.youtube-nocookie.com/embed/<id>", "reason": "explainer video" }
         ]
       }
     }

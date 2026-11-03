@@ -1,0 +1,79 @@
+{
+ "siteId": "gaichat",
+ "shell": {
+  "base": "v1.2.6",
+  "fork": false,
+  "overrides": {
+   "inline": [
+    {
+     "page": "404.html",
+     "sha256": "421d2d2497abdc2a92207f5aae11e5aabe416d653e7283e09dbff8e91da61d1f",
+     "reason": "migration sim"
+    },
+    {
+     "page": "agents.html",
+     "sha256": "09b4db0e9c20b98961463863c479181452a4c237771cf45f089a1071a9c5941d",
+     "reason": "migration sim"
+    },
+    {
+     "page": "apis.html",
+     "sha256": "0630c0b1593212e262ccb631557dde89cad3882ccf686dc8ab6a96e29b9d666e",
+     "reason": "migration sim"
+    },
+    {
+     "page": "coding-agents.html",
+     "sha256": "82789527173de842c70d5abbae06990818257a9d2710089d23ae917f02ed9d0f",
+     "reason": "migration sim"
+    },
+    {
+     "page": "evals.html",
+     "sha256": "3f0a8d6e9ecf4d79c3292b46e79c44da146625adb5f752271d6d8dade986c865",
+     "reason": "migration sim"
+    },
+    {
+     "page": "mcp-tools.html",
+     "sha256": "c6c49dc6b5157b1e9f33749b9166df8464702aac044e460a15975ef2d752f3a8",
+     "reason": "migration sim"
+    },
+    {
+     "page": "open-weights.html",
+     "sha256": "1e75c4e38b4092f1e8b4970d3ba7becf9d7f27e2d7f0a21fa59746e1a38f6363",
+     "reason": "migration sim"
+    },
+    {
+     "page": "prompt-fail.html",
+     "sha256": "4d7d595b2b4512992003f9486fbae6383ef9b396bceca9c3465e61bb545bff35",
+     "reason": "migration sim"
+    },
+    {
+     "page": "rag.html",
+     "sha256": "1b67124d863438c61f2b3f752193a8d204f4bb0ad5178a46b76dae34ee10e7b7",
+     "reason": "migration sim"
+    },
+    {
+     "page": "ship-notes.html",
+     "sha256": "64ba57a6afeefcbeeacea346f0b07583a16a21592023047c97831d3afa7d0b77",
+     "reason": "migration sim"
+    },
+    {
+     "page": "tool-desks.html",
+     "sha256": "5afe87d6c1632431677a2896a8c03c6657c9606482abcf33f72570a402752981",
+     "reason": "migration sim"
+    }
+   ]
+  },
+  "keep": [
+   {
+    "file": "takedown.js",
+    "sha256": "ecf97d7d99ae4dffdd5359b2c8e9aa8ad1a2388a8c8765d382d1c047a4f5a319",
+    "reason": "migration sim"
+   }
+  ],
+  "noShell": [
+   "guidelines.html",
+   "privacy.html",
+   "report.html",
+   "terms.html"
+  ]
+ }
+}

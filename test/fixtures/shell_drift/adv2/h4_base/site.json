@@ -1,0 +1,1 @@
+{"siteId": "h4_base", "shell": {"base": "v1.2.6", "fork": false, "overrides": {"modules": [{"file": "ext/room.js", "sha256": "3eb528bbb385ea530153da9e5201f6d328887ba9739235cdbb978a8f179e59a8", "hooks": ["__subxPlugins"], "load": "before", "reason": "t"}]}}}

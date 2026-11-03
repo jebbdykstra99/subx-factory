@@ -1,0 +1,1 @@
+{"siteId": "h10_evalfetch", "shell": {"base": "v1.2.6", "fork": false, "overrides": {"modules": [{"file": "ext/room.js", "sha256": "7a352b02d97c6e1b265f21ec2f80c807b5eaeb711f04814c3842a1e8bdcadddc", "hooks": ["__subxPlugins"], "load": "before", "reason": "t"}]}}}

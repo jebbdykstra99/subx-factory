@@ -1,0 +1,79 @@
+{
+ "siteId": "415chat",
+ "shell": {
+  "base": "v1.2.6",
+  "fork": false,
+  "overrides": {
+   "inline": [
+    {
+     "page": "404.html",
+     "sha256": "421d2d2497abdc2a92207f5aae11e5aabe416d653e7283e09dbff8e91da61d1f",
+     "reason": "migration sim"
+    },
+    {
+     "page": "ask-415.html",
+     "sha256": "63d8a034759d67b09b14ee4d7eb1ef5b6067566b3fe4ecdf0cd5414e7a0553c1",
+     "reason": "migration sim"
+    },
+    {
+     "page": "east-bay.html",
+     "sha256": "8127cb5f1f5ce4260176b37587d18cf5760065d2e2091149deb0a7c533491472",
+     "reason": "migration sim"
+    },
+    {
+     "page": "eats.html",
+     "sha256": "165835c5c9e54a557b90532124db3930a565fa52b79def89b7edc5cfe73b6e7a",
+     "reason": "migration sim"
+    },
+    {
+     "page": "fog.html",
+     "sha256": "dcb43b7ce6762056d2eae93440e6de94af0a0b638e53c8903407a20262a8bdd9",
+     "reason": "migration sim"
+    },
+    {
+     "page": "housing.html",
+     "sha256": "d464bc505c656960a4eb11d52949271a47ecc635f332bdaf656dfef6183dbc51",
+     "reason": "migration sim"
+    },
+    {
+     "page": "mission.html",
+     "sha256": "7745424087df872a5f19771da6aa852c4d682bb53017853cc0c6f63d88c3ee2d",
+     "reason": "migration sim"
+    },
+    {
+     "page": "nightlife.html",
+     "sha256": "a18d98de3a0578c9a1c184da04ff9d1a501dd79b9c0dc6559beba2d082480384",
+     "reason": "migration sim"
+    },
+    {
+     "page": "outdoors.html",
+     "sha256": "f943208a2cdca462525064b517dde02ea1e83c445e7db4118aedf143a44cd6a4",
+     "reason": "migration sim"
+    },
+    {
+     "page": "rider-life.html",
+     "sha256": "2ecc2691f1b7dc8f50d1fc67142fe3d83f0dc25afc130f6b14da0525a0fdf1b3",
+     "reason": "migration sim"
+    },
+    {
+     "page": "tech-scene.html",
+     "sha256": "1db080e566fdf8bfd30f1f6ce2f089cf81790f2d6557d2a274ec9bcbab8905c3",
+     "reason": "migration sim"
+    }
+   ]
+  },
+  "keep": [
+   {
+    "file": "takedown.js",
+    "sha256": "ecf97d7d99ae4dffdd5359b2c8e9aa8ad1a2388a8c8765d382d1c047a4f5a319",
+    "reason": "migration sim"
+   }
+  ],
+  "noShell": [
+   "guidelines.html",
+   "privacy.html",
+   "report.html",
+   "terms.html"
+  ]
+ }
+}
