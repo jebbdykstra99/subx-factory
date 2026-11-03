@@ -13,3 +13,14 @@ for i, c in enumerate(['<!-->%s-->', '<!-- x --!>%s -->', '<!--->%s-->']):
     mk('k%d_stub_comment' % i, PIN, R, None, {'go.html': STUB % (c % EVS)})
     mk('k%d_index_comment' % i, PIN + (c % EVS))
     mk('k%d_noshell_comment' % i, PIN, NS, {'takedown.js': TD}, {'terms.html': NSP % (c % EVS)})
+# B4: a script src browsers read as //evil.example (backslash, entity-encoded tab), even with a keep file at that literal
+# path. The keep files themselves (named with a backslash / a tab) are written by the test at run time, not committed.
+BS = '/* looks local */\n'
+mk('n0_src_backslash_keep', '<script src="/\\evil.example/x.js"></script>' + PIN, {'keep': [keep('\\evil.example/x.js', BS)]})
+mk('n1_src_tab_entity_keep', '<script src="/&#9;/evil.example/x.js"></script>' + PIN, {'keep': [keep('\t/evil.example/x.js', BS)]})
+mk('n2_src_newline', '<script src="/\n/evil.example/x.js"></script>' + PIN)
+mk('n3_import_backslash', PIN, {'overrides': {'modules': [keep('lib/m.js', "import '/\\\\evil.example/x.js';")]}},
+   {'lib/m.js': "import '/\\\\evil.example/x.js';"}, {'about.html': '<html>%s<script type="module" src="lib/m.js"></script></html>' % PIN})
+# B5: meta refresh off the origin on ordinary (non-stub) pages
+for i, u in enumerate(['/\\evil.example/', '/&#9;/evil.example/', '\\\\evil.example/', ' &#10;//evil.example/']):
+    mk('r%d_refresh' % i, PIN, None, None, {'go.html': '<html><head><meta http-equiv="refresh" content="0;url=%s"></head></html>' % u})

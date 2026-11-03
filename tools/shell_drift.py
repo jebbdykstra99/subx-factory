@@ -43,6 +43,10 @@ node_modules, dot-dirs). Besides <script>:
   - Comment ends: browsers end a comment at <!-->, <!---> and --!>, which some Python html.parser versions do not.
     Any of the three anywhere in a page is DRIFT (independent of the Python version), so markup hidden behind one
     can never be skipped by the checker while a browser runs it
+  - URL normalization: every src, href, import specifier and refresh URL is read the way a browser reads it
+    before the local/remote decision (entities decoded once by the parser, leading/trailing C0 controls and spaces
+    stripped, tab/CR/LF removed anywhere, \\ read as /, %2e read as . for local paths). Anything that then starts
+    with // or a scheme is remote
 Runtime injection detection is BEST-EFFORT static analysis: createElement('script') or a non-literal createElement,
 import(), importScripts, document.write('<script'), eval, new Function, Worker/SharedWorker, serviceWorker.register.
 Each is DRIFT unless the declaring entry carries "injects": "<reason>"; one that names a factory/shell file is always
@@ -53,6 +57,7 @@ fork is DRIFT.
 Never writes to the room, Firestore, or the network. Exit 1 with --strict when any room has DRIFT.
 """
 import argparse, glob, hashlib, json, os, posixpath, re, subprocess, sys
+from urllib.parse import unquote
 from html.parser import HTMLParser
 
 PIN_RE = re.compile(r'^https://cdn\.jsdelivr\.net/gh/jebbdykstra99/subx-factory@([0-9a-f]{40})/shell/(v[0-9.]+)/(factory(?:-[a-z]+)?\.js)$')
@@ -244,9 +249,16 @@ def scripts(room):
     return out
 
 
+def norm_url(u):
+    """A URL as the browser's URL parser sees it (attribute entities are already decoded once by the parser): strip
+    leading/trailing C0 controls and spaces, drop tab/CR/LF anywhere, read \\ as / (http(s) pages)."""
+    u = re.sub(r'^[\x00-\x20]+|[\x00-\x20]+$', '', u or '')
+    return re.sub(r'[\t\n\r]', '', u).replace('\\', '/')
+
+
 def local_ref(base_file, src):
     """Room-relative posix path for a local src (relative to base_file), or None if it escapes the room."""
-    clean = src.split('#', 1)[0].split('?', 1)[0]
+    clean = unquote(norm_url(src).split('#', 1)[0].split('?', 1)[0])
     if clean.startswith('/'):
         rel = posixpath.normpath(clean.lstrip('/'))
     else:
@@ -449,7 +461,7 @@ CSS_JSURL_RE = re.compile(r"""url\(\s*['"]?\s*javascript:""", re.I)
 def css_notes(text):
     out = []
     for m in CSS_IMPORT_RE.finditer(text):
-        if REMOTE_RE.match(m.group(1)) and not m.group(1).lower().startswith('data:'):
+        if REMOTE_RE.match(norm_url(m.group(1))) and not m.group(1).lower().startswith('data:'):
             out.append('CSS @import of remote %s' % m.group(1))
     if CSS_JSURL_RE.search(text):
         out.append('CSS url(javascript:...) (inert in current browsers)')
@@ -474,8 +486,8 @@ def redirect_stub(pg):
             return False, 'it preloads a script'
     for mt in pg.metas:
         if mt['equiv'] == 'refresh':
-            u = re.sub(r'[\x00-\x20]', '', refresh_url(mt['content']))
-            if u and not (u.startswith('/') and not u.startswith(('//', '/\\'))) and not u.startswith(('#', '?')):
+            u = re.sub(r'[\x00-\x20]', '', norm_url(refresh_url(mt['content'])))
+            if u and not (u.startswith('/') and not u.startswith('//')) and not u.startswith(('#', '?')):
                 return False, 'its meta refresh does not stay on the origin'
     code = [s for s in pg.out if (s['attrs'].get('type') or '').strip().lower() not in DATA_TYPES
             and (s['attrs'].get('src') is not None or s['text'].strip())]
@@ -526,6 +538,9 @@ def check(room, mans):
                 continue
             fn = posixpath.normpath(e['file'])
             p = os.path.join(room, fn)
+            if re.search(r'[\x00-\x20\\%]', e['file']):
+                f.append('%s entry %r has a space, control character, backslash or %% in its path: a browser never requests '
+                         'that literal path' % (kind, e['file']))
             if not os.path.isfile(p):
                 f.append('%s %s declared but missing' % (kind, fn))
             elif not e.get('sha256'):
@@ -651,21 +666,23 @@ def check(room, mans):
         for mt in pg.metas:
             if mt['equiv'] != 'refresh':
                 continue
-            u, where = refresh_url(mt['content']), '%s:%d' % (page, mt['line'])
+            raw_u, where = refresh_url(mt['content']), '%s:%d' % (page, mt['line'])
+            u = norm_url(raw_u)
             if not u:
                 continue
             if _jsurl(u) or re.match(r'^(?:data|blob|vbscript|filesystem):', re.sub(r'[\x00-\x20]', '', u), re.I):
                 f.append('%s <meta http-equiv=refresh> to a %s URL' % (where, u.split(':', 1)[0].lower()))
             elif REMOTE_RE.match(u):
-                if (page, u) in refresh_decl:
-                    used_refresh.add((page, u))
+                key = (page, u) if (page, u) in refresh_decl else (page, raw_u)
+                if key in refresh_decl:
+                    used_refresh.add(key)
                     w.append('%s <meta http-equiv=refresh> to remote %s (declared)' % (where, u))
                 else:
                     f.append('%s undeclared <meta http-equiv=refresh> to remote %s (declare it in overrides.refresh)' % (where, u))
         # C8: remote modulepreload / preload-as-script / HTML import (no code runs from these alone)
         for ln in pg.links:
             rel_ = (ln['attrs'].get('rel') or '').lower().split()
-            href = (ln['attrs'].get('href') or '').strip()
+            href = norm_url(ln['attrs'].get('href'))
             if href and REMOTE_RE.match(href) and ('modulepreload' in rel_ or 'import' in rel_ or
                                                     ('preload' in rel_ and (ln['attrs'].get('as') or '').lower() in ('script', 'worker'))):
                 w.append('%s:%d remote <link rel=%s href=%s>' % (page, ln['line'], ' '.join(rel_), href))
@@ -690,8 +707,7 @@ def check(room, mans):
                     f.append('%s undeclared <%s srcdoc> (sha256 %s)' % (where, tag, h[:12]))
                 ns_add(page, where, '<%s srcdoc>' % tag, False)
                 continue
-            src = (a.get('src') if tag in ('iframe', 'frame', 'embed') else a.get('data')) or ''
-            src = src.strip()
+            src = norm_url((a.get('src') if tag in ('iframe', 'frame', 'embed') else a.get('data')) or '')
             if tag in ('object', 'embed'):
                 ns_add(page, where, '<%s>' % tag, False)
                 if (page, src) in frame_decl:
@@ -729,7 +745,7 @@ def check(room, mans):
                 inline_js.append((where + ' inline', s['text'], decl))
                 needs.setdefault(page, 'inline <script>')  # C12
                 continue
-            src = src.strip()
+            src = norm_url(src)
             runs = typ in JS_TYPES and 'nomodule' not in a and not s['inert'] and not s['dup']
             if FIREBASE_RE.match(src):
                 needs.setdefault(page, 'Firebase SDK')  # C12
@@ -820,8 +836,9 @@ def check(room, mans):
     def static_imports(text, where, origin, decl):
         allowed = set(decl.get('imports') or [])
         for spec in import_specs(text):
+            raw_spec, spec = spec, norm_url(spec)
             if REMOTE_RE.match(spec) or not spec.startswith(('.', '/')):
-                if spec not in allowed:
+                if spec not in allowed and raw_spec not in allowed:
                     f.append('%s statically imports %s (not in the declaring entry\'s "imports")' % (where, spec))
                 if SHELL_REF_RE.search(spec):
                     f.append('%s statically imports a factory/shell file %s' % (where, spec))
@@ -890,7 +907,7 @@ def check(room, mans):
             if decl.get('injects'):
                 f.append('%s noShell page declares inline code with "injects" (%s): inline code on a noShell page may not '
                          'inject or evaluate code' % (where, str(decl['injects'])[:40]))
-            rem = [x for x in (decl.get('imports') or []) if isinstance(x, str) and (REMOTE_RE.match(x) or not x.startswith(('.', '/')))]
+            rem = [x for x in (decl.get('imports') or []) if isinstance(x, str) and (REMOTE_RE.match(norm_url(x)) or not norm_url(x).startswith(('.', '/')))]
             if rem:
                 f.append('%s noShell page declares remote "imports" %s: inline code on a noShell page may not import remote modules'
                          % (where, ', '.join(rem)))
@@ -940,10 +957,10 @@ def suggest(room):
     for page, pg in pages(room):
         if page != 'index.html' and redirect_stub(pg)[0]:
             continue  # C14: redirect stubs need neither noShell nor an inline hash
-        pinned = any(PIN_RE.match((s.get('attrs') or {}).get('src', '').strip()) for s in pg.out)
+        pinned = any(PIN_RE.match(norm_url((s.get('attrs') or {}).get('src'))) for s in pg.out)
         if page != 'index.html' and not pinned and (pg.code or any(
-                (s['attrs'].get('src') and (not REMOTE_RE.match(s['attrs']['src'].strip())
-                                            or FIREBASE_RE.match(s['attrs']['src'].strip())))
+                (s['attrs'].get('src') and (not REMOTE_RE.match(norm_url(s['attrs']['src']))
+                                            or FIREBASE_RE.match(norm_url(s['attrs']['src']))))
                 or (s['attrs'].get('src') is None and (s['attrs'].get('type') or '').lower() not in DATA_TYPES
                     and s['text'].strip()) for s in pg.out)):
             out['noShell'].append(page)
@@ -959,8 +976,8 @@ def suggest(room):
             a = s['attrs']
             if a.get('src') is None and (a.get('type') or '').lower() not in DATA_TYPES and s['text'].strip():
                 out['inline'].append({'page': page, 'sha256': sha256b(s['text'].encode('utf-8')), 'reason': 'TODO'})
-            elif a.get('src') and not REMOTE_RE.match(a['src'].strip()):
-                rel = local_ref(page, a['src'].strip())
+            elif a.get('src') and not REMOTE_RE.match(norm_url(a['src'])):
+                rel = local_ref(page, a['src'])
                 if rel and os.path.isfile(os.path.join(room, rel)):
                     out['scripts'].append({'file': rel, 'sha256': sha256(os.path.join(room, rel)), 'reason': 'TODO'})
     out['scripts'] = list({e['file']: e for e in out['scripts']}.values())

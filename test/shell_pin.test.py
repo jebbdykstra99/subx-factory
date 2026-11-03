@@ -595,11 +595,21 @@ ADV7_EXPECT = {}
 for i, tok in enumerate(['<!-->', '--!>', '<!--->']):  # B1-B3 comment ends
     for kind in ('stub', 'index', 'noshell'):
         ADV7_EXPECT['k%d_%s_comment' % (i, kind)] = 'has %s: browsers end a comment there' % tok
+# B4/B5: URLs are read the way a browser reads them (\\ is /, tab/CR/LF dropped, edge C0/space stripped)
+ADV7_PREP = {'n0_src_backslash_keep': {'\\evil.example/x.js': '/* looks local */\n'},
+             'n1_src_tab_entity_keep': {'\t/evil.example/x.js': '/* looks local */\n'}}
+for name in ('n0_src_backslash_keep', 'n1_src_tab_entity_keep', 'n2_src_newline'):
+    ADV7_EXPECT[name] = 'loads undeclared remote script //evil.example/x.js'
+ADV7_EXPECT['n3_import_backslash'] = 'statically imports ///evil.example/x.js'
+for i in range(4):
+    ADV7_EXPECT['r%d_refresh' % i] = 'go.html:1 undeclared <meta http-equiv=refresh> to remote //evil.example/'
 # ADV7 more
 ok(sorted(ADV7_EXPECT) == sorted(x for x in os.listdir(ADV7) if os.path.isdir(os.path.join(ADV7, x))), 'every adv7 fixture room has an expectation')
 for name, needle in sorted(ADV7_EXPECT.items()):
     with tempfile.TemporaryDirectory() as t:
         d = os.path.join(t, name); shutil.copytree(os.path.join(ADV7, name), d)
+        for fn, body in ADV7_PREP.get(name, {}).items():
+            os.makedirs(os.path.dirname(os.path.join(d, fn)), exist_ok=True); open(os.path.join(d, fn), 'w').write(body)
         r = run(d)
         ok(r['status'] == 'DRIFT' and any(needle in x for x in r['findings']),
            'adv7 %s = DRIFT with "%s" (%s %s)' % (name, needle, r['status'], r['findings']))
@@ -629,6 +639,12 @@ for name in ('gaichat', '415chat', 'atmchat'):
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import shell_drift as SD  # noqa: E402
+for raw, want in [('/\\evil.example/x.js', '//evil.example/x.js'), ('\x00 /\t/evil.example/\n', '//evil.example/'),
+                  ('\\\\evil.example/', '//evil.example/'), ('lib/a.js', 'lib/a.js'), (None, '')]:
+    ok(SD.norm_url(raw) == want, 'norm_url(%r) = %r (got %r)' % (raw, want, SD.norm_url(raw)))
+    ok(bool(SD.REMOTE_RE.match(SD.norm_url(raw))) == want.startswith('//'), 'norm_url(%r) remote decision' % (raw,))
+ok(SD.local_ref('index.html', '%2e%2e/x.js') is None and SD.local_ref('a/b.html', '%2e%2e/x.js') == 'x.js',
+   'local_ref percent-decodes %2e before deciding whether a path leaves the room')
 two = INTEG + ' sha512-' + 'A' * 86 + '=='
 ok(SD.csp_allows_pin({'script-src': ["'%s'" % INTEG]}, URL, INTEG, None), 'csp_allows_pin: the single pin hash listed = allowed')
 ok(not SD.csp_allows_pin({'script-src': ["'%s'" % INTEG]}, URL, two, None), 'csp_allows_pin: only one of two integrity hashes listed = blocked')
