@@ -589,6 +589,21 @@ for tag, base, expect in (('adv5', ADV5, ADV5_EXPECT), ('adv6', ADV6, ADV6_EXPEC
                 good = good and not r['findings'] and not r['warnings']
             ok(good, '%s %s = %s%s (%s %s %s)' % (tag, name, st, ' with "%s"' % needle if needle else '', r['status'], r['findings'], r['warnings']))
 
+# adv7: review fixes (Key 2 at 7aa0716). Every room must DRIFT with the needle.
+ADV7 = os.path.join(ROOT, 'test', 'fixtures', 'shell_drift', 'adv7')
+ADV7_EXPECT = {}
+for i, tok in enumerate(['<!-->', '--!>', '<!--->']):  # B1-B3 comment ends
+    for kind in ('stub', 'index', 'noshell'):
+        ADV7_EXPECT['k%d_%s_comment' % (i, kind)] = 'has %s: browsers end a comment there' % tok
+# ADV7 more
+ok(sorted(ADV7_EXPECT) == sorted(x for x in os.listdir(ADV7) if os.path.isdir(os.path.join(ADV7, x))), 'every adv7 fixture room has an expectation')
+for name, needle in sorted(ADV7_EXPECT.items()):
+    with tempfile.TemporaryDirectory() as t:
+        d = os.path.join(t, name); shutil.copytree(os.path.join(ADV7, name), d)
+        r = run(d)
+        ok(r['status'] == 'DRIFT' and any(needle in x for x in r['findings']),
+           'adv7 %s = DRIFT with "%s" (%s %s)' % (name, needle, r['status'], r['findings']))
+
 # C15 is scoped to noShell pages: the b2 page running the pin keeps its declared "injects"
 with tempfile.TemporaryDirectory() as t:
     d = os.path.join(t, 'b2'); shutil.copytree(os.path.join(ADV5, 'b2_noshell_inline_injects_declared'), d)
@@ -639,6 +654,13 @@ ok(not stub_of('<base href="https://e.example/"><script>%s</script>' % TPL)[0], 
 ok(not stub_of('<link rel="modulepreload" href="/x.js"><script>%s</script>' % TPL)[0], 'C14: a script preload disqualifies a stub')
 ok(not stub_of('<button formaction="https://e.example/">x</button><script>%s</script>' % TPL)[0], 'C14: formaction disqualifies a stub')
 ok(stub_of('<meta http-equiv="refresh" content="0;url=/#explore"><script>%s</script>' % TPL)[0], 'C14: same-origin meta refresh keeps a stub')
+
+# comment ends are flagged on the raw page, whatever html.parser makes of them
+with tempfile.TemporaryDirectory() as t:
+    for i, html in enumerate(['<html><!-->x-->', '<html><!-- a --!> b -->', '<html><!--->x-->', '<html><!---->ok<!-- ok --></html>']):
+        open(os.path.join(t, 'p%d.html' % i), 'w').write(html)
+    traps = {pg: p_.comment_traps for pg, p_ in SD.pages(t)}
+    ok(all(traps['p%d.html' % i] for i in range(3)) and not traps['p3.html'], 'comment ends: <!-->, --!>, <!---> flagged; <!----> and <!-- --> are not')
 
 print('\n%d failure(s)' % len(fails))
 sys.exit(1 if fails else 0)
