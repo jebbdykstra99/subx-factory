@@ -59,6 +59,8 @@ fork is DRIFT.
 Never writes to the room, Firestore, or the network. Exit 1 with --strict when any room has DRIFT.
 """
 import argparse, glob, hashlib, json, os, posixpath, re, subprocess, sys
+from collections import Counter
+from html import unescape as html_unescape
 from urllib.parse import unquote
 from html.parser import HTMLParser
 
@@ -74,11 +76,16 @@ JS_TYPES = ('', 'text/javascript', 'application/javascript', 'module', 'text/ecm
 # a <script> inside these never runs as a page script (template/noscript content, raw text, foreign content)
 INERT_CTX = ('template', 'noscript', 'textarea', 'title', 'xmp', 'noembed', 'noframes', 'iframe', 'svg', 'math', 'plaintext')
 PAGE_EXTS = ('.html', '.htm', '.xhtml', '.shtml', '.svg', '.php', '.phtml')
-INJECT_RE = re.compile(r"""createElement(?:NS)?\s*\([^)]*?['"`]script['"`]\s*\)|createElement\s*\(\s*[^'"`\s)]|\bimport\s*\("""
-                       r"""|\bimportScripts\s*\(|document\s*\.\s*write(?:ln)?\s*\([^)]*<\s*script|\beval\s*\(|[(,=:]\s*eval\s*[),;]|\bnew\s+Function\s*\("""
-                       r"""|\bnew\s+(?:Shared)?Worker\s*\(|serviceWorker\s*\.\s*register""", re.I)
-# static ES module imports / re-exports: import x from 'spec', import 'spec', export {a} from 'spec'
-IMPORT_RE = re.compile(r"""(?:^|[;{}])\s*(?:import|export)\s*(?:[\w*{}\s,$]+?\s*from\s*)?(['"])([^'"\n]+)\1""", re.M)
+# B12: JS lets a comment stand wherever whitespace may, so every gap between tokens below also skips comments
+JS_GAP = r"""(?:\s|/\*[\s\S]*?\*/|//[^\n]*)*"""
+INJECT_RE = re.compile((r"""createElement(?:NS)?G\([^)]*?['"`]script['"`]G\)|createElementG\(G[^'"`\s)/]|\bimportG\("""
+                        r"""|\bimportScriptsG\(|document\s*\.\s*write(?:ln)?\s*\([^)]*<\s*script|\bevalG\(|[(,=:]G\s*evalG[),;]"""
+                        r"""|\bnew(?:\s|/\*[\s\S]*?\*/)+FunctionG\(|\bnew(?:\s|/\*[\s\S]*?\*/)+(?:Shared)?WorkerG\("""
+                        r"""|serviceWorkerG\.G\s*register""").replace('G', JS_GAP), re.I)
+# static ES module imports / re-exports: import x from 'spec', import 'spec', export {a} from 'spec'. Comments may
+# sit anywhere between the tokens (/**/import, import/**/'x', from/**/'x'); they are skipped, not trusted (B12)
+IMPORT_RE = re.compile((r"""(?:^|(?<=[\s;{}/)]))(?:import|export)G(?:(?:[\w*{}\s,$]|/\*[\s\S]*?\*/|//[^\n]*\n)*?(?<![\w$])fromG)?"""
+                        r"""(['"])([^'"\n]*)\1""").replace('G', JS_GAP), re.M)
 REMOTE_RE = re.compile(r'^(?:[a-z][a-z0-9+.-]*:|//)', re.I)
 SHELL_REF_RE = re.compile(r'factory(?:-[a-z]+)?\.js|subx-factory|/shell/v\d', re.I)
 SHELL_HEADER_RE = re.compile(r'/\*\s*SubX factory(?:-[a-z]+)?\.js\b')
@@ -139,8 +146,19 @@ class _Page(HTMLParser):
         super().__init__(convert_charrefs=False)
         self.out, self.code, self.frames, self.bases, self._cur = [], [], [], [], None
         self.metas, self.links, self.styles, self._style = [], [], [], None
-        self.forms, self.comments, self.comment_traps = [], [], []
+        self.forms, self.comments, self.comment_traps, self.tags = [], [], [], []
         self._ctx = {t: 0 for t in INERT_CTX}
+
+    def feed(self, data):
+        self.raw = getattr(self, 'raw', '') + data
+        super().feed(data)
+
+    @property
+    def toks(self):
+        """The page as a browser's tokenizer reads it (browser_tokens), for the B8-B10 checks and C14/C15 grammar."""
+        if getattr(self, '_toks_for', None) != len(self.raw):
+            self._toks, self._toks_for = browser_tokens(self.raw), len(self.raw)
+        return self._toks
 
     def _attrs(self, tag, attrs, line):
         d, dup = {}, []
@@ -159,6 +177,7 @@ class _Page(HTMLParser):
 
     def _start(self, tag, attrs, closed):
         line = self.getpos()[0]
+        self.tags.append((tag, tuple((k.lower(), v) for k, v in attrs)))
         a, dup = self._attrs(tag, attrs, line)
         if tag == 'script':
             # SVG <script> loads its source from href / xlink:href, not src (C7)
@@ -252,10 +271,18 @@ def scripts(room):
 
 
 def norm_url(u):
-    """A URL as the browser's URL parser sees it (attribute entities are already decoded once by the parser): strip
-    leading/trailing C0 controls and spaces, drop tab/CR/LF anywhere, read \\ as / (http(s) pages)."""
+    """An HTML attribute URL as the browser's URL parser sees it (attribute entities are already decoded once by the
+    parser): strip leading/trailing C0 controls and spaces, drop tab/CR/LF anywhere, read \\ as / (http(s) pages).
+    HTML attributes only: JS specifiers go through norm_js (B11)."""
     u = re.sub(r'^[\x00-\x20]+|[\x00-\x20]+$', '', u or '')
     return re.sub(r'[\t\n\r]', '', u).replace('\\', '/')
+
+
+def norm_js(u):
+    """A JS module specifier as the URL parser sees it. Unlike an HTML attribute, \\ is a JS string escape, so
+    callers reject specifiers that contain one (B11) rather than read it as /."""
+    u = re.sub(r'^[\x00-\x20]+|[\x00-\x20]+$', '', u or '')
+    return re.sub(r'[\t\n\r]', '', u)
 
 
 def local_ref(base_file, src):
@@ -463,11 +490,209 @@ CSS_JSURL_RE = re.compile(r"""url\(\s*['"]?\s*javascript:""", re.I)
 def css_notes(text):
     out = []
     for m in CSS_IMPORT_RE.finditer(text):
-        if REMOTE_RE.match(norm_url(m.group(1))) and not m.group(1).lower().startswith('data:'):
+        if '\\' in m.group(1):  # CSS escapes (\2f, \/) are decoded before the URL is parsed
+            out.append('CSS @import with a backslash escape %s' % m.group(1))
+        elif REMOTE_RE.match(norm_js(m.group(1))) and not m.group(1).lower().startswith('data:'):
             out.append('CSS @import of remote %s' % m.group(1))
     if CSS_JSURL_RE.search(text):
         out.append('CSS url(javascript:...) (inert in current browsers)')
     return out
+
+
+# ---- B8-B10 and C14/C15 allowlist: a small tokenizer that follows the HTML spec's tokenizer states (data, tag,
+# comment, bogus comment, doctype, RCDATA/RAWTEXT/script data, plaintext). It does not build a tree. It is used
+# to compare against html.parser, and to hold redirect stubs and noShell pages to a small accepted grammar.
+RAW_TEXT = ('textarea', 'title', 'noscript', 'iframe', 'xmp', 'noembed', 'noframes')  # RCDATA/RAWTEXT (noscript: scripting on)
+RAW_ALL = RAW_TEXT + ('script', 'style')
+_WS = '\t\n\f\r '
+_TAGNAME_RE = re.compile(r'[^\t\n\f\r />]*')
+_ATTRNAME_RE = re.compile(r'[^\t\n\f\r />][^\t\n\f\r /=>]*')
+_EQ_RE = re.compile(r'[\t\n\f\r ]*=[\t\n\f\r ]*')
+_UNQ_RE = re.compile(r'[^\t\n\f\r >]*')
+_CEND_RE = re.compile(r'--!?>')
+
+
+def browser_tokens(raw):
+    """Tokens as a browser's tokenizer reads the page (HTML namespace only; foreign content is handled by the callers
+    conservatively). Each token is a dict with kind start|end|comment|decl|bogus|raw and pos (offset)."""
+    out, i, n = [], 0, len(raw)
+    while i < n:
+        j = raw.find('<', i)
+        if j < 0:
+            break
+        i, nx = j, raw[j + 1:j + 2]
+        if raw.startswith('<!--', i):
+            if raw.startswith('<!-->', i) or raw.startswith('<!--->', i):
+                k = raw.find('>', i + 4)
+                out.append({'kind': 'comment', 'text': raw[i + 4:k], 'pos': i})
+                i = k + 1
+                continue
+            m = _CEND_RE.search(raw, i + 4)
+            out.append({'kind': 'comment', 'text': raw[i + 4:m.start() if m else n], 'pos': i})
+            i = m.end() if m else n
+            continue
+        if nx in ('!', '?') or (nx == '/' and raw[i + 2:i + 3] and raw[i + 2] != '>'
+                                and not (raw[i + 2].isascii() and raw[i + 2].isalpha())):
+            k = raw.find('>', i + 2)  # doctype, bogus comment (<!x, <?x, </1): all end at the first >
+            out.append({'kind': 'decl' if nx == '!' else 'bogus', 'text': raw[i + 2:k if k >= 0 else n], 'pos': i})
+            i = k + 1 if k >= 0 else n
+            continue
+        if nx == '/' and raw[i + 2:i + 3] in ('>', ''):
+            i += 3
+            continue
+        end = nx == '/'
+        k = i + 2 if end else i + 1
+        if not (raw[k:k + 1].isascii() and raw[k:k + 1].isalpha()):
+            i += 1  # a literal '<'
+            continue
+        name = _TAGNAME_RE.match(raw, k).group(0).lower()
+        k += len(name)
+        attrs, closed, done = [], False, False
+        while k < n:
+            c = raw[k]
+            if c in _WS:
+                k += 1
+            elif c == '>':
+                k += 1
+                done = True
+                break
+            elif c == '/':
+                if raw[k + 1:k + 2] == '>':
+                    closed, done, k = True, True, k + 2
+                    break
+                k += 1
+            else:
+                an = _ATTRNAME_RE.match(raw, k).group(0)
+                k += len(an)
+                val, m = None, _EQ_RE.match(raw, k)
+                if m:
+                    k = m.end()
+                    if raw[k:k + 1] in ('"', "'"):
+                        e = raw.find(raw[k], k + 1)
+                        e = n if e < 0 else e
+                        val, k = raw[k + 1:e], e + 1
+                    else:
+                        val = _UNQ_RE.match(raw, k).group(0)
+                        k += len(val)
+                attrs.append((an.lower(), val))
+        if not done:
+            break  # EOF in a tag: the browser drops the tag
+        out.append({'kind': 'end' if end else 'start', 'name': name, 'attrs': attrs, 'closed': closed, 'pos': i})
+        i = k
+        if end:
+            continue
+        if name == 'plaintext':
+            out.append({'kind': 'raw', 'name': name, 'text': raw[k:], 'pos': k})
+            break
+        if name in RAW_ALL:  # a self-closing flag is ignored on these: the content still runs to </name
+            m = re.compile(r'</%s[\t\n\f\r />]' % re.escape(name), re.I).search(raw, k)
+            e = m.start() if m else n
+            out.append({'kind': 'raw', 'name': name, 'text': raw[k:e], 'pos': k, 'attrs': attrs})
+            i = e
+    return out
+
+
+def _ln(raw, pos):
+    return raw.count('\n', 0, pos) + 1
+
+
+def _attr_key(name, attrs):
+    return (name, tuple((k, html_unescape(v) if v is not None else None) for k, v in attrs))
+
+
+def prescan(raw, toks, pg):
+    """B8-B10 (all pages): markup that html.parser and a browser read differently. Returns findings (str)."""
+    f = []
+    foreign = None  # offset of the first <svg>/<math>: after it the browser may be in foreign content
+    for t in toks:
+        if t['kind'] == 'start' and t['name'] in ('svg', 'math') and foreign is None:
+            foreign = t['pos']
+        if t['kind'] != 'raw':
+            continue
+        where = '%d <%s>' % (_ln(raw, t['pos']), t['name'])
+        if t['name'] == 'plaintext':
+            f.append('%s: everything after <plaintext> is text to a browser but markup to the checker' % where)
+        elif '<!--' in t['text'] and t['name'] in RAW_TEXT:
+            f.append('%s contains <!--: browsers read it as text, the checker as a comment that can hide markup' % where)
+        elif '<!--' in t['text'] and t['name'] == 'script':
+            f.append('%s script text contains <!--: browsers can then run past the first </script> '
+                     '(script double-escape)' % where)
+        elif foreign is not None and t['pos'] > foreign and re.search(r'<[A-Za-z!/?]', t['text']):
+            f.append('%s contains markup after an <svg>/<math>: in foreign content a browser parses it as tags' % where)
+    for m in re.finditer(r'<!\[', raw):
+        f.append('%d has <![ (CDATA or marked section): browsers end it at the first > outside svg/math, the checker '
+                 'at ]]>' % _ln(raw, m.start()))
+    for t in toks:
+        if t['kind'] == 'decl' and not re.match(r'(?i)^doctype[\t\n\f\r ]+html[\t\n\f\r ]*$', t['text']):
+            f.append('%d has <!%s>: only <!DOCTYPE html> is allowed (browsers end a declaration at the first >)'
+                     % (_ln(raw, t['pos']), t['text'][:30]))
+    # differential: every start tag the browser sees must be one the checker saw, with the same attributes, and
+    # every inline script text must be the text the checker hashed
+    mine = Counter(_attr_key(t['name'], t['attrs']) for t in toks if t['kind'] == 'start')
+    py = Counter((n_, tuple(a_)) for n_, a_ in pg.tags)
+    for (name, attrs), c in sorted((mine - py).items(), key=str):
+        pos = next(t['pos'] for t in toks if t['kind'] == 'start' and _attr_key(t['name'], t['attrs']) == (name, attrs))
+        f.append('%d a browser sees <%s%s> that the checker does not (parsers disagree)'
+                 % (_ln(raw, pos), name, ''.join(' %s=%r' % kv for kv in attrs)[:80]))
+    my_txt = Counter(t['text'] for t in toks if t['kind'] == 'raw' and t['name'] == 'script'
+                     and not any(k in ('src', 'href', 'xlink:href') for k, _ in t['attrs']))
+    py_txt = Counter(s['text'] for s in pg.out if s['attrs'].get('src') is None)
+    for txt in sorted(my_txt - py_txt):
+        pos = next(t['pos'] for t in toks if t['kind'] == 'raw' and t['name'] == 'script' and t['text'] == txt)
+        f.append('%d a browser runs inline script text %r that the checker does not see as one script (parsers disagree)'
+                 % (_ln(raw, pos), txt[:60]))
+    return f
+
+
+NEST_COMMENT = ' %s; edit site.json, not this file ' % NEST_MARK
+# the factory/404.html restore-path bounce, byte for byte (C15: the one inline script a noShell page may carry)
+NOTFOUND_TEMPLATE = (
+    "\n    (function () {\n"
+    "      var path = location.pathname || '/';\n"
+    "      if (path.charAt(0) !== '/') path = '/' + path;\n"
+    "      try { sessionStorage.setItem('subx.restorePath', path + (location.search || '') + (location.hash || '')); } catch (e) {}\n"
+    "      location.replace('/' + (location.search || '') + (location.hash || ''));\n"
+    "    })();\n  ")
+CLASSIC_TYPES = ('', 'text/javascript', 'application/javascript', 'text/ecmascript', 'application/ecmascript')
+
+
+def strict_grammar(pg, kind):
+    """C14/C15 allowlist: redirect stubs (kind 'stub') and noShell pages (kind 'noShell') must stay inside a small
+    grammar, so no parser difference can hide code on them. Returns the violations as 'line: what' strings."""
+    raw, v = pg.raw, []
+    for t in pg.toks:
+        ln, k = _ln(raw, t['pos']), t['kind']
+        if k == 'comment':
+            if t['text'] != NEST_COMMENT:
+                v.append('%d: a comment <!--%s-->' % (ln, t['text'][:40]))
+        elif k == 'decl':
+            if not re.match(r'(?i)^doctype[\t\n\f\r ]+html[\t\n\f\r ]*$', t['text']):
+                v.append('%d: <!%s>' % (ln, t['text'][:40]))
+        elif k == 'bogus':
+            v.append('%d: a bogus comment <%s%s>' % (ln, raw[t['pos'] + 1], t['text'][:40]))
+        elif k == 'start':
+            for an, av in t['attrs']:
+                av = html_unescape(av or '')
+                if an.startswith('on') or _jsurl(av):
+                    v.append('%d: inline code in <%s %s=>' % (ln, t['name'], an))
+            if t['name'] == 'script' and kind == 'stub' and any(an in ('src', 'href', 'xlink:href') for an, _ in t['attrs']):
+                v.append('%d: an external <script>' % ln)
+        elif k == 'raw':
+            if t['name'] == 'plaintext' or '<' in t['text']:
+                v.append('%d: <%s> whose content contains <' % (ln, t['name']))
+            if t['name'] != 'script' or any(an in ('src', 'href', 'xlink:href') for an, _ in t['attrs']):
+                continue
+            typ = html_unescape(dict(reversed(t['attrs'])).get('type') or '').strip().lower()
+            text = t['text'].replace('\r\n', '\n')
+            if typ in CLASSIC_TYPES:
+                if not (NEST_RE.match(text) or BARE_RE.match(text) or (kind == 'noShell' and text == NOTFOUND_TEMPLATE)):
+                    v.append('%d: an inline <script> that is not the %s template' % (ln, 'stub' if kind == 'stub' else 'stub or 404'))
+            elif typ == 'module' and kind == 'noShell':
+                if re.search(r'\\|/\*|//', text):
+                    v.append('%d: an inline module script with a backslash or a comment (specifiers must be plain quoted strings)' % ln)
+            else:
+                v.append('%d: a <script type=%s>' % (ln, typ[:30]))
+    return v
 
 
 def redirect_stub(pg):
@@ -501,11 +726,12 @@ def redirect_stub(pg):
     if (s['attrs'].get('type') or '').strip().lower() not in ('', 'text/javascript') or s['inert'] or s['dup']:
         return False, 'its script is not a plain classic inline script'
     text = s['text'].replace('\r\n', '\n')
-    if NEST_RE.match(text):
-        return True, 'nest stub'
-    if BARE_RE.match(text):
-        return True, 'bare same-origin location.replace'
-    return False, 'its inline script is neither the nest_stubs.py template (slug only) nor a bare same-origin location.replace'
+    if not (NEST_RE.match(text) or BARE_RE.match(text)):
+        return False, 'its inline script is neither the nest_stubs.py template (slug only) nor a bare same-origin location.replace'
+    gv = strict_grammar(pg, 'stub')  # C14 allowlist: the whole page, as a browser tokenizes it
+    if gv:
+        return False, 'it is outside the redirect-stub grammar (line %s)' % gv[0]
+    return (True, 'nest stub') if NEST_RE.match(text) else (True, 'bare same-origin location.replace')
 
 
 def check(room, mans):
@@ -652,9 +878,13 @@ def check(room, mans):
             ns_add(page, where, 'Firebase SDK (%s names %s)' % (kind, fb.group(0)), False)
         return decl
 
-    all_pages = []
+    all_pages, page_objs, ns_preload = [], {}, []
     for page, pg in pages(room):
         all_pages.append(page)
+        page_objs[page] = pg
+        # B8-B10: markup that html.parser and a browser tokenize differently is DRIFT on every page
+        for msg in prescan(pg.raw, pg.toks, pg):
+            f.append('%s:%s' % (page, msg))
         is_stub, stub_why = redirect_stub(pg)
         is_stub = is_stub and page != 'index.html'  # the main page is never a stub, whatever it contains
         if is_stub:
@@ -698,6 +928,7 @@ def check(room, mans):
             if href and REMOTE_RE.match(href) and ('modulepreload' in rel_ or 'import' in rel_ or
                                                     ('preload' in rel_ and (ln['attrs'].get('as') or '').lower() in ('script', 'worker'))):
                 w.append('%s:%d remote <link rel=%s href=%s>' % (page, ln['line'], ' '.join(rel_), href))
+                ns_preload.append((page, '%s:%d' % (page, ln['line']), ' '.join(rel_), href))
         for st in pg.styles:
             for wmsg in css_notes(st['text']):
                 w.append('%s:%d <style> %s' % (page, st['line'], wmsg))
@@ -848,7 +1079,11 @@ def check(room, mans):
     def static_imports(text, where, origin, decl):
         allowed = set(decl.get('imports') or [])
         for spec in import_specs(text):
-            raw_spec, spec = spec, norm_url(spec)
+            if '\\' in spec:  # B11: in JS a backslash is a string escape, not a path separator
+                f.append('%s imports %r: a module specifier with a backslash (an escape the JS parser decodes first)'
+                         % (where, spec[:60]))
+                continue
+            raw_spec, spec = spec, norm_js(spec)
             if REMOTE_RE.match(spec) or not spec.startswith(('.', '/')):
                 if spec not in allowed and raw_spec not in allowed:
                     f.append('%s statically imports %s (not in the declaring entry\'s "imports")' % (where, spec))
@@ -889,6 +1124,9 @@ def check(room, mans):
         decl = modules.get(rel) or keep.get(rel) or {}
         text = open(p, encoding='utf-8', errors='replace').read()
         f.extend(injection_findings(text, rel, bool(decl.get('injects'))))
+        if rel in ns_keep and decl.get('injects'):  # B13
+            f.append('%s is loaded on noShell page %s but declares "injects" (%s): code on a noShell page may not inject '
+                     'or evaluate code' % (rel, ns_keep[rel], str(decl['injects'])[:40]))
         if rel in ns_keep and import_specs(text):
             f.append('%s is loaded on noShell page %s but imports modules (a noShell page may run only keep files and '
                      'declared inline code)' % (rel, ns_keep[rel]))
@@ -911,6 +1149,12 @@ def check(room, mans):
         if pg_ in running:
             w.append('%s is listed in shell.noShell but runs the shell; remove it from noShell' % pg_)
             continue
+        if pg_ in page_objs:  # C15 allowlist grammar
+            for v_ in strict_grammar(page_objs[pg_], 'noShell'):
+                f.append('%s:%s on a noShell page (outside the noShell grammar)' % (pg_, v_))
+        for page_, where, rel_, href in ns_preload:
+            if page_ == pg_:
+                f.append('%s noShell page has remote <link rel=%s href=%s>' % (where, rel_, href))
         for where, what, ok in ns_items.get(pg_, []):
             if not ok:
                 f.append('%s noShell page loads %s: a noShell page may load only keep files%s and declared inline code'
