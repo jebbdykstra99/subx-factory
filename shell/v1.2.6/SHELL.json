@@ -1,0 +1,34 @@
+{
+  "version": "v1.2.6",
+  "immutable": true,
+  "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.6. Never edit files in this folder; a change is a new shell/vX.Y.Z/ folder.",
+  "sourceCommit": "63e2dca439ee694501942eca91b2b9219bed78d9",
+  "sourcePath": "factory/",
+  "url": {
+    "pinned": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@<MERGE_SHA>/shell/v1.2.6/<file>",
+    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@63e2dca439ee694501942eca91b2b9219bed78d9/factory/<file>",
+    "rule": "Pin by full 40-char commit SHA only. Never @main, @latest, a branch, or a semver range."
+  },
+  "files": {
+    "factory.js": {
+      "bytes": 254931,
+      "sha256": "53765ec2c8206b6c153cf1d28324de317097f12b84871c1cda70e55f16d2c7d2",
+      "integrity": "sha384-P1qjkeL0BmNyUksLCAUJJ0Lws2AX1bx7hdOGxVHEbHjXQsof63F7DxNAZQbDXFpY"
+    },
+    "factory-gp.js": {
+      "bytes": 34934,
+      "sha256": "3741c3428fa1ca1f4014765764ff711fc3ae0cba7c838f8ee0f1250824103390",
+      "integrity": "sha384-RQCBXyqrgtRrZp6msosoUwPOzCkN7zEWxhmpJ2dYNZ8uUxk3qdKS/BWtoDl1rHwe"
+    },
+    "factory-rail.js": {
+      "bytes": 10235,
+      "sha256": "c356c97a39202ed8762a8474a2e97b96138a6d5ddc87f7addbded2c30236bca9",
+      "integrity": "sha384-nuY0varqkphgQXWgldfYId21U3CpdC3Bog20Ag3zIR902dvNGSg7JBNQ0PLF//38"
+    },
+    "factory-reports.js": {
+      "bytes": 9369,
+      "sha256": "5a0918168c340c19d600a8ab588c590c2804cff0c9aaa3158555021757094958",
+      "integrity": "sha384-2XmptE38GE0Z6O2tG1ShMoG62+PCLu+67jT+xjmgYa9DzzGeJhIhCcIATrSc07/i"
+    }
+  }
+}

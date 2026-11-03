@@ -25,3 +25,5 @@ jobs:
       - run: python3 -c "import json; json.load(open('rooms.json'))"
       - name: whoMark disclosure mark (assets/whomark in sync, unit + swap tests)
         run: python3 build/whomark.py --check --no-png && node test/whomark.test.js
+      - name: Shared pinned shell (shell/v*/ match SHELL.json; drift checker tests)
+        run: python3 test/shell_pin.test.py
