@@ -597,7 +597,16 @@ def check(room, mans):
     if not isinstance(redirects, list) or not all(isinstance(x, str) for x in redirects):
         f.append('shell.redirects must be a list of page paths')
         redirects = []
-    redirects = {posixpath.normpath(x.lstrip('/')) for x in redirects}
+    good = set()
+    for x in redirects:
+        n = posixpath.normpath(x.lstrip('/')) if x.strip('/') else ''
+        if (not n or re.search(r'[\x00-\x20\\%]', x) or REMOTE_RE.match(x) or x.startswith('//')
+                or '..' in x.split('/') or n == '..' or n.startswith(('../', '/'))):
+            f.append('shell.redirects entry %r is not a page path inside the room (no .., backslash, %%-encoding, '
+                     'scheme or leading //)' % x)
+        else:
+            good.add(n)
+    redirects = good
     for x in sorted(redirects):
         if x == 'index.html':
             f.append('shell.redirects lists index.html: the main page must run the shell')

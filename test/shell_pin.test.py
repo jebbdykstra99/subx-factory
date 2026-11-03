@@ -603,11 +603,15 @@ for name in ('n0_src_backslash_keep', 'n1_src_tab_entity_keep', 'n2_src_newline'
 ADV7_EXPECT['n3_import_backslash'] = 'statically imports ///evil.example/x.js'
 for i in range(4):
     ADV7_EXPECT['r%d_refresh' % i] = 'go.html:1 undeclared <meta http-equiv=refresh> to remote //evil.example/'
+# B6: shell.redirects entries outside the room (the test also puts a stub at <tmp>/outside.html, next to the room)
+for i in range(7):
+    ADV7_EXPECT['d%d_redirects_outside' % i] = 'is not a page path inside the room'
 # ADV7 more
 ok(sorted(ADV7_EXPECT) == sorted(x for x in os.listdir(ADV7) if os.path.isdir(os.path.join(ADV7, x))), 'every adv7 fixture room has an expectation')
 for name, needle in sorted(ADV7_EXPECT.items()):
     with tempfile.TemporaryDirectory() as t:
         d = os.path.join(t, name); shutil.copytree(os.path.join(ADV7, name), d)
+        open(os.path.join(t, 'outside.html'), 'w').write("<html><head><script>location.replace('/')</script></head></html>")
         for fn, body in ADV7_PREP.get(name, {}).items():
             os.makedirs(os.path.dirname(os.path.join(d, fn)), exist_ok=True); open(os.path.join(d, fn), 'w').write(body)
         r = run(d)

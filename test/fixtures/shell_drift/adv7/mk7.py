@@ -24,3 +24,7 @@ mk('n3_import_backslash', PIN, {'overrides': {'modules': [keep('lib/m.js', "impo
 # B5: meta refresh off the origin on ordinary (non-stub) pages
 for i, u in enumerate(['/\\evil.example/', '/&#9;/evil.example/', '\\\\evil.example/', ' &#10;//evil.example/']):
     mk('r%d_refresh' % i, PIN, None, None, {'go.html': '<html><head><meta http-equiv="refresh" content="0;url=%s"></head></html>' % u})
+# B6: shell.redirects entries must name a page inside the room
+for i, x in enumerate(['../outside.html', '/../outside.html', 'nest\\go.html', 'https://evil.example/go.html', '%2e%2e/outside.html',
+                       '//evil.example/go.html', 'nest/../../outside.html']):
+    mk('d%d_redirects_outside' % i, PIN, {'redirects': [x]}, {'nest/go.html': STUB % ''})
