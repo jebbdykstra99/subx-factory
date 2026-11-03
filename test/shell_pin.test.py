@@ -103,8 +103,10 @@ with tempfile.TemporaryDirectory() as t:
     r = run(room(t, 'undeclared', pinned + '<script src="extra.js"></script>', {'base': V}, {'extra.js': b''}))
     ok(r['status'] == 'DRIFT' and any('undeclared local script' in x for x in r['findings']), 'undeclared module = DRIFT')
 
-    r = run(room(t, 'kept', '<script src="gate.js?v=1"></script>' + pinned, {'base': V, 'keep': ['gate.js']}, {'gate.js': b''}))
-    ok(r['status'] == 'OK', 'room file in shell.keep (gate.js) = OK')
+    gate = b'/* room gate */\n'
+    r = run(room(t, 'kept', '<script src="gate.js?v=1"></script>' + pinned,
+                 {'base': V, 'keep': [{'file': 'gate.js', 'sha256': hashlib.sha256(gate).hexdigest(), 'reason': 'E1'}]}, {'gate.js': gate}))
+    ok(r['status'] == 'OK', 'room file in shell.keep (gate.js, sha256-pinned) = OK (%s)' % r['findings'])
 
     pre = 'https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@%s/factory/factory.js' % m['sourceCommit']
     r = run(room(t, 'premerge', '<script src="%s" integrity="%s" crossorigin="anonymous"></script>' % (pre, INTEG), {'base': V}))
@@ -112,6 +114,113 @@ with tempfile.TemporaryDirectory() as t:
     other = pre.replace(m['sourceCommit'], '1' * 40)
     r = run(room(t, 'premerge2', '<script src="%s" integrity="%s" crossorigin="anonymous"></script>' % (other, INTEG), {'base': V}))
     ok(r['status'] == 'DRIFT', 'factory/ path at any other commit = DRIFT')
+
+# ---- Key 2 adversarial rooms (test/fixtures/shell_drift/adv, from the PR #28 Key 2 review): each must be DRIFT ----
+ADV = os.path.join(ROOT, 'test', 'fixtures', 'shell_drift', 'adv')
+ADV_EXPECT = {
+    'a_inline': 'undeclared inline <script>',
+    'b_singlequote': 'undeclared local script app.js',
+    'g_unquoted': 'undeclared local script app.js',
+    'c_commentedpin': 'no shell runs',
+    'd_deep': 'a/b/page.html:1 loads undeclared local script factory-copy.js',
+    'e_dynamic': 'injects a script at runtime',
+    'f_keepmut': "keep entry 'gate.js' must be {file, sha256, reason}",
+}
+for name, needle in sorted(ADV_EXPECT.items()):
+    with tempfile.TemporaryDirectory() as t:
+        d = os.path.join(t, name)
+        shutil.copytree(os.path.join(ADV, name), d)
+        r = run(d)
+        ok(r['status'] == 'DRIFT' and any(needle in x for x in r['findings']),
+           'adv %s = DRIFT with "%s" (%s)' % (name, needle, r['status']))
+
+
+def sha(b_):
+    return hashlib.sha256(b_).hexdigest()
+
+
+def write(d, rel, data):
+    p = os.path.join(d, rel)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    open(p, 'wb' if isinstance(data, bytes) else 'w').write(data)
+
+
+with tempfile.TemporaryDirectory() as t:
+    # precision: the same rooms come out clean once the difference is declared
+    d = os.path.join(t, 'b_declared'); shutil.copytree(os.path.join(ADV, 'b_singlequote'), d)
+    json.dump({'siteId': 'b', 'shell': {'base': V, 'overrides': {'modules': [
+        {'file': 'app.js', 'sha256': sha(b(os.path.join(d, 'app.js'))), 'hooks': ['__subxPlugins'], 'load': 'before', 'reason': 't'}]}}},
+        open(os.path.join(d, 'site.json'), 'w'))
+    r = run(d); ok(r['status'] == 'OK', 'single-quoted local src declared as module = OK (%s)' % r['findings'])
+
+    d = os.path.join(t, 'a_declared'); shutil.copytree(os.path.join(ADV, 'a_inline'), d)
+    html = open(os.path.join(d, 'index.html')).read()
+    body = html.split('<script>', 1)[1].split('</script>', 1)[0]
+    json.dump({'siteId': 'a', 'shell': {'base': V, 'overrides': {'inline': [{'page': 'index.html', 'sha256': sha(body.encode()), 'reason': 't'}]}}},
+              open(os.path.join(d, 'site.json'), 'w'))
+    r = run(d); ok(r['status'] == 'OK', 'inline <script> declared by page + sha256 = OK (%s)' % r['findings'])
+    write(d, 'index.html', html.replace('window.evil=1', 'window.evil=2'))
+    r = run(d); ok(r['status'] == 'DRIFT', 'declared inline script edited = DRIFT')
+
+    d = os.path.join(t, 'c_declared'); shutil.copytree(os.path.join(ADV, 'c_commentedpin'), d)
+    json.dump({'siteId': 'c', 'shell': {'base': V, 'overrides': {'modules': [
+        {'file': 'app.js', 'sha256': sha(b(os.path.join(d, 'app.js'))), 'hooks': [], 'load': 'before', 'reason': 't'}]}}},
+        open(os.path.join(d, 'site.json'), 'w'))
+    r = run(d); ok(r['status'] == 'DRIFT' and r['findings'] == ['no pinned factory.js <script> on any page (no shell runs)'],
+                   'commented-out pin with everything else declared = DRIFT, only "no shell runs" (%s)' % r['findings'])
+
+    # nested page carrying its own real shell copy
+    d = room(t, 'nested_copy', pinned, {'base': V})
+    write(d, 'a/b/page.html', '<script src="factory.js"></script>')
+    write(d, 'a/b/factory.js', b(os.path.join(ROOT, 'factory', 'factory.js')))
+    r = run(d)
+    ok(r['status'] == 'DRIFT' and any('a/b/page.html:1 loads local a/b/factory.js' in x for x in r['findings'])
+       and any('a/b/factory.js is a shell copy' in x for x in r['findings']), 'nested page with its own shell copy = DRIFT (%s)' % r['findings'])
+
+    # unreferenced shell copy with an edited body still carries the SubX factory header
+    d = room(t, 'orphan_copy', pinned, {'base': V})
+    write(d, 'old/f.js', b(os.path.join(ROOT, 'factory', 'factory.js'))[:2000] + b'\n// edited\n')
+    r = run(d); ok(r['status'] == 'DRIFT' and any('old/f.js is a shell copy' in x for x in r['findings']), 'unreferenced edited shell copy = DRIFT')
+
+    # runtime loads of a factory/shell file from declared room JS: DRIFT even with an "injects" reason
+    for label, code in (('dynamic import()', "import('https://cdn.example/factory.js');\n"),
+                        ('createElement script', "var s=document.createElement(\"script\");s.src='factory.js';document.head.appendChild(s);\n")):
+        js = code.encode()
+        d = room(t, 'dyn_' + label.split()[0], '<script src="ext.js"></script>' + pinned,
+                 {'base': V, 'overrides': {'modules': [{'file': 'ext.js', 'sha256': sha(js), 'hooks': [], 'load': 'before', 'reason': 't', 'injects': 'declared'}]}},
+                 {'ext.js': js})
+        r = run(d); ok(r['status'] == 'DRIFT' and any('names a factory/shell file' in x for x in r['findings']),
+                       'declared module doing %s of a shell file = DRIFT (%s)' % (label, r['findings']))
+    js = b"var s=document.createElement('script');s.src='https://maps.example/x.js';document.head.appendChild(s);\n"
+    d = room(t, 'inj_undeclared', '<script src="ext.js"></script>' + pinned,
+             {'base': V, 'overrides': {'modules': [{'file': 'ext.js', 'sha256': sha(js), 'hooks': [], 'load': 'before', 'reason': 't'}]}}, {'ext.js': js})
+    r = run(d); ok(r['status'] == 'DRIFT', 'module injecting a non-shell script without "injects" = DRIFT')
+    d = room(t, 'inj_declared', '<script src="ext.js"></script>' + pinned,
+             {'base': V, 'overrides': {'modules': [{'file': 'ext.js', 'sha256': sha(js), 'hooks': [], 'load': 'before', 'reason': 't', 'injects': 'map widget'}]}}, {'ext.js': js})
+    r = run(d); ok(r['status'] == 'OK', 'module injecting a non-shell script with a declared "injects" reason = OK (%s)' % r['findings'])
+
+    # keep files: sha256 pin enforced, and a keep file that is a shell copy is still DRIFT
+    d = room(t, 'keep_edit', '<script src="gate.js"></script>' + pinned,
+             {'base': V, 'keep': [{'file': 'gate.js', 'sha256': sha(b'one'), 'reason': 'E1'}]}, {'gate.js': b'two'})
+    r = run(d); ok(r['status'] == 'DRIFT' and any('keep gate.js sha256 differs' in x for x in r['findings']), 'keep file edited after pin = DRIFT')
+    shell_bytes = b(os.path.join(ROOT, 'factory', 'factory.js'))
+    d = room(t, 'keep_shell', '<script src="gate.js"></script>' + pinned,
+             {'base': V, 'keep': [{'file': 'gate.js', 'sha256': sha(shell_bytes), 'reason': 'E1'}]}, {'gate.js': shell_bytes})
+    r = run(d); ok(r['status'] == 'DRIFT' and any('gate.js is a shell copy' in x for x in r['findings']), 'keep file that is a shell copy = DRIFT')
+
+    # third-party: emoji-picker@1 without SRI is WARN (not OK, not DRIFT); exact version + integrity is clean
+    d = room(t, 'emoji_warn', pinned + '<script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js"></script>', {'base': V})
+    r = run(d); ok(r['status'] == 'WARN' and r['warnings'], 'emoji-picker-element@1 without SRI = WARN')
+    d = room(t, 'emoji_pinned', pinned + '<script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.21.3/index.js" integrity="sha384-x" crossorigin="anonymous"></script>', {'base': V})
+    r = run(d); ok(r['status'] == 'OK', 'emoji-picker-element exact version + integrity = OK')
+
+    # no fallback host: fastly mirror is not a declared pin
+    d = room(t, 'fastly', pinned.replace('cdn.jsdelivr.net', 'fastly.jsdelivr.net'), {'base': V})
+    r = run(d); ok(r['status'] == 'DRIFT', 'fastly.jsdelivr.net host (no failover loader exists) = DRIFT')
+
+    # data scripts are not code
+    d = room(t, 'ldjson', pinned + '<script type="application/ld+json">{"@type":"WebSite"}</script>', {'base': V})
+    r = run(d); ok(r['status'] == 'OK', 'application/ld+json data block = OK')
 
 print('\n%d failure(s)' % len(fails))
 sys.exit(1 if fails else 0)
