@@ -609,6 +609,11 @@ for i in range(7):
 # B7: keep files on noShell pages are scanned for the C15 Firebase-host patterns
 for i in range(3):
     ADV7_EXPECT['f%d_noshell_keep_firebase' % i] = 'takedown.js is loaded on noShell page terms.html and names the Firebase SDK'
+# Review nit: index.html shaped like a bare stub is still the main page (its inline script is checked, no stub counted)
+ADV7_EXPECT['i0_index_bare_stub'] = 'index.html:1 undeclared inline <script>'
+with tempfile.TemporaryDirectory() as t:
+    d = os.path.join(t, 'i0'); shutil.copytree(os.path.join(ADV7, 'i0_index_bare_stub'), d)
+    r = run(d); ok(r['layers'].get('redirectStubs') == 0, 'index.html is never counted as a redirect stub (%s)' % r['layers'])
 # ADV7 more
 ok(sorted(ADV7_EXPECT) == sorted(x for x in os.listdir(ADV7) if os.path.isdir(os.path.join(ADV7, x))), 'every adv7 fixture room has an expectation')
 for name, needle in sorted(ADV7_EXPECT.items()):

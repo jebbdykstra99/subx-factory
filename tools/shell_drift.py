@@ -654,6 +654,7 @@ def check(room, mans):
     for page, pg in pages(room):
         all_pages.append(page)
         is_stub, stub_why = redirect_stub(pg)
+        is_stub = is_stub and page != 'index.html'  # the main page is never a stub, whatever it contains
         if is_stub:
             stubs.append(page)
         elif page in redirects:

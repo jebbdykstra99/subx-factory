@@ -34,3 +34,5 @@ for i, body in enumerate(["import('https://www.gstatic.com/firebasejs/10.0.0/fir
                           "/* https://cdn.jsdelivr.net/npm/firebase@10/firebase-app.js */\n"]):
     e = keep('takedown.js', body); e['injects'] = 'loader'
     mk('f%d_noshell_keep_firebase' % i, PIN, {'noShell': ['terms.html'], 'keep': [e]}, {'takedown.js': body}, {'terms.html': NSP % ''})
+# Review nit: index.html is never a redirect stub, even when it is shaped exactly like one
+mk('i0_index_bare_stub', "<script>location.replace('/')</script>", None, None, {'about.html': '<html><head>%s</head></html>' % PIN})
