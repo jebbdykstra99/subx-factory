@@ -1,0 +1,1 @@
+{"siteId": "j0_unicode_escape_spec", "shell": {"base": "v1.2.6", "fork": false, "overrides": {"inline": [{"page": "index.html", "sha256": "23d1468db17643ff93dd7e5d4031c47035da7054a5325e289b837509d053e80d", "reason": "r"}], "modules": [{"file": "u002f/u002fevil.example/x.js", "sha256": "037ecd1db38c230c248787e60fd7bfc0cb0101b187b59535b6e7483be762d350", "reason": "r"}]}}}

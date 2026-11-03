@@ -440,7 +440,11 @@ with tempfile.TemporaryDirectory() as t:
                                                    'if it is meant to run without the shell'],
                           'C12: declared inline code on an unpinned page counts as room JS (nest.html not in noShell = DRIFT) (%s)' % f_)
     reshell(d, lambda sh: sh.update(noShell=['terms.html', 'nest.html']))
-    s_, f_, w_ = st(d); ok(s_ == 'OK', 'terms.html + nest.html in shell.noShell = OK (%s)' % f_)
+    s_, f_, w_ = st(d); ok(s_ == 'DRIFT' and f_ == ['nest.html:1: an inline <script> that is not the stub or 404 template on a noShell '
+                                                   'page (outside the noShell grammar)'],
+                          'C15 grammar: declared classic inline code on a noShell page = DRIFT (only the stub/404 templates) (%s)' % f_)
+    write(d, 'nest.html', "<html><script type=\"module\">document.title='nest'</script></html>")
+    s_, f_, w_ = st(d); ok(s_ == 'OK', 'terms.html + nest.html (declared inline module) in shell.noShell = OK (%s)' % f_)
     # C11: a noShell page may load only keep files (noShellOk when the room uses the flag) and declared inline code
     reshell(d, lambda sh: sh.update(keep=[{'file': 'takedown.js', 'sha256': sha(tk), 'reason': 't', 'noShellOk': False}]))
     s_, f_, w_ = st(d); ok(s_ == 'DRIFT' and any('keep file takedown.js (not flagged noShellOk)' in x for x in f_),
@@ -600,7 +604,7 @@ ADV7_PREP = {'n0_src_backslash_keep': {'\\evil.example/x.js': '/* looks local */
              'n1_src_tab_entity_keep': {'\t/evil.example/x.js': '/* looks local */\n'}}
 for name in ('n0_src_backslash_keep', 'n1_src_tab_entity_keep', 'n2_src_newline'):
     ADV7_EXPECT[name] = 'loads undeclared remote script //evil.example/x.js'
-ADV7_EXPECT['n3_import_backslash'] = 'statically imports ///evil.example/x.js'
+ADV7_EXPECT['n3_import_backslash'] = 'a module specifier with a backslash'
 for i in range(4):
     ADV7_EXPECT['r%d_refresh' % i] = 'go.html:1 undeclared <meta http-equiv=refresh> to remote //evil.example/'
 # B6: shell.redirects entries outside the room (the test also puts a stub at <tmp>/outside.html, next to the room)
@@ -626,6 +630,48 @@ for name, needle in sorted(ADV7_EXPECT.items()):
         ok(r['status'] == 'DRIFT' and any(needle in x for x in r['findings']),
            'adv7 %s = DRIFT with "%s" (%s %s)' % (name, needle, r['status'], r['findings']))
 
+# adv8: review fixes (Key 2 at 442d04b, B8-B13). Each room was OK at 442d04b; status and needle now.
+ADV8 = os.path.join(ROOT, 'test', 'fixtures', 'shell_drift', 'adv8')
+ADV8_EXPECT = {}
+# B8/B9: <!-- inside RCDATA/RAWTEXT (text to a browser, a comment to html.parser) and script double-escape, any page
+for t_ in ('textarea', 'title', 'noscript', 'iframe', 'xmp', 'noembed', 'noframes'):
+    for k_ in ('pinned', 'stub'):
+        ADV8_EXPECT['h_%s_%s' % (t_, k_)] = ('DRIFT', '<%s> contains <!--' % t_)
+ADV8_EXPECT['h_dblescape_pinned'] = ('DRIFT', 'script text contains <!--')
+# B10: any <![ (CDATA / marked section), on any page; c_svg_cdata_ok is inert in a browser but DRIFT by rule
+for n_ in ('h_cdata_pinned', 'h_cdata_stub', 'c_svg_cdata_ok'):
+    ADV8_EXPECT[n_] = ('DRIFT', 'has <![ (CDATA or marked section)')
+ADV8_EXPECT['c_bang_gt_ok'] = ('DRIFT', 'has --!>')  # known false positive (<!--!>), kept
+# B11: a JS specifier with a backslash is DRIFT (\\ is a string escape in JS, not a path separator)
+ADV8_EXPECT['j0_unicode_escape_spec'] = ('DRIFT', 'a module specifier with a backslash')
+# B12: comments around import / from are skipped by the scanner
+for n_ in ('j1_comment_before_from', 'j2_comment_before_import', 'j3_comment_after_import', 'j4_noshell_comment_import'):
+    ADV8_EXPECT[n_] = ('DRIFT', 'statically imports https://evil.example/x.js')
+# B13: a keep file loaded on a noShell page may not declare "injects"
+for n_ in ('k0_concat', 'k1_variable', 'k2_createscript', 'k4_escaped_host'):
+    ADV8_EXPECT[n_] = ('DRIFT', 'takedown.js is loaded on noShell page terms.html but declares "injects"')
+# hardening beyond B8-B13: other parser splits, and the C14/C15 grammar
+ADV8_EXPECT['x0_doctype_subset_pinned'] = ('DRIFT', 'only <!DOCTYPE html> is allowed')
+ADV8_EXPECT['x1_svg_style_pinned'] = ('DRIFT', 'contains markup after an <svg>/<math>')
+ADV8_EXPECT['x2_selfclose_inline_pinned'] = ('DRIFT', 'a browser runs inline script text')
+ADV8_EXPECT['x3_stub_extra_comment'] = ('DRIFT', 'outside the redirect-stub grammar (line 1: a comment <!-- hi -->)')
+ADV8_EXPECT['x4_noshell_handler'] = ('DRIFT', 'inline code in <img onerror=> on a noShell page')
+ADV8_EXPECT['x5_noshell_modpreload'] = ('DRIFT', 'noShell page has remote <link rel=modulepreload')
+# controls: must stay OK
+for n_ in ('c_dashdash_ok', 'c_template_comment_ok', 'x6_real_shapes_ok', 'x7_import_comment_local_ok'):
+    ADV8_EXPECT[n_] = ('OK', None)
+ok(sorted(ADV8_EXPECT) == sorted(x for x in os.listdir(ADV8) if os.path.isdir(os.path.join(ADV8, x))), 'every adv8 fixture room has an expectation')
+for name, (st_, needle) in sorted(ADV8_EXPECT.items()):
+    with tempfile.TemporaryDirectory() as t:
+        d = os.path.join(t, name); shutil.copytree(os.path.join(ADV8, name), d)
+        r = run(d)
+        good = r['status'] == st_ and (needle is None or any(needle in x for x in r['findings']))
+        if st_ == 'OK':
+            good = good and not r['findings'] and not r['warnings']
+        ok(good, 'adv8 %s = %s%s (%s %s %s)' % (name, st_, ' with "%s"' % needle if needle else '', r['status'], r['findings'], r['warnings']))
+with tempfile.TemporaryDirectory() as t:
+    d = os.path.join(t, 'x6'); shutil.copytree(os.path.join(ADV8, 'x6_real_shapes_ok'), d)
+    r = run(d); ok(r['layers'].get('redirectStubs') == 1, 'the marker-comment nest stub is still a redirect stub (%s)' % r['layers'])
 # C15 is scoped to noShell pages: the b2 page running the pin keeps its declared "injects"
 with tempfile.TemporaryDirectory() as t:
     d = os.path.join(t, 'b2'); shutil.copytree(os.path.join(ADV5, 'b2_noshell_inline_injects_declared'), d)
@@ -651,6 +697,19 @@ for name in ('gaichat', '415chat', 'atmchat'):
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import shell_drift as SD  # noqa: E402
+# unit checks for the B8-B12 helpers
+toks_ = SD.browser_tokens('<!DOCTYPE html><textarea><!--</textarea><script src=a>x</script><!--->b<script/>c</script>')
+ok([(t_['kind'], t_.get('name')) for t_ in toks_] == [('decl', None), ('start', 'textarea'), ('raw', 'textarea'), ('end', 'textarea'),
+                                                     ('start', 'script'), ('raw', 'script'), ('end', 'script'), ('comment', None),
+                                                     ('start', 'script'), ('raw', 'script'), ('end', 'script')],
+   'browser_tokens: RCDATA ends at </textarea>, <!---> ends a comment, <script/> still opens script data (%s)' % toks_)
+ok(SD.browser_tokens('<a b="1"c=2 d>')[0]['attrs'] == [('b', '1'), ('c', '2'), ('d', None)], 'browser_tokens: spec attribute splitting')
+ok(SD.norm_js('\t./a.js\n') == './a.js' and SD.norm_js('/\\x') == '/\\x', 'norm_js: no backslash-to-slash for JS specifiers (B11)')
+for src_, want_ in (("import a from/**/'x';", ['x']), ("/**/import 'x'", ['x']), ("import/**/'x'", ['x']), ("import // c\n'x'", ['x']),
+                    ("import {a, /* , */ b} from './y.js'", ['./y.js']), ("var s = 'import'; o.import('z')", []), ("export const a = 'x'", [])):
+    ok(SD.import_specs(src_) == want_, 'import_specs(%r) = %s (B12, got %s)' % (src_, want_, SD.import_specs(src_)))
+for src_ in ('import/**/("x")', 'new/**/Function("x")', 'eval /* */ (x)', 'createElement(/**/"script")'):
+    ok(SD.INJECT_RE.search(src_) is not None, 'INJECT_RE sees %r through comments (B12)' % src_)
 for raw, want in [('/\\evil.example/x.js', '//evil.example/x.js'), ('\x00 /\t/evil.example/\n', '//evil.example/'),
                   ('\\\\evil.example/', '//evil.example/'), ('lib/a.js', 'lib/a.js'), (None, '')]:
     ok(SD.norm_url(raw) == want, 'norm_url(%r) = %r (got %r)' % (raw, want, SD.norm_url(raw)))

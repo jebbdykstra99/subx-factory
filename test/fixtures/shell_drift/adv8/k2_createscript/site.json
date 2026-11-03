@@ -1,0 +1,1 @@
+{"siteId": "k2_createscript", "shell": {"base": "v1.2.6", "fork": false, "noShell": ["terms.html"], "keep": [{"file": "takedown.js", "sha256": "0d4901ea5ffce717334f49c54f12d3b13a4b59077d654f040734e4e5650455d2", "reason": "r", "injects": "loader"}]}}

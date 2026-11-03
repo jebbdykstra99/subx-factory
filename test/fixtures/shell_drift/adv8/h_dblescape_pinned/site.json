@@ -1,0 +1,1 @@
+{"siteId": "h_dblescape_pinned", "shell": {"base": "v1.2.6", "fork": false, "overrides": {"inline": [{"page": "index.html", "sha256": "2248bb0ba7d98fa06c525158dd294c0108bb1909a3bb6d91ea703c3e7f52ed1d", "reason": "legacy comment"}]}}}

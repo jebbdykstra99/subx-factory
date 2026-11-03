@@ -1,0 +1,1 @@
+{"siteId": "k0_concat", "shell": {"base": "v1.2.6", "fork": false, "noShell": ["terms.html"], "keep": [{"file": "takedown.js", "sha256": "a3ef1f15d440d30e0bfc33a74e64ff1c5e88c83a1f84b2e0ca7633b9126031be", "reason": "r", "injects": "loader"}]}}

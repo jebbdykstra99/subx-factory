@@ -1,0 +1,1 @@
+{"siteId": "k1_variable", "shell": {"base": "v1.2.6", "fork": false, "noShell": ["terms.html"], "keep": [{"file": "takedown.js", "sha256": "51a016fecd099deb3f6ff85edf5b3462303eb45a31771395194fe15f91ed6014", "reason": "r", "injects": "loader"}]}}

@@ -1,0 +1,9 @@
+<!DOCTYPE html><html><head><!-- hi --><script>
+    (function () {
+      var path = location.pathname || '/go';
+      if (path.charAt(0) !== '/') path = '/' + path;
+      path = path.replace(/\.html$/, '');
+      try { sessionStorage.setItem('subx.restorePath', path + (location.search || '') + (location.hash || '')); } catch (e) {}
+      location.replace('/' + (location.search || '') + (location.hash || ''));
+    })();
+  </script></head></html>
