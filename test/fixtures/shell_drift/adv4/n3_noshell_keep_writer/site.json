@@ -1,0 +1,1 @@
+{"siteId": "n3_noshell_keep_writer", "shell": {"base": "v1.2.6", "fork": false, "keep": [{"file": "takedown.js", "sha256": "c43a510ce2bbf245a015ca4d98ec920cef85b09107250dd0e0e6bb085f3b5608", "reason": "t"}], "noShell": ["terms.html"]}}

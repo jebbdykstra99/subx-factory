@@ -70,10 +70,21 @@
    }
   ],
   "noShell": [
+   "404.html",
+   "agents.html",
+   "apis.html",
+   "coding-agents.html",
+   "evals.html",
    "guidelines.html",
+   "mcp-tools.html",
+   "open-weights.html",
    "privacy.html",
+   "prompt-fail.html",
+   "rag.html",
    "report.html",
-   "terms.html"
+   "ship-notes.html",
+   "terms.html",
+   "tool-desks.html"
   ]
  }
 }

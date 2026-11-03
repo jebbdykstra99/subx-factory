@@ -70,9 +70,20 @@
    }
   ],
   "noShell": [
+   "404.html",
+   "ask-415.html",
+   "east-bay.html",
+   "eats.html",
+   "fog.html",
    "guidelines.html",
+   "housing.html",
+   "mission.html",
+   "nightlife.html",
+   "outdoors.html",
    "privacy.html",
    "report.html",
+   "rider-life.html",
+   "tech-scene.html",
    "terms.html"
   ]
  }
