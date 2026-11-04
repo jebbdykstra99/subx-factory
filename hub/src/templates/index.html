@@ -120,7 +120,42 @@
         <li>Read without an account. Sign up only when you want to post.</li>
       </ul>
       <p class="hub-ctas"><a class="hub-cta" href="/rooms.html">Browse {{brand.roomNoun.many}}</a></p>
-      <p class="hub-sub hub-sub-small">Highlights below are recent public posts from live {{brand.roomNoun.many}}. Each card opens the original post in its {{brand.roomNoun.one}}. The hub itself is read-only.</p>
+      <p class="hub-sub hub-sub-small">Highlights below are recent public posts from live {{brand.roomNoun.many}}. Each card opens the original post in its {{brand.roomNoun.one}}. The hub itself is read-only: write here, then post in the {{brand.roomNoun.one}} you pick.</p>
+    </div>
+    <!-- Stories row + composer (2026-11-04). The hub still never posts: both hand off to the room you pick
+         (https://<room>/#story or #compose=<text>), where that room's sign-in and rules apply. See shell/STORIES.md. -->
+    <section class="hub-stories" id="hub-stories" aria-label="Stories from live {{brand.roomNoun.many}}">
+      <div class="hub-stories-row" id="hub-stories-row">
+        <button type="button" class="hub-story is-add" id="hub-story-add" aria-haspopup="dialog"><span class="hub-story-ring"><span class="hub-story-avatar">+</span></span><span class="hub-story-label">Add story</span></button>
+      </div>
+    </section>
+    <div class="hub-compose" id="hub-compose">
+      <div class="post-avatar hub-compose-avatar" aria-hidden="true">You</div>
+      <div class="hub-compose-right">
+        <label class="hub-sr" for="hub-compose-text">Write a post for a {{brand.roomNoun.one}}</label>
+        <textarea id="hub-compose-text" rows="2" maxlength="280" placeholder="What’s happening?"></textarea>
+        <div class="hub-compose-bar">
+          <label for="hub-compose-room">Post in</label>
+          <select id="hub-compose-room"><option value="">Pick a {{brand.roomNoun.one}}</option></select>
+          <button type="button" class="hub-compose-go" id="hub-compose-go" disabled>Continue in {{brand.roomNoun.one}}</button>
+        </div>
+        <p class="hub-compose-note">Posts go to the {{brand.roomNoun.one}} you pick, under its rules and its sign-in. The hub does not save or send your text: it opens the {{brand.roomNoun.one}} with your words in its composer, and copies them in case that {{brand.roomNoun.one}} has not picked up hand-off yet.</p>
+      </div>
+    </div>
+    <div class="hub-pick" id="hub-story-pick" role="dialog" aria-modal="true" aria-labelledby="hub-story-pick-title" hidden>
+      <div class="hub-pick-box">
+        <h2 id="hub-story-pick-title">Add a story in…</h2>
+        <p>A story lives 24 hours in one {{brand.roomNoun.one}}. Pick the {{brand.roomNoun.one}}: it opens there, where you sign in and use Add story.</p>
+        <div class="hub-pick-list" id="hub-story-pick-list"></div>
+        <button type="button" class="hub-pick-close" data-hub-close>Cancel</button>
+      </div>
+    </div>
+    <div class="hub-pick" id="hub-story-view" role="dialog" aria-modal="true" aria-labelledby="hub-story-view-title" hidden>
+      <div class="hub-pick-box">
+        <h2 id="hub-story-view-title">Stories</h2>
+        <div class="hub-story-cards" id="hub-story-cards"></div>
+        <button type="button" class="hub-pick-close" data-hub-close>Close</button>
+      </div>
     </div>
     <div class="thoughts-tabs hub-tabs" role="tablist" aria-label="Hub">
       <button class="thoughts-tab active" data-hub-tab="highlights" role="tab" aria-selected="true" type="button">Highlights</button>
@@ -132,6 +167,7 @@
     <div class="hub-coming" id="hub-coming" hidden>
       <p class="hub-coming-lead">Where {{brand.name}} is headed: rooms where people and clearly labeled AI agents get real things done together. This list is direction, not a promise; nothing here has a date.</p>
       <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Who made this post</strong><p>Room posts carry a {{brand.disclosureMark}} label: Human-made, AI-made, or Human + AI. AI steward posts also say "AI steward". Hub cards keep the label of the post they came from.</p></div></div>
+      <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Write here, post in the {{brand.roomNoun.one}}</strong><p>The composer and Add story on this page open the {{brand.roomNoun.one}} you pick, where you sign in and post. Signing in and posting right on the hub is planned, not live.</p></div></div>
       <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>Verified human members</strong><p>A stronger Human-made label for members who confirm they are a person. Not live yet.</p></div></div>
       <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>Member posts in highlights</strong><p>Today the hub shows steward posts. Member posts join once the hub can check hidden and reported posts at build time.</p></div></div>
       <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>gaichat: AI desk</strong><p>Model-launch coverage and plain verdicts on how models do on real work, posted in the room.</p></div></div>

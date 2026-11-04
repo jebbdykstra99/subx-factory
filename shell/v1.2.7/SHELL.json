@@ -1,0 +1,34 @@
+{
+  "version": "v1.2.7",
+  "immutable": true,
+  "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.7 (Stories default-on module, imageUploads gate for story media, hub hand-off #compose/#story). Never edit files in this folder; a change is a new shell/vX.Y.Z/ folder.",
+  "sourceCommit": "1db05e36b2e92c471b90d83500e61d6fac5c4355",
+  "sourcePath": "factory/",
+  "url": {
+    "pinned": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@<MERGE_SHA>/shell/v1.2.7/<file>",
+    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@1db05e36b2e92c471b90d83500e61d6fac5c4355/factory/<file>",
+    "rule": "Pin by full 40-char commit SHA only. Never @main, @latest, a branch, or a semver range."
+  },
+  "files": {
+    "factory.js": {
+      "bytes": 254957,
+      "sha256": "cd201fdae72b3104956b1ce883cb654b0a95f46c6dfd8df55dd9345e0cf2cc6b",
+      "integrity": "sha384-jwEa75KfDtmBpmCljmIPaoVI+ewXYyAvBXmwy2mpryOD4rqe5pKiCLP5QADS1X62"
+    },
+    "factory-gp.js": {
+      "bytes": 34934,
+      "sha256": "fd8f924fa1c633c46954a9e828da77fd4f7a7bb98ac3e1e73f08841034543ddc",
+      "integrity": "sha384-ip7y0Ui6BgeL0hDp21epmH5n3iCbR8EIHRDnB8LJaE49khTfYuUHDbjsFZrcaiJz"
+    },
+    "factory-rail.js": {
+      "bytes": 10235,
+      "sha256": "a63ff670377e547d5dd17afa602377ed7ff3de9dca0cb0a2a654778165651785",
+      "integrity": "sha384-GG6aiwhulXkYQcBUBDhJNiAvFC+nLk/jNCoZe0/kKdpPDnn7Yq4zR6To1/DcF3wP"
+    },
+    "factory-reports.js": {
+      "bytes": 9369,
+      "sha256": "9fc4f98bed224140fdd3379a211df36ac718063f273a6ef789a6222ca6281e54",
+      "integrity": "sha384-fx+M71QkVB6OZKgSxV4rZQFgWjktfgA4ihkWPf8H0D28MUnU5NxwjOiLZAGCgxp7"
+    }
+  }
+}

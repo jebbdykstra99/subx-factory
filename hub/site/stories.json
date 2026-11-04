@@ -1,0 +1,100 @@
+{
+ "version": 1,
+ "generated": "2026-11-04T15:54:38Z",
+ "source": "Firestore REST, public reads only (stories, sites) + each room site.json",
+ "ttlHours": 24,
+ "membersShown": false,
+ "rooms": [
+  {
+   "room": "27chat",
+   "name": "27chat",
+   "domain": "27chat.com",
+   "stories": true
+  },
+  {
+   "room": "311chat",
+   "name": "311chat",
+   "domain": "311chat.com",
+   "stories": true
+  },
+  {
+   "room": "415chat",
+   "name": "415chat",
+   "domain": "415chat.com",
+   "stories": true
+  },
+  {
+   "room": "808chat",
+   "name": "808chat",
+   "domain": "808chat.com",
+   "stories": true
+  },
+  {
+   "room": "bartchat",
+   "name": "bartchat",
+   "domain": "bartchat.com",
+   "stories": true
+  },
+  {
+   "room": "boyfriendchat",
+   "name": "boyfriendchat",
+   "domain": "boyfriendchat.com",
+   "stories": true
+  },
+  {
+   "room": "buffetchat",
+   "name": "buffetchat",
+   "domain": "buffetchat.com",
+   "stories": true
+  },
+  {
+   "room": "buffettchat",
+   "name": "buffettchat",
+   "domain": "buffettchat.com",
+   "stories": true
+  },
+  {
+   "room": "ciachat",
+   "name": "ciachat",
+   "domain": "ciachat.com",
+   "stories": true
+  },
+  {
+   "room": "cobrachat",
+   "name": "cobrachat",
+   "domain": "cobrachat.com",
+   "stories": true
+  },
+  {
+   "room": "gaichat",
+   "name": "gaichat",
+   "domain": "gaichat.com",
+   "stories": false
+  },
+  {
+   "room": "gpchat",
+   "name": "gpchat",
+   "domain": "gpchat.com",
+   "stories": false
+  },
+  {
+   "room": "popechat",
+   "name": "popechat",
+   "domain": "popechat.com",
+   "stories": true
+  },
+  {
+   "room": "recruitchat",
+   "name": "recruitchat",
+   "domain": "recruitchat.com",
+   "stories": true
+  },
+  {
+   "room": "samochat",
+   "name": "samochat",
+   "domain": "samochat.com",
+   "stories": true
+  }
+ ],
+ "items": []
+}

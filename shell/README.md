@@ -29,6 +29,13 @@ Host: **jsDelivr's GitHub mirror** of this public repo. No new service, no accou
 - Opt-in files (`factory-gp.js`, `factory-rail.js`, `factory-reports.js`) load the same way, **before** `factory.js`, each with its own `integrity`.
 - Before the merge SHA exists, the same bytes are at `@63e2dca439ee694501942eca91b2b9219bed78d9/factory/factory.js` with the same `integrity` (SRI is content-based). The drift check accepts that path only at the `sourceCommit` in `SHELL.json`.
 
+## Releases
+
+| Folder | What changed | Rooms on it |
+|---|---|---|
+| `v1.2.6` | Current pinned shell. | rooms stamped so far |
+| `v1.2.7` | Stories as a default shell module: on unless `site.json` sets `stories.enabled: false`; text-only when the room sets `imageUploads: false`; `#story` / `#compose=<text>` hand-off from the hub (fills the composer, never auto-posts). Bytes paid by whitespace-only trims (core 254957 B). See [STORIES.md](STORIES.md). | none yet (draft; re-stamping is a separate decision) |
+
 ## Release, cache, rollback
 
 - Release: new `shell/vX.Y.Z/` folder in one subx-factory PR (the only code review). Each room then gets a generated two-line change (URL + integrity) in `index.html` and `site.json shell.base`; no code in room PRs.

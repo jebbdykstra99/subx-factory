@@ -9,6 +9,10 @@
   "minAge": 18,
   "dms": false,
   "imageUploads": false,
+  "stories": {
+    "enabled": false,
+    "note": "Hub runs no Stories of its own (read-only). The hub page shows a hub-stories row built from data/stories.json instead."
+  },
   "earlyWelcome": false,
   "composePlaceholder": "The hub is read-only. Post in a room.",
   "emptyState": "The hub is read-only. Pick a room to read or post.",
@@ -189,7 +193,7 @@
       },
       {
         "file": "hub.js",
-        "sha256": "5cf3ffa4d07d0f9f0d674a824634035c7e5273a73ccbd270926c54fedecb0da2",
+        "sha256": "60eac7bee7e061e9df6c4ee2857ab9d55530d4dd8649e764309206b31ff4434f",
         "reason": "hub: renders highlights.json + rooms.json (read-only, no auth, no writes)",
         "noShellOk": true
       },

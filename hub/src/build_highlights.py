@@ -19,7 +19,10 @@ Option A from the 2026-10-30 readiness notes: a static build, no rules change, n
   rewritten), and a highlight that quotes a failing tagline is dropped. --refilter applies this to data/ too.
 - Writes only hub/src/data (no CNAME, no site.json edit: tools/brand_render.py fills site.json rail.outbound from
   rail.json). The per-room report is printed, not saved.
-Usage: python3 hub/src/build_highlights.py [--fetch 40] [--max 40] [--no-live-check] | --refilter
+Usage: python3 hub/src/build_highlights.py [--fetch 40] [--max 40] [--no-live-check] | --refilter | --stories-only
+- Stories (2026-11-04, draft): also writes data/stories.json, the live rooms with Stories on (for the hub's Add story
+  picker) and their live public TEXT stories. Steward-only unless --allow-member-stories; photo/clip stories are never
+  copied. Stories expire in 24 hours, so this file needs a rebuild cadence (see shell/STORIES.md).
 
 Slots come from rooms.json: featuredRooms (in order) get featuredPerRoom posts each and lead the feed;
 every other live room gets otherPerRoom (0 = suggestion only), trailing in roomOrder.
@@ -93,12 +96,24 @@ def ms(iso):
     except Exception: return None
 
 def live_check(domain):
+    return live_site(domain) is not None
+
+def live_site(domain):
+    """The room's public site.json (dict), or None when the room is not reachable."""
     try:
         req = urllib.request.Request('https://%s/site.json' % domain, headers={'user-agent': 'subx-hub-highlights/1'})
         with urllib.request.urlopen(req, timeout=15) as r:
-            return r.status == 200
+            if r.status != 200: return None
+            d = json.loads(r.read().decode('utf-8'))
+            return d if isinstance(d, dict) else {}
     except Exception:
-        return False
+        return None
+
+def stories_flag(site):
+    """Room Stories on/off as shell v1.2.7 reads it: on unless stories.enabled is false. Rooms on v1.2.6 and older
+    only run Stories when stories.enabled is true, so an unset flag counts as off until the room is on v1.2.7."""
+    st = (site or {}).get('stories') or {}
+    return st.get('enabled') is True
 
 def tier_for(f):
     """WHOMARK tier, same as the factory pill: steward:true or admin-authored -> ai; member -> human. None = drop."""
@@ -186,6 +201,80 @@ def refilter():
     print('refilter: kept %d, dropped %d (%s)' % (len(keep), len(drop), ', '.join('%s/%s' % (i['room'], i['postId']) for i in drop) or '-'))
     return 0
 
+STORY_TYPES_SHOWN = {'text'}   # no photo/clip on the hub: no remote media, nothing to moderate twice
+
+def story_check(f, doc, sid, now_ms, allow_members):
+    """Reason a story is left out of hub/src/data/stories.json, or None. Same safety bar as highlights."""
+    if f.get('siteId') != sid: return 'wrong_site'
+    e = f.get('expiresAt')
+    exp = ms(e) if isinstance(e, str) else (float(e) if isinstance(e, (int, float)) and not isinstance(e, bool) else None)
+    if exp is None or exp <= now_ms: return 'expired'
+    if f.get('type') not in STORY_TYPES_SHOWN: return 'media'
+    if f.get('hidden') or f.get('deleted') or f.get('removed') or f.get('underReport') or (f.get('reportCount') or 0) > 0: return 'flagged'
+    ct, st = ms(f.get('createdAt') or ''), ms(doc.get('createTime') or '')
+    if ct is not None and st is not None and st - ct > BACKDATE_MS: return 'backdated'
+    t = f.get('text')
+    if not isinstance(t, str) or not t.strip(): return 'no_text'
+    why = text_rule(t)
+    if why: return why
+    tier = tier_for(f)
+    if tier is None: return 'no_label'
+    if tier != 'ai' and not allow_members: return 'member_story_held'
+    hay = '\n'.join([t, f.get('authorName') or '', f.get('authorHandle') or ''])
+    if EMAIL_RE.search(hay) or SECRET_RE.search(hay): return 'lint'
+    if PHONE_RE.search(re.sub(r'https?://\S+', '', hay)): return 'lint'
+    if blocked(hay): return 'blocked_string'
+    return None
+
+def build_stories(cfg, no_live_check=False, allow_members=False):
+    """hub/src/data/stories.json: which live rooms run Stories (for the hub's Add story picker) and their live public
+    text stories (steward-only by default). Stories expire after 24 hours; the hub page also drops expired items on
+    the client, so a stale build never shows an old story. Public reads only (stories allow read for factory sites)."""
+    now_ms = time.time() * 1000
+    rooms, items, report = [], [], {}
+    for r in sorted(cfg['rooms'], key=lambda r: r['room']):
+        sid, room = r['siteId'], r['room']
+        rep = report.setdefault(room, {'fetched': 0, 'kept': 0, 'dropped': {}})
+        if room in PAUSED or r.get('status') != 'live':
+            rep['skipped'] = 'paused'; continue
+        if not r.get('suggest'):
+            rep['skipped'] = 'not listed on the hub (%s)' % (r.get('hold') or 'suggest off'); continue
+        site = {} if no_live_check else live_site(r['domain'])
+        if site is None:
+            rep['skipped'] = 'not live'; continue
+        try:
+            if site_killed(sid):
+                rep['skipped'] = 'killed'; continue
+        except Exception as e:
+            rep['skipped'] = 'kill check failed: %s' % e; continue
+        on = stories_flag(site)
+        rooms.append({'room': room, 'name': r['name'], 'domain': r['domain'], 'stories': on})
+        if not on:
+            rep['skipped'] = 'stories off'; continue
+        try:
+            docs = run_query('stories', sid, order=False, limit=50)
+        except Exception as e:
+            rep['error'] = str(e); continue
+        for doc in docs:
+            rep['fetched'] += 1
+            f = {k: val(v) for k, v in (doc.get('fields') or {}).items()}
+            why = story_check(f, doc, sid, now_ms, allow_members)
+            if why: rep['dropped'][why] = rep['dropped'].get(why, 0) + 1; continue
+            items.append({'room': room, 'roomName': r['name'], 'domain': r['domain'], 'storyId': doc['name'].rsplit('/', 1)[-1],
+                          'text': clip(f['text']), 'authorName': f.get('authorName') or '', 'tier': tier_for(f),
+                          'createdAt': doc.get('createTime'), 'expiresAt': f.get('expiresAt')})
+            rep['kept'] += 1
+        time.sleep(0.2)
+    items.sort(key=lambda it: it.get('createdAt') or '', reverse=True)
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    json.dump({'version': 1, 'generated': now, 'source': 'Firestore REST, public reads only (stories, sites) + each room site.json',
+               'ttlHours': 24, 'membersShown': bool(allow_members), 'rooms': rooms, 'items': items},
+              open(os.path.join(DATA, 'stories.json'), 'w'), indent=1, ensure_ascii=False)
+    print('stories: %d live items; %d live rooms, %d with Stories on (wrote %s)' % (len(items), len(rooms), sum(1 for x in rooms if x['stories']), DATA))
+    for room, rep in report.items():
+        print('  %-20s kept %-2s fetched %-3s %s %s' % (room, rep.get('kept'), rep.get('fetched'), rep.get('skipped', ''), rep.get('dropped') or ''))
+    return 0
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--fetch', type=int, default=40)
@@ -193,11 +282,15 @@ def main():
     ap.add_argument('--no-live-check', action='store_true')
     ap.add_argument('--allow-unverified-members', action='store_true', help='include member posts even when hides cannot be read (not recommended)')
     ap.add_argument('--refilter', action='store_true', help='re-apply text_rule to data/highlights.json only (no fetch)')
+    ap.add_argument('--stories-only', action='store_true', help='rebuild data/stories.json only (highlights untouched)')
+    ap.add_argument('--allow-member-stories', action='store_true', help='include member text stories (decision pending; default steward-only)')
     a = ap.parse_args()
     if a.refilter:
         return refilter()
 
     cfg = json.load(open(os.path.join(HERE, 'rooms.json')))
+    if a.stories_only:
+        return build_stories(cfg, a.no_live_check, a.allow_member_stories)
     featured = [x for x in cfg.get('featuredRooms', [])]
     f_per, o_per = int(cfg.get('featuredPerRoom', 6)), int(cfg.get('otherPerRoom', 1))
     order = featured + [x for x in cfg.get('roomOrder', []) if x not in featured]
@@ -275,6 +368,7 @@ def main():
     json.dump({'version': 1, 'generated': now, 'rooms': suggest},
               open(os.path.join(DATA, 'rooms.json'), 'w'), indent=1, ensure_ascii=False)
     write_rail(suggest)
+    build_stories(cfg, a.no_live_check, a.allow_member_stories)
     print('highlights: %d items from %d rooms; suggested rooms: %d (wrote %s)' % (len(items), len(counts), len(suggest), DATA))
     for room, rep in report.items():
         print('  %-20s kept %-2s fetched %-3s %s %s' % (room, rep.get('kept'), rep.get('fetched'), rep.get('skipped', ''), rep.get('dropped') or ''))

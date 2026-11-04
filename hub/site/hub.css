@@ -97,3 +97,36 @@ body { padding-bottom: 46px; }
 .whomark--color.whomark--hybrid .whomark-label { color: #9A6700; }
 .whomark--color.whomark--ai .whomark-label { color: #000000; }
 .hub-legend .whomark { margin-left: 0; }
+
+/* Stories row + composer (2026-11-04): hub-* names on purpose, because the shell's .stories-tray / compose stay hidden */
+.hub-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.hub-stories { border-bottom: 1px solid var(--border); padding: 0.7rem 0.9rem 0.6rem; }
+.hub-stories-row { display: flex; gap: 0.8rem; overflow-x: auto; scrollbar-width: none; }
+.hub-stories-row::-webkit-scrollbar { display: none; }
+.hub-story { flex: 0 0 auto; width: 4.3rem; background: none; border: 0; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; color: var(--text); font: inherit; }
+.hub-story-ring { display: block; padding: 2px; border-radius: 50%; border: 2px solid var(--border); }
+.hub-story.has-live .hub-story-ring { border-color: var(--accent); }
+.hub-story-avatar { display: flex; align-items: center; justify-content: center; width: 3.3rem; height: 3.3rem; border-radius: 50%; background: #3a3a40; color: #fff; font-weight: 700; font-size: 1rem; }
+.hub-story.is-add .hub-story-avatar { background: var(--surface); color: var(--accent); font-size: 1.6rem; border: 1px dashed var(--border); }
+.hub-story-label { font-size: 0.72rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
+.hub-story:focus-visible .hub-story-ring { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hub-compose { display: flex; gap: 0.7rem; padding: 0.8rem 0.9rem; border-bottom: 1px solid var(--border); }
+.hub-compose-avatar { flex: 0 0 auto; font-size: 0.7rem; background: #3a3a40; }
+.hub-compose-right { flex: 1; min-width: 0; }
+.hub-compose textarea { width: 100%; box-sizing: border-box; border: 0; resize: vertical; min-height: 2.6rem; font: inherit; font-size: 1.05rem; background: transparent; color: var(--text); padding: 0.3rem 0; }
+.hub-compose textarea:focus { outline: none; }
+.hub-compose-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--text-muted); }
+.hub-compose-bar select { flex: 1; min-width: 9rem; padding: 0.35rem 0.5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.hub-compose-go { padding: 0.45rem 1rem; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; font: inherit; font-weight: 600; }
+.hub-compose-go:disabled { opacity: 0.45; cursor: default; }
+.hub-compose-note { margin: 0.45rem 0 0; font-size: 0.75rem; color: var(--text-light); }
+.hub-pick[hidden] { display: none !important; }
+.hub-pick { position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.hub-pick-box { background: var(--bg); color: var(--text); border-radius: 14px; width: min(26rem, 100%); max-height: 85vh; overflow: auto; padding: 1rem 1.1rem; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); }
+.hub-pick-box h2 { margin: 0 0 0.3rem; font-size: 1.1rem; }
+.hub-pick-box p { margin: 0 0 0.7rem; font-size: 0.85rem; color: var(--text-muted); }
+.hub-pick-room { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.6rem 0.2rem; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; }
+.hub-pick-room span { color: var(--text-muted); font-size: 0.85rem; }
+.hub-pick-room:hover strong { color: var(--accent); }
+.hub-pick-close { margin-top: 0.8rem; padding: 0.4rem 1rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); cursor: pointer; font: inherit; }
+.hub-story-card { padding: 0.6rem 0; border-bottom: 1px solid var(--border); }

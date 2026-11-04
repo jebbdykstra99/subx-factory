@@ -114,7 +114,8 @@
   ],
   "data": [
     "highlights.json",
-    "rooms.json"
+    "rooms.json",
+    "stories.json"
   ],
   "pages": {
     "index.html": {
