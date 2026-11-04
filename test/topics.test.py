@@ -119,6 +119,13 @@ for v, why in (([1], 'list'), ({'1': 1}, 'dict'), ({1}, 'set'), ((1,), 'tuple'),
         ok(False, 'N1: non-int wave (%s) raised %r' % (why, ex))
 ok(not TS.approved(atopic(), [1.0], NOW) and not TS.approved(atopic(), [True], NOW) and not TS.approved(atopic(), ['1'], NOW)
    and TS.approved(atopic(), [[1], {'a': 1}, 1], NOW), 'N1: only strict-int entries in the approved wave list count (and odd entries do not crash)')
+for v in (0, -1, -100):
+    try:
+        ok(TS.approved(atopic(approvedWave=v), [v, 0, -1, -100, 1], NOW) is False and TS.apply(atopic(approvedWave=v), busy, NOW, [v, 1])['status'] == 'eligible',
+           'wave >= 1 backstop: wave %d -> not approved, eligible, even if the list carries it' % v)
+    except Exception as ex:  # noqa: BLE001
+        ok(False, 'wave >= 1 backstop: wave %d raised %r' % (v, ex))
+ok(TS.approved(atopic(approvedWave=1), [1], NOW) and TS.approved(atopic(approvedWave=7), [7], NOW), 'wave >= 1 backstop: waves 1 and 7 still approve when listed')
 ok(not TS.approved(atopic(approvedWave=True), [True, 1], NOW) and not TS.approved(atopic(approvedWave=1.0), [1.0, 1], NOW), 'N1: True / 1.0 never match wave 1')
 ok(TS.apply(atopic(), busy[:19], NOW, W)['status'] == 'hidden', '19 posts stays hidden')
 four = [post('u%d' % (i % 4), i * 0.5) for i in range(25)]

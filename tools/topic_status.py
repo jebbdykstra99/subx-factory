@@ -6,7 +6,7 @@ Counted post: written by a verified human account that was at least 7 days old w
 posts never count, whatever the account says about itself.
 
 Approval: a topic row may carry an approval record (approvedWave, approvedBy, approvedAt). It is valid only when
-approvedWave is a strict integer (not bool, float, string, list, dict or None) that is in the approved wave list
+approvedWave is a strict integer >= 1 (not 0 or negative, not bool, float, string, list, dict or None) that is in the approved wave list
 (topics/approved_waves.json, one batch approval per wave; only strict-integer entries count), approvedBy is a
 non-empty string and approvedAt is a zoned timestamp not in the future. The list is empty tonight. Removing a wave from
 the list (or a row losing its record) fails closed: nothing in that wave can be active.
@@ -99,7 +99,7 @@ def approved(topic, approved_waves, now):
     """True when the row's approval record is complete and its wave is on the approved wave list."""
     wave, by, at = (topic.get(k) for k in APPROVAL_FIELDS)
     # strict int only: bool is an int subclass, 1.0 == 1, and a list/dict wave must not raise
-    if type(wave) is not int or not any(type(w) is int and w == wave for w in (approved_waves or ())):
+    if type(wave) is not int or wave < 1 or not any(type(w) is int and w == wave for w in (approved_waves or ())):
         return False
     if not isinstance(by, str) or not by.strip():
         return False
