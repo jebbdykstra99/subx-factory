@@ -11,19 +11,21 @@ comes from `brand/brand.json`; templates hold `{{brand.*}}` tokens only.
     python3 test/hub_brand.test.py          # CI: pages, CSP, rename test, shell_drift
 
 The rename test renders the hub with a dummy brand and fails if any brand literal is
-left outside `brand/brand.json` (allowed: the repo path in the shell pin, the Firebase
-project/site ids).
+left outside `brand/brand.json` (allowed: the Firebase project/site ids).
 
 ## Shell and CSP
 
-- `index.html` runs the shared shell `shell/v1.2.6/factory.js`, pinned to a full commit
-  SHA on jsDelivr with SRI (`hub/src/config.json` -> `shell`).
+- `index.html` runs the shared shell `shell/v1.2.6/factory.js`, self-hosted at
+  `/shell/v1.2.6/factory.js` as a byte copy with SRI (`hub/src/config.json` -> `shell`; the render
+  stops unless the bytes match `config.json` integrity and `shell/v1.2.6/SHELL.json`). `site.json`
+  declares it as a byte-identical fork (`shell.fork`, EXCEPTIONS.md E21), so shell_drift reports
+  `FORK` with 0 diff lines. No CDN: script-src is `'self'` only.
 - The other pages (rooms, about, topics, legal, 404) are static and declared in
   `site.json` `shell.noShell` (see `shell/README.md`): the v1.2.6 shell is an app shell
   and needs the app DOM, so it is not loaded on them. They only load files listed in
   `shell.keep`.
 - Every page has the strict meta CSP as the first element of `<head>`:
-  `script-src 'self' <pin folder>/; object-src 'none'; base-uri 'none'; font-src 'self'` (fonts are self-hosted under assets/fonts, OFL 1.1).
+  `script-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'` (fonts are self-hosted under assets/fonts, OFL 1.1).
   `hub/firebase.json` sends the same policy as a header plus `frame-ancestors 'none'`,
   and `X-Robots-Tag: noindex` on the JSON data files only.
 - Check: `python3 tools/shell_drift.py hub/site --csp-legacy <file> --strict`.

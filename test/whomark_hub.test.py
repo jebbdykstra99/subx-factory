@@ -162,7 +162,13 @@ DENVER_ADDR = re.compile(
 def banned(t):
     return BANNED.search(t) or DENVER_ADDR.search(t)
 hits = []
+# the self-hosted shell (hub/site/shell/<base>/factory.js) is an immutable byte copy of shell/<base>/factory.js (SRI);
+# hub_brand.test.py pins its bytes and its only owner-handle strings, so it is skipped here
+SELF_SHELL = os.path.abspath(os.path.join(ROOT, 'hub', 'site', 'shell'))
 for p in list(walk(os.path.join(ROOT, 'hub'))) + [os.path.join(SRC, 'topic-template.html')]:
+    if os.path.abspath(p).startswith(SELF_SHELL + os.sep):
+        ok(read(p, 'rb') == read(os.path.join(ROOT, os.path.relpath(p, os.path.join(ROOT, 'hub', 'site'))), 'rb'), '%s is a byte copy of the shared shell' % os.path.relpath(p, ROOT))
+        continue
     b = read(p, 'rb')
     try:
         t = b.decode('utf-8')

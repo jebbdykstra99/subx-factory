@@ -112,6 +112,23 @@ with tempfile.TemporaryDirectory() as t:
                  {'base': V, 'fork': True, 'sha256': fsha, 'reason': 'test', 'exception': 'E0'}, {'factory.js': forked + b'//x\n'}))
     ok(r['status'] == 'DRIFT' and any('undeclared edit' in x for x in r['findings']), 'edited fork (sha mismatch) = DRIFT')
 
+    # B2 (hub, 2026-11-04): a self-hosted byte copy of the pinned shell, declared as a fork, with SRI and script-src 'self'
+    # only = FORK with 0 diff lines and no findings, CSP rule enforced (the hub's shape: EXCEPTIONS.md E21)
+    pin_bytes = b(os.path.join(ROOT, 'shell', V, 'factory.js'))
+    ok('sha384-' + base64.b64encode(hashlib.sha384(pin_bytes).digest()).decode() == INTEG, 'self-host: shell/%s/factory.js bytes match the SHELL.json SRI' % V)
+    sd = os.path.join(t, 'selfhost'); os.makedirs(os.path.join(sd, 'shell', V))
+    open(os.path.join(sd, 'shell', V, 'factory.js'), 'wb').write(pin_bytes)
+    json.dump({'siteId': 'selfhost', 'shell': {'base': V, 'fork': True, 'file': 'shell/%s/factory.js' % V, 'sha256': hashlib.sha256(pin_bytes).hexdigest(),
+                                                 'reason': 'self-hosted byte copy', 'exception': 'E21'}}, open(os.path.join(sd, 'site.json'), 'w'))
+    sh_tag = '<script src="/shell/%s/factory.js" integrity="%s" crossorigin="anonymous" data-site="/site.json"></script>' % (V, INTEG)
+    open(os.path.join(sd, 'index.html'), 'w').write('<html><head><meta http-equiv="Content-Security-Policy" content="script-src \'self\'; object-src \'none\'; base-uri \'none\'"></head><body>%s</body></html>' % sh_tag)
+    r = run(sd, csp=True)
+    ok(r['status'] == 'FORK' and r['layers'].get('forkDiffLines') == 0 and not r['findings'] and not r['warnings'],
+       "self-hosted byte copy + SRI + script-src 'self' = FORK, 0 diff lines, no findings (%s %s)" % (r['findings'][:2], r['warnings'][:2]))
+    open(os.path.join(sd, 'shell', V, 'factory.js'), 'ab').write(b'//x\n')
+    r = run(sd, csp=True)
+    ok(r['status'] == 'DRIFT' and any('undeclared edit' in x for x in r['findings']), 'self-hosted copy edited after declaring = DRIFT')
+
     r = run(room(t, 'legacy', '<script src="factory.js?v=1"></script>', None, {'factory.js': shell_bytes}))
     ok(r['status'] == 'DRIFT', 'no shell block = DRIFT (legacy)')
 

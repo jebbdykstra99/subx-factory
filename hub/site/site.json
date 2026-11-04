@@ -159,7 +159,7 @@
   "nests": [],
   "shell": {
     "base": "v1.2.6",
-    "fork": false,
+    "fork": true,
     "cspRequired": true,
     "overrides": {
       "theme": [
@@ -261,6 +261,10 @@
       "t/board-games/index.html",
       "t/photography/index.html",
       "t/books/index.html"
-    ]
+    ],
+    "file": "shell/v1.2.6/factory.js",
+    "sha256": "53765ec2c8206b6c153cf1d28324de317097f12b84871c1cda70e55f16d2c7d2",
+    "reason": "Self-hosted byte copy of shell/v1.2.6/factory.js (SRI kept), so script-src is self only",
+    "exception": "E21"
   }
 }

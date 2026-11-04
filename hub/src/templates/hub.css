@@ -12,6 +12,8 @@
 #thoughts-compose-wrap, #thoughts-feed,
 .sidebar-post-wrap, #sidebar-post-btn, #sidebar-auth,
 #cv-auth-overlay, .stories-tray, #stories-tray { display: none !important; }
+/* W3: the profile Sign in button opens nothing while accounts are closed (site.json accountsOpen false = html.acc-closed) */
+.acc-closed #profile-signin-prompt-btn { display: none !important; }
 
 .hub-intro { padding: 1.15rem 1.3rem 0.7rem; border-bottom: 1px solid var(--border); background: var(--surface); }
 .hub-title { font-family: 'Newsreader', Georgia, serif; font-size: 1.55rem; font-weight: 600; line-height: 1.2; margin: 0 0 0.3rem; color: var(--text); }

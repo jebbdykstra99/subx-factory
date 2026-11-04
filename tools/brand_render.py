@@ -6,7 +6,7 @@ spell the brand; they use tokens:
 
   {{brand.KEY}} / {{brand.KEY.SUB}}   a brand.json value (values may hold tokens too, e.g. footer -> {{year}})
   {{year}}                            year of hub/src/data/highlights.json "generated" (deterministic, not the clock)
-  {{shell.pinUrl}} {{shell.integrity}} {{shell.csp}}   the pinned shared shell (hub/src/config.json)
+  {{shell.pinUrl}} {{shell.integrity}} {{shell.csp}}   the shared shell, self-hosted at /shell/<base>/factory.js (hub/src/config.json)
   {{page.title}} {{page.description}}  per-page values from hub/src/config.json "pages"
   {{asset:/path}}                     /path?v=<sha256[:10] of the rendered file> (cache-bust, rendered first)
   {{> name}}                          hub/src/partials/name.html
@@ -36,7 +36,7 @@ shell.keep sha256 values in site.json are filled from the rendered files.
 Usage: python3 tools/brand_render.py [--check] [--brand PATH] [--out DIR] [--src DIR]
   --check  render to a temp dir and fail (exit 1) if hub/site differs (names every differing file)
 """
-import argparse, filecmp, hashlib, json, os, re, sys, tempfile, urllib.parse
+import argparse, base64, filecmp, hashlib, json, os, re, sys, tempfile, urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import topic_slug, topic_status  # noqa: E402
@@ -117,8 +117,11 @@ class Renderer:
         if not re.fullmatch(r'^\d{4}$', year):
             raise RenderError('hub/src/data/highlights.json has no "generated" year')
         sh = self.cfg['shell']
-        pin = 'https://cdn.jsdelivr.net/gh/%s@%s/shell/%s/factory.js' % (sh['repo'], sh['sha'], sh['base'])
-        csp = "script-src 'self' %s; object-src 'none'; base-uri 'none'; font-src 'self'" % (pin.rsplit('/', 1)[0] + '/')
+        # B2 (2026-11-04): the pinned shell is self-hosted as a byte copy at /shell/<base>/factory.js (SRI kept), so
+        # script-src is 'self' only and no CDN or repo path appears in the page source. shell_bytes() checks the bytes.
+        self.shell_rel = 'shell/%s/factory.js' % sh['base']
+        pin = '/' + self.shell_rel
+        csp = "script-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'"
         if re.search(r'[^\x20-\x7e]|,', csp):
             raise RenderError('CSP must be printable ASCII without commas')
         self.ctx = {'brand': brand, 'year': year,
@@ -184,6 +187,19 @@ class Renderer:
             fh.write(data)
         return p
 
+    def shell_bytes(self):
+        """The self-hosted shell: shell/<base>/factory.js copied byte for byte (never re-branded). Its sha384 must equal
+        config.json shell.integrity and SHELL.json, and its sha256 must equal SHELL.json, or the render stops."""
+        sh = self.cfg['shell']
+        man = json.load(open(os.path.join(ROOT, 'shell', sh['base'], 'SHELL.json'), encoding='utf-8'))['files']['factory.js']
+        data = open(os.path.join(ROOT, 'shell', sh['base'], 'factory.js'), 'rb').read()
+        sri = 'sha384-' + base64.b64encode(hashlib.sha384(data).digest()).decode()
+        if not (sri == sh['integrity'] == man['integrity']):
+            raise RenderError('shell/%s/factory.js sha384 %s != config.json shell.integrity / SHELL.json' % (sh['base'], sri))
+        if hashlib.sha256(data).hexdigest() != man['sha256'] or len(data) != man['bytes']:
+            raise RenderError('shell/%s/factory.js sha256/bytes != SHELL.json' % sh['base'])
+        return data, man['sha256']
+
     def rebrand_vendor(self, data):
         brand = self.ctx['brand']
         text = data.decode('utf-8')
@@ -209,6 +225,9 @@ class Renderer:
                 data = self.rebrand_vendor(data)
             self.write(v['to'], data)
             self.assets['/' + v['to']] = hashlib.sha256(data).hexdigest()[:10]
+        # 1b. the self-hosted shell (byte copy, no ?v= query: a pin URL may not carry one)
+        shell_data, shell_sha = self.shell_bytes()
+        self.write(self.shell_rel, shell_data)
         # 2. data files copied as is (room content, not brand copy)
         for d in cfg.get('data', []):
             data = open(os.path.join(self.src, 'data', d), 'rb').read()
@@ -228,6 +247,10 @@ class Renderer:
             self.assets['/' + n] = hashlib.sha256(data).hexdigest()[:10]
         site = json.loads(self.render_text(open(os.path.join(tdir, 'site.json'), encoding='utf-8').read(), '.json',
                                            where='site.json'))
+        # the self-hosted shell is a declared byte-identical fork (shell_drift reports FORK with 0 diff lines), EXCEPTIONS.md E21
+        site.setdefault('shell', {}).update({'fork': True, 'file': self.shell_rel, 'sha256': shell_sha,
+                                             'reason': 'Self-hosted byte copy of shell/%s/factory.js (SRI kept), so script-src is self only' % self.cfg['shell']['base'],
+                                             'exception': 'E21'})
         for k in site.get('shell', {}).get('keep', []):
             p = os.path.join(self.out, k['file'])
             if not os.path.isfile(p):

@@ -2,7 +2,7 @@
 """Hub (hub/src -> hub/site) and brand/brand.json: render is reproducible, a dummy rename reaches every page with no
 brand literal left, every page carries the go-live robots rules (public hub pages indexed, topics hide-until-active) + strict CSP + footer, and tools/shell_drift.py scores the
 hub OK with the CSP rule enforced. Offline; temp dirs only (the hub data files are not refetched)."""
-import json, os, re, shutil, subprocess, sys, tempfile
+import base64, hashlib, json, os, re, shutil, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
@@ -31,9 +31,11 @@ def files(d):
 TEXT = BR.TEXT_EXT
 cfg = json.load(open(os.path.join(SRC, 'config.json')))
 brand = json.load(open(BRAND))
-PIN = 'https://cdn.jsdelivr.net/gh/%s@%s/shell/%s/factory.js' % (cfg['shell']['repo'], cfg['shell']['sha'], cfg['shell']['base'])
-PIN_DIR = PIN.rsplit('/', 1)[0] + '/'
-CSP = "script-src 'self' %s; object-src 'none'; base-uri 'none'; font-src 'self'" % PIN_DIR
+# B2 (Key 2, 2026-11-04): the shell is self-hosted at /shell/<base>/factory.js (byte copy, SRI kept); script-src is 'self' only
+SHELL_REL = 'shell/%s/factory.js' % cfg['shell']['base']
+PIN = '/' + SHELL_REL
+CDN_PIN = 'https://cdn.jsdelivr.net/gh/%s@%s/shell/%s/factory.js' % (cfg['shell']['repo'], cfg['shell']['sha'], cfg['shell']['base'])
+CSP = "script-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'"
 
 # ---- brand.json ----
 want_keys = ['name', 'legalEntity', 'primaryDomain', 'shortName', 'tagline', 'takedownEmail', 'topicPathPrefix',
@@ -77,8 +79,22 @@ ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_inde
 site = json.load(open(os.path.join(SITE, 'site.json')))
 sh = site['shell']
 no_shell = set(x.lstrip('/') for x in sh.get('noShell', []))
-ok(site['siteId'] == 'subx' and site['accountsOpen'] is False and sh['cspRequired'] is True and sh['base'] == cfg['shell']['base'] and not sh.get('fork'),
-   'site.json: siteId subx, accounts closed, cspRequired true, base = pin base, no fork')
+ok(site['siteId'] == 'subx' and site['accountsOpen'] is False and sh['cspRequired'] is True and sh['base'] == cfg['shell']['base'],
+   'site.json: siteId subx, accounts closed, cspRequired true, base = pin base')
+_man = json.load(open(os.path.join(ROOT, 'shell', cfg['shell']['base'], 'SHELL.json')))['files']['factory.js']
+ok(sh.get('fork') is True and sh.get('file') == SHELL_REL and sh.get('sha256') == _man['sha256'] and sh.get('exception') == 'E21' and sh.get('reason'),
+   'site.json: the self-hosted shell is a declared byte-identical fork (file, SHELL.json sha256, EXCEPTIONS.md E21)')
+ok('| E21 | hub (subx.it) |' in open(os.path.join(ROOT, 'EXCEPTIONS.md'), encoding='utf-8').read(), 'EXCEPTIONS.md has the E21 row for the self-hosted hub shell')
+_sb = open(os.path.join(SITE, SHELL_REL), 'rb').read()
+ok(_sb == open(os.path.join(ROOT, SHELL_REL), 'rb').read(), 'hub/site/%s is byte-identical to the pinned shell/%s' % (SHELL_REL, SHELL_REL))
+_pinned = subprocess.run(['git', '-C', ROOT, 'show', '%s:%s' % (cfg['shell']['sha'], SHELL_REL)], capture_output=True)
+ok(_pinned.returncode != 0 or _pinned.stdout == _sb, 'self-hosted shell = the bytes at the pinned commit %s (when that commit is in the clone)' % cfg['shell']['sha'][:7])
+_sri = 'sha384-' + base64.b64encode(hashlib.sha384(_sb).digest()).decode()
+ok(_sri == cfg['shell']['integrity'] == _man['integrity'] and hashlib.sha256(_sb).hexdigest() == _man['sha256'] and len(_sb) == _man['bytes'],
+   'self-hosted shell: sha384 = config.json integrity = SHELL.json, sha256 and size = SHELL.json')
+_jb = [f for f in files(SITE) if 'jebbdykstra99' in open(os.path.join(SITE, f), encoding='utf-8', errors='replace').read() and f != SHELL_REL]
+ok(not _jb and 'jebbdykstra99' not in open(os.path.join(ROOT, 'hub', 'firebase.json')).read(), 'no jebbdykstra99 in rendered hub output (besides the byte-identical shell header) or hub/firebase.json (%s)' % _jb[:3])
+ok(not any('jsdelivr' in open(os.path.join(SITE, f), encoding='utf-8', errors='replace').read() for f in files(SITE) if f.endswith('.html')), 'no page references jsDelivr')
 leg = json.load(open(os.path.join(ROOT, 'tools', 'csp_legacy_rooms.json')))['rooms']
 ok('subx' not in leg and 'hub' not in leg, 'the hub is not on the CSP legacy list')
 ok(not sh.get('recaptcha') and 'recaptcha' not in ''.join(read(os.path.join(SITE, p)) for p in pages).lower(), 'no reCAPTCHA (shell.recaptcha not set)')
@@ -91,7 +107,7 @@ for p in pages:
     ok(m is not None and m.group(1) == CSP, '%s: meta CSP is the first element after charset, http-equiv exact, strict policy' % p)
     if m:
         c = m.group(1)
-        ok(all(32 <= ord(ch) < 127 for ch in c) and ',' not in c and PIN_DIR in c.split(';')[0].split(), '%s: CSP is ASCII, no commas, script-src lists the pin folder' % p)
+        ok(all(32 <= ord(ch) < 127 for ch in c) and ',' not in c and c.split(';')[0].split() == ['script-src', "'self'"], '%s: CSP is ASCII, no commas, script-src is self only' % p)
     ok(h.count('Content-Security-Policy') == 1, '%s: exactly one CSP meta' % p)
     want_robots = 'index,follow' if p in PUBLIC_PAGES else 'noindex,nofollow'
     ok(re.findall(r'<meta name="robots" content="([^"]*)">', h) == [want_robots], '%s: exactly one robots meta, %s' % (p, want_robots))
@@ -104,7 +120,7 @@ for p in pages:
     pins = re.findall(r'<script\b[^>]*\bsrc="([^"]*factory[^"]*)"[^>]*>', h)
     if p == 'index.html':
         tag = re.search(r'<script src="%s" integrity="%s" crossorigin="anonymous" data-site="/site\.json\?v=[0-9a-f]{10}"></script>' % (re.escape(PIN), re.escape(cfg['shell']['integrity'])), h)
-        ok(tag is not None and pins == [PIN], 'index.html: the pinned shell (full SHA, SRI, crossorigin, data-site) and no other factory script')
+        ok(tag is not None and pins == [PIN], 'index.html: the self-hosted shell (SRI, crossorigin, data-site) and no other factory script')
     else:
         ok(pins == [], '%s: static page loads no factory script (declared noShell)' % p)
     scripts = re.findall(r'<script\b([^>]*)>(.*?)</script>', h, re.S)
@@ -174,6 +190,13 @@ for p in pages:
     vis = re.sub(r'<!--.*?-->', '', re.sub(r'<(script|style)\b.*?</\1>', '', read(os.path.join(SITE, p)), flags=re.S), flags=re.S)
     vis = re.sub(r'<[^>]+>', ' ', vis)
     ok(not re.search(r'site\.json|DMs graph|\bstubs?\b|\bTODO\b|FIXME|not a real inbox|[Ss]ample thread', vis), '%s: no internal dev note in visible text' % p)
+# B3 (Key 2): no Report-button promise the hub cannot keep
+rp = read(os.path.join(SITE, 'report.html'))
+RL = 'Use the Report link on the post in its room, or email <a data-takedown href="mailto:%s">%s</a>.' % (brand['takedownEmail'], brand['takedownEmail'])
+ok(rp.count(RL) == 2 and 'Report button' not in rp, 'report.html: both Report-button lines read "Use the Report link on the post in its room, or email takedown@subx.it."')
+# W3 (Key 2): the inert profile Sign in button is hidden while accountsOpen is false
+ok(re.search(r'\.acc-closed #profile-signin-prompt-btn \{ display: none !important; \}', read(os.path.join(SITE, 'hub.css'))) is not None and site['accountsOpen'] is False,
+   'hub.css: #profile-signin-prompt-btn hidden under html.acc-closed (accountsOpen false)')
 ok('Sign-in opens soon. Guest is browse-only.' in idx and 'Sign-in is closed while the hub is in preview' not in idx and '<span>Read-only</span>' in idx,
    'index.html: launch wording (sign-in opens soon, read-only), no preview claim')
 # launch copy: no preview / draft wording left in any rendered page (CSS class names like compose-image-preview excepted)
@@ -194,8 +217,9 @@ for p, k in KICK2.items():
     ok(len(kk) == 2 and kk[0].startswith('Effective November 4, 2026. ') and kk[1] == k, '%s: kickers = effective Nov 4, 2026 + exactly %r (%s)' % (p, k, kk[1:]))
     ok('Effective October 22' not in read(os.path.join(SITE, p)) and 'Effective on launch' not in read(os.path.join(SITE, p)), '%s: no stale effective date' % p)
 PROC = ("<li><strong>Processors</strong>: service providers that host, deliver, or secure the Service (Google Firebase / Google Cloud, "
-        "including Firebase Hosting; jsDelivr, which serves the site's script files; GoDaddy, for domain DNS) under contracts or terms that limit use of the data.</li>")
-ok(pv.count(PROC) == 1 and pv.count('<strong>Processors</strong>') == 1 and 'Cloudflare' not in pv and 'GitHub Pages' not in pv, 'privacy.html: Processors bullet is exactly the CLO text (no GitHub Pages, no Cloudflare)')
+        "including Firebase Hosting; GoDaddy, for domain DNS) under contracts or terms that limit use of the data.</li>")
+ok(pv.count(PROC) == 1 and pv.count('<strong>Processors</strong>') == 1 and 'Cloudflare' not in pv and 'GitHub Pages' not in pv, 'privacy.html: Processors bullet is exactly the CLO text, jsDelivr clause removed (no GitHub Pages, no Cloudflare)')
+ok('jsDelivr' not in pv, 'privacy.html: jsDelivr is no longer named (B2 self-hosts the shell)')
 # CLO note (a): the sign-in modal on the hub is inert: hidden, accounts closed, no Firebase SDK can load
 ok(re.search(r'#cv-auth-overlay[^{]*\{ display: none !important; \}', read(os.path.join(SITE, 'hub.css'))) is not None, 'hub.css hides the sign-in modal (#cv-auth-overlay) and the sidebar auth entry')
 ok(site.get('accountsOpen') is False, 'site.json accountsOpen false: Register and Google are gated closed by the shell')
@@ -247,7 +271,7 @@ ok('<urlset' in sm and sorted(locs) == want_locs, 'sitemap.xml lists exactly the
 ok(not [u for u in locs if brand['topicPathPrefix'] in u] and not [u for u in locs if '404' in u], 'sitemap.xml lists no topic page, no topic index and no 404 while no topic is active')
 ok(all('<meta name="robots" content="noindex,nofollow">' in read(os.path.join(SITE, f)) for f in NOINDEX_PAGES), 'hide-until-active: 404, topic index and every hidden topic stay noindex,nofollow')
 ok(all('<meta name="robots" content="index,follow">' in read(os.path.join(SITE, f)) for f in PUBLIC_PAGES), 'public hub pages are index,follow')
-ok(not any('preview-banner' in read(os.path.join(SITE, f)) for f in files(SITE) if f.endswith(TEXT)) and not os.path.exists(os.path.join(SRC, 'partials', 'banner.html')),
+ok(not any('preview-banner' in read(os.path.join(SITE, f)) for f in files(SITE) if f.endswith(TEXT) and f != SHELL_REL) and not os.path.exists(os.path.join(SRC, 'partials', 'banner.html')),
    'no preview banner markup or style anywhere in hub/site; banner partial removed')
 rt = read(os.path.join(SITE, 'robots.txt'))
 groups = [g for g in re.split(r'\n\s*\n', rt) if 'User-agent' in g]
@@ -303,14 +327,19 @@ def scan_files():
 FORBID = [re.compile(x, re.I) for x in (r'\bjebb(?!dykstra99/subx-factory\b)', r'\bj@sub' + r'x\.it', r'\(?\b310\)?[\s.-]?\d{3}[\s.-]?\d{4}\b',
                                          r'\bden' + r'ver\b', r'peek' + r'ai', r'voka' + r'dots', r'dmca-' + r'1084331')]
 hits = []
+SELF_SHELL = os.path.abspath(os.path.join(SITE, SHELL_REL))
 for p in scan_files():
-    if os.path.abspath(p) == os.path.abspath(__file__):
+    if os.path.abspath(p) in (os.path.abspath(__file__), SELF_SHELL):
         continue
     t = read(p) if not p.endswith('.png') else ''
     for rx in FORBID:
         for m in rx.finditer(t):
             hits.append('%s: %s' % (os.path.relpath(p, ROOT), m.group(0)))
 ok(not hits, 'no private names, emails, 310 numbers, registered-agent city or internal codes in the hub, brand or renderer (%s)' % hits[:5])
+# the self-hosted shell is an immutable byte copy (SRI): its only owner-handle strings are the known v1.2.6 ones
+_sh = [m.group(0) for rx in FORBID[:1] + [re.compile('jebbdykstra99')] for m in rx.finditer(read(SELF_SHELL))]
+ok(sorted(_sh) == ['jebb', 'jebbdykstra99'] and not [m for rx in FORBID[1:] for m in rx.finditer(read(SELF_SHELL))],
+   'self-hosted shell: only the known v1.2.6 strings (header source line jebbdykstra99, reserved-handle regex "jebb"); no other private string (%s)' % _sh)
 # Key 2 B1: never claim affiliation with X ("Affiliated with X" only ever as "Not affiliated with X")
 AFFIL = re.compile(r'(?<!not )affiliated with x\b', re.I)
 bad = []
@@ -358,11 +387,11 @@ def drift(d, legacy=()):
 with tempfile.TemporaryDirectory() as t:
     d = os.path.join(t, 'site'); shutil.copytree(SITE, d)
     r = drift(d)
-    ok(r['status'] == 'OK' and not r['findings'] and not r['warnings'], 'shell_drift hub/site = OK, no findings or warnings, CSP enforced (%s %s)' % (r['findings'][:3], r['warnings'][:3]))
+    ok(r['status'] == 'FORK' and r['layers'].get('forkDiffLines') == 0 and not r['findings'] and not r['warnings'], 'shell_drift hub/site = FORK (byte-identical self-hosted shell), no findings or warnings, CSP enforced (%s %s)' % (r['findings'][:3], r['warnings'][:3]))
     fb = json.load(open(os.path.join(ROOT, 'hub', 'firebase.json')))
     shutil.copy(os.path.join(ROOT, 'hub', 'firebase.json'), os.path.join(d, 'firebase.json'))
     r = drift(d)
-    ok(r['status'] == 'OK' and not r['findings'] and not r['warnings'], 'shell_drift hub/site + hub/firebase.json headers = OK (%s %s)' % (r['findings'][:3], r['warnings'][:3]))
+    ok(r['status'] == 'FORK' and r['layers'].get('forkDiffLines') == 0 and not r['findings'] and not r['warnings'], 'shell_drift hub/site + hub/firebase.json headers = FORK (%s %s)' % (r['findings'][:3], r['warnings'][:3]))
     hs = fb['hosting']
     hdr = {h['key']: h['value'] for e in hs['headers'] for h in e['headers']}
     ok(hs['public'] == 'site' and not hs.get('redirects') and not hs.get('rewrites'), 'hub/firebase.json: public site, no redirects or rewrites')
@@ -373,17 +402,22 @@ with tempfile.TemporaryDirectory() as t:
     rc = json.load(open(os.path.join(ROOT, 'hub', '.firebaserc')))
     ok(hs.get('target') == 'hub' and 'site' not in hs and rc['targets']['subx-skins']['hosting']['hub'] == ['subx-hub'],
        'hub/firebase.json deploys to target hub = site subx-hub (never the subx-skins site, whose live channel is SubX Master)')
-    # a local shell copy is drift: the hub never vendors factory.js
+    # any other local shell copy is drift: only the declared self-hosted copy may exist
     shutil.copy(os.path.join(ROOT, 'factory', 'factory.js'), os.path.join(d, 'factory.js'))
     r = drift(d)
-    ok(r['status'] == 'DRIFT', 'a local factory.js copy in the hub = DRIFT')
+    ok(r['status'] == 'DRIFT', 'a second local factory.js copy in the hub = DRIFT')
     os.remove(os.path.join(d, 'factory.js'))
+    # an edited self-hosted shell is drift (sha256 no longer the declared one)
+    sp = os.path.join(d, SHELL_REL); orig = open(sp, 'rb').read(); open(sp, 'ab').write(b'//x\n')
+    r = drift(d)
+    ok(r['status'] == 'DRIFT' and any('undeclared edit' in x for x in r['findings']), 'an edited self-hosted shell = DRIFT (undeclared edit)')
+    open(sp, 'wb').write(orig)
     os.remove(os.path.join(d, 'firebase.json'))  # (a strict header CSP would still cover a weak meta; test the meta alone)
-    h = read(os.path.join(d, 'about.html')).replace(PIN_DIR + ';', 'https:;', 1)
+    h = read(os.path.join(d, 'about.html')).replace("script-src 'self';", "script-src 'self' https:;", 1)
     open(os.path.join(d, 'about.html'), 'w').write(h)
     r = drift(d)
     ok(r['status'] == 'DRIFT' and any('about.html' in x for x in r['findings']), 'a weakened meta CSP on one hub page = DRIFT')
-ok(not any(f.endswith('factory.js') for f in files(SITE)), 'hub/site has no local factory.js')
+ok([f for f in files(SITE) if f.endswith('factory.js')] == [SHELL_REL], 'hub/site has exactly one local factory.js: the self-hosted %s' % SHELL_REL)
 
 # ---- dummy rename flows through every hub page ----
 dummy = json.loads(json.dumps(brand))
@@ -405,7 +439,7 @@ with tempfile.TemporaryDirectory() as t:
     ok('z/index.html' in names and 't/index.html' not in names, 'rename: topic index follows topicPathPrefix (/z/)')
     left = []
     for f in names:
-        if not f.endswith(TEXT):
+        if not f.endswith(TEXT) or f == SHELL_REL:  # the self-hosted shell is an upstream byte copy, not brand copy
             continue
         t_ = read(os.path.join(out, f))
         for a in ALLOW:
@@ -432,7 +466,7 @@ with tempfile.TemporaryDirectory() as t:
        'rename: hub.js steward label and the whomark.js shell-pill selector follow the brand')
     d2 = os.path.join(t, 'drift', 'site'); shutil.copytree(out, d2)
     r = drift(d2)
-    ok(r['status'] == 'OK' and not r['findings'] and not r['warnings'], 'rename: shell_drift still OK (%s)' % r['findings'][:3])
+    ok(r['status'] == 'FORK' and r['layers'].get('forkDiffLines') == 0 and not r['findings'] and not r['warnings'], 'rename: shell_drift still FORK (%s)' % r['findings'][:3])
     # topic template (HUB_COPY 4a-4e) renders every state with a dummy topic; topic text is escaped and never token-expanded
     rr = BR.Renderer(SRC, bp, os.path.join(t, 'tt')).run()
     full = {'slug': 'tide-pools', 'name': 'Tide <Pools>', 'description': 'Rock pools {{brand.name}}', 'longDescription': 'All about pools.',
