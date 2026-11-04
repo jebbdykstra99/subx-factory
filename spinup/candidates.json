@@ -1,0 +1,545 @@
+{
+  "notes": "CONFIG ONLY: the spin-up candidate domains (step 3 prep). tools/spinup_render.py renders one site.json per candidate into a dry-run dir that is never served; nothing here touches DNS, a registrar, a room repo or hub/. Source: the owned-domain inventory in the 2026-11-03 topic-rooms plan (151 names; live rooms and personal names were already left out). Names held for legal or trademark review are NOT listed here in any form; the reviewed list is kept off-repo, and only the count by reason is recorded below.",
+  "source": {
+    "plan": "topic-rooms plan 2026-11-03, section 12-13 domain map",
+    "inventory": 151
+  },
+  "excludedByReason": {
+    "brand reserve (mark not cleared)": 2,
+    "doorway topic on HOLD": 1,
+    "government agency name": 9,
+    "personal name or real person": 14,
+    "sensitive term (profanity, drugs, other)": 15,
+    "third-party mark (trademark review)": 22
+  },
+  "defaults": {
+    "mode": "parked",
+    "brand": "default",
+    "doorway": {
+      "style": "redirect",
+      "keepQuery": false
+    }
+  },
+  "candidates": [
+    {
+      "domain": "202chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "washington-dc"
+    },
+    {
+      "domain": "206chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "seattle"
+    },
+    {
+      "domain": "210chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "san-antonio"
+    },
+    {
+      "domain": "212chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "new-york-city"
+    },
+    {
+      "domain": "213chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "los-angeles"
+    },
+    {
+      "domain": "214chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "dallas"
+    },
+    {
+      "domain": "215chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "philadelphia"
+    },
+    {
+      "domain": "224chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "chicago-suburbs"
+    },
+    {
+      "domain": "303chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "denver"
+    },
+    {
+      "domain": "305chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "miami"
+    },
+    {
+      "domain": "310chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "los-angeles"
+    },
+    {
+      "domain": "31chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "netherlands"
+    },
+    {
+      "domain": "32chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "belgium"
+    },
+    {
+      "domain": "34chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "spain"
+    },
+    {
+      "domain": "39chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "italy"
+    },
+    {
+      "domain": "404chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "atlanta"
+    },
+    {
+      "domain": "408chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "san-jose"
+    },
+    {
+      "domain": "41chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "switzerland"
+    },
+    {
+      "domain": "43chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "austria"
+    },
+    {
+      "domain": "47chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "norway"
+    },
+    {
+      "domain": "48chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "poland"
+    },
+    {
+      "domain": "49chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "germany"
+    },
+    {
+      "domain": "512chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "austin"
+    },
+    {
+      "domain": "54chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "argentina"
+    },
+    {
+      "domain": "602chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "phoenix"
+    },
+    {
+      "domain": "612chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "minneapolis"
+    },
+    {
+      "domain": "617chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "boston"
+    },
+    {
+      "domain": "61chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "australia"
+    },
+    {
+      "domain": "62chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "indonesia"
+    },
+    {
+      "domain": "63chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "philippines"
+    },
+    {
+      "domain": "650chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "silicon-valley"
+    },
+    {
+      "domain": "702chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "las-vegas"
+    },
+    {
+      "domain": "713chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "houston"
+    },
+    {
+      "domain": "81chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "japan"
+    },
+    {
+      "domain": "82chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "south-korea"
+    },
+    {
+      "domain": "84chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "vietnam"
+    },
+    {
+      "domain": "858chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "san-diego"
+    },
+    {
+      "domain": "222chat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "73chat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "agachat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "aga-cooking"
+    },
+    {
+      "domain": "awolchat.com",
+      "group": "topic",
+      "note": "parked by Key 1 review: AWOL means desertion, not a front door to military-life (no mode, so the default applies)"
+    },
+    {
+      "domain": "awwchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "cute-animals"
+    },
+    {
+      "domain": "birderschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "birding"
+    },
+    {
+      "domain": "bnchat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "boneschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "bone-health"
+    },
+    {
+      "domain": "briechat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "cheese"
+    },
+    {
+      "domain": "cancelchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "culture-debates"
+    },
+    {
+      "domain": "complaintchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "complaints"
+    },
+    {
+      "domain": "cribschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "home-tours"
+    },
+    {
+      "domain": "dibschat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "dittychat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "songwriting"
+    },
+    {
+      "domain": "dobchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "birthdays"
+    },
+    {
+      "domain": "dpchat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "envychat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "envy"
+    },
+    {
+      "domain": "etachat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "travel-delays"
+    },
+    {
+      "domain": "fdchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "firefighters"
+    },
+    {
+      "domain": "fibschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "white-lies"
+    },
+    {
+      "domain": "fohchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "restaurant-work"
+    },
+    {
+      "domain": "forgivechat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "forgiveness"
+    },
+    {
+      "domain": "ftpchat.com",
+      "group": "topic",
+      "note": "parked by Key 1 review: FTP is anti-police slang (no mode, so the default applies)"
+    },
+    {
+      "domain": "ftwchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "wins"
+    },
+    {
+      "domain": "g7chat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "world-economy"
+    },
+    {
+      "domain": "gmochat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "food-science"
+    },
+    {
+      "domain": "greedchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "money-and-greed"
+    },
+    {
+      "domain": "hahachat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "jokes",
+      "ownership": "unverified"
+    },
+    {
+      "domain": "hmuchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "meetups"
+    },
+    {
+      "domain": "intervalchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "interval-training"
+    },
+    {
+      "domain": "iouchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "personal-debt"
+    },
+    {
+      "domain": "lacchat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "ladderschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "career-ladders"
+    },
+    {
+      "domain": "marineschat.com",
+      "group": "topic",
+      "note": "topic follows topics/domains.json (plan proposed marines)",
+      "mode": "doorway",
+      "topic": "military-life"
+    },
+    {
+      "domain": "nibschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "cacao-nibs"
+    },
+    {
+      "domain": "nmfchat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "orchidchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "orchids"
+    },
+    {
+      "domain": "recallchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "product-recalls"
+    },
+    {
+      "domain": "retirechat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "retirement"
+    },
+    {
+      "domain": "ribschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "barbecue"
+    },
+    {
+      "domain": "salmonchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "salmon-fishing"
+    },
+    {
+      "domain": "sandchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "beaches"
+    },
+    {
+      "domain": "scramblechat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "word-games"
+    },
+    {
+      "domain": "startupschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "startups"
+    },
+    {
+      "domain": "taxeschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "taxes"
+    },
+    {
+      "domain": "tbachat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "tgifchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "weekends"
+    },
+    {
+      "domain": "tiredchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "sleep"
+    },
+    {
+      "domain": "tldrchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "summaries"
+    },
+    {
+      "domain": "upsetchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "venting"
+    },
+    {
+      "domain": "votingchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "voting"
+    }
+  ]
+}

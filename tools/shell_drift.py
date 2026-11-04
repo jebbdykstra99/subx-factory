@@ -11,6 +11,9 @@ A room may differ from the pinned shell only through DECLARED layers in its site
   3. fork        a full room copy of factory.js pinned to a named base version, with its sha256 and a reason
   keep           room scripts that are not shell code (gate.js, takedown.js ...), each sha256-pinned
 Anything else is DRIFT. Status per room: OK, WARN (OK + non-blocking notes), FORK (declared fork), DRIFT.
+A site.json with mode doorway or parked (topics/site_mode.schema.json) is not a room: its dir must contain exactly that
+site.json (a regular file) with only the hybrid keys (domain, mode, topic, brand, doorway); any other file, subdirectory
+(even empty or .git), symlink, key or mode is DRIFT. A site.json that is not a JSON object is DRIFT.
 
 Pages are parsed with html.parser (quoted, single-quoted and unquoted attributes; comments ignored), and every
 page-like file (*.html, *.htm, *.xhtml, *.xht, *.xml, *.xsl, *.xslt, *.svg, *.shtml, *.php, *.phtml) under the room is
@@ -1153,12 +1156,50 @@ def redirect_stub(pg):
     return (True, 'nest stub') if NEST_RE.fullmatch(text) else (True, 'bare same-origin location.replace')
 
 
+NONROOM_KEYS = ('domain', 'mode', 'topic', 'brand', 'doorway')
+
+
+def check_nonroom(room, name, site):
+    """Hybrid site.json with mode doorway|parked (topics/site_mode.schema.json): no room, so no shell and no files.
+
+    Such a dir must contain exactly one entry, a regular (non-symlink) site.json with only the hybrid keys. Any other
+    file, any subdirectory (even empty, even .git or a dot-dir), any symlink, a "shell" block or an unknown mode is
+    DRIFT (a doorway is an edge redirect and a parked domain serves nothing of ours)."""
+    f, mode = [], site.get('mode')
+    if mode not in ('doorway', 'parked'):
+        f.append('site.json mode %r is not room, doorway or parked' % (mode,))
+    extra = sorted(k for k in site if k not in NONROOM_KEYS)
+    if extra:
+        f.append('a %s site.json carries only %s, not %s' % (mode, '/'.join(NONROOM_KEYS), ', '.join(extra)))
+    if os.path.islink(os.path.normpath(room)):
+        f.append('a %s dir may not be a symlink' % mode)
+    try:
+        names = sorted(os.listdir(room))
+    except OSError as e:
+        names = []
+        f.append('dir unreadable: %s' % e)
+    others = [x for x in names if x != 'site.json']
+    if others:
+        f.append('a %s domain serves no files of its own; the dir must contain exactly site.json, not %s'
+                 % (mode, ', '.join(others[:5])))
+    sj = os.path.join(room, 'site.json')
+    if os.path.islink(sj) or not os.path.isfile(sj):
+        f.append('site.json must be a regular file, not a symlink')
+    return {'room': name, 'status': 'DRIFT' if f else 'OK', 'findings': f, 'warnings': [],
+            'layers': {'mode': mode if isinstance(mode, str) else None}}
+
+
 def check(room, mans, legacy=None):
     name = os.path.basename(os.path.normpath(room))
     try:
         site = json.load(open(os.path.join(room, 'site.json')))
     except Exception as e:
         return {'room': name, 'status': 'DRIFT', 'findings': ['site.json unreadable: %s' % e], 'warnings': [], 'layers': {}}
+    if not isinstance(site, dict):
+        return {'room': name, 'status': 'DRIFT', 'findings': ['site.json must be a JSON object, not %s' % type(site).__name__],
+                'warnings': [], 'layers': {}}
+    if 'mode' in site and site.get('mode') != 'room':
+        return check_nonroom(room, name, site)
     sh = site.get('shell') if isinstance(site.get('shell'), dict) else None
     f, w, layers = [], [], {}
     local = os.path.join(room, 'factory.js')

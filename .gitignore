@@ -7,3 +7,4 @@ rules/tests/firestore.rules
 rules/tests/storage.rules
 package-lock.json
 __pycache__/
+spinup/out/

@@ -35,3 +35,5 @@ jobs:
         run: python3 tools/brand_render.py --check && python3 test/hub_brand.test.py
       - name: Topics layer (seed + schema, slug rules, activity rule, hybrid domain config; dry run only)
         run: python3 tools/topics_seed.py --check && python3 tools/topic_domains.py --check && python3 test/topics.test.py
+      - name: Spin-up dry run (site.json for the candidate domains; temp dir only, drift --strict + domain validator)
+        run: python3 tools/spinup_render.py --check && python3 test/spinup.test.py
