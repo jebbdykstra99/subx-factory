@@ -40,7 +40,7 @@
     var url = safeUrl('https://' + r.domain + '/'); if (!url) return '';
     return '<a class="hub-room-card' + (r.featured ? ' is-featured' : '') + '" href="' + esc(url) + '" rel="noopener"><strong>' + esc(r.name) + '</strong>' +
       (r.featured ? '<span class="hub-feat-tag">Featured</span>' : '') +
-      '<span class="hub-room-domain">' + esc(r.domain) + '</span><p>' + esc(r.tagline) + '</p></a>';
+      '<span class="hub-room-domain">' + esc(r.domain) + '</span>' + (r.tagline ? '<p>' + esc(r.tagline) + '</p>' : '') + '</a>';
   }
   function getJSON(p) { return fetch(p, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(p + ' ' + r.status); return r.json(); }); }
   var feed = document.getElementById('hub-feed'), roomsEl = document.getElementById('hub-rooms'), coming = document.getElementById('hub-coming');

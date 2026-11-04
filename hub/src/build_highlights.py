@@ -14,6 +14,9 @@ Option A from the 2026-10-30 readiness notes: a static build, no rules change, n
 - Also drops (Key 1 edit E1, 2026-11-03) any post whose text contains an em dash (U+2014) or en dash (U+2013), or
   starts with "Seed" (any case). Post text is never edited: a post passes whole or is left out.
   --refilter re-applies these text rules to the existing data/highlights.json without fetching (no new posts).
+- Room taglines and rail snippets (2026-11-03): a tagline that fails tagline_rule (the same dash / "Seed" rule, plus
+  "pending", "TODO" or "Content DB") ships as "" (the room keeps its name and link; the source copy is never
+  rewritten), and a highlight that quotes a failing tagline is dropped. --refilter applies this to data/ too.
 - Writes only hub/src/data (no CNAME, no site.json edit: tools/brand_render.py fills site.json rail.outbound from
   rail.json). The per-room report is printed, not saved.
 Usage: python3 hub/src/build_highlights.py [--fetch 40] [--max 40] [--no-live-check] | --refilter
@@ -113,6 +116,26 @@ def text_rule(t):
     if t.lstrip().lower().startswith('seed'): return 'seed_prefix'
     return None
 
+TAGLINE_BAD_RE = re.compile(r'pending|content db', re.I)
+
+def tagline_rule(t):
+    """Reason a room tagline / rail snippet is left out (shown as no tagline), or None."""
+    if not isinstance(t, str) or not t.strip(): return 'empty'
+    why = text_rule(t)
+    if why: return why
+    if TAGLINE_BAD_RE.search(t) or 'TODO' in t: return 'placeholder'
+    return None
+
+def safe_tagline(t):
+    return t if tagline_rule(t) is None else ''
+
+def bad_taglines(cfg):
+    return [r['tagline'] for r in cfg.get('rooms', []) if isinstance(r.get('tagline'), str) and r['tagline'].strip()
+            and tagline_rule(r['tagline'])]
+
+def quotes_bad_tagline(text, bad):
+    return any(b in text for b in bad)
+
 def check(f, doc, hidden):
     pid = doc['name'].rsplit('/', 1)[-1]
     if f.get('parentId'): return 'reply'
@@ -135,12 +158,27 @@ def clip(t):
     t = re.sub(r'\s+\n', '\n', t.strip())
     return t if len(t) <= MAX_TEXT else t[:MAX_TEXT - 1].rstrip() + '…'
 
+def write_rail(suggest):
+    # Right rail (factory rail.outbound cards): suggested live rooms, merged into site.json by tools/brand_render.py.
+    rail = [{'tag': 'Featured room' if s['featured'] else 'Room', 'headline': s['name'], 'snippet': safe_tagline(s['tagline']),
+             'meta': s['domain'], 'url': 'https://%s/' % s['domain']} for s in suggest]
+    with open(os.path.join(DATA, 'rail.json'), 'w') as fh:
+        json.dump(rail, fh, indent=1, ensure_ascii=False); fh.write('\n')
+
 def refilter():
+    bad = bad_taglines(json.load(open(os.path.join(HERE, 'rooms.json'), encoding='utf-8')))
+    rp = os.path.join(DATA, 'rooms.json')
+    rd = json.load(open(rp, encoding='utf-8'))
+    cleared = [r['room'] for r in rd['rooms'] if r.get('tagline') and tagline_rule(r['tagline'])]
+    for r in rd['rooms']: r['tagline'] = safe_tagline(r.get('tagline'))
+    json.dump(rd, open(rp, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+    write_rail(rd['rooms'])
+    print('refilter: taglines cleared: %s' % (', '.join(cleared) or '-'))
     p = os.path.join(DATA, 'highlights.json')
     d = json.load(open(p, encoding='utf-8'))
     keep, drop = [], []
     for it in d['items']:
-        (drop if text_rule(it['text']) else keep).append(it)
+        (drop if text_rule(it['text']) or quotes_bad_tagline(it['text'], bad) else keep).append(it)
     counts = {}
     for it in keep: counts[it['room']] = counts.get(it['room'], 0) + 1
     d['items'], d['counts'] = keep, counts
@@ -166,6 +204,7 @@ def main():
     rank = {x: i for i, x in enumerate(order)}
     rooms = sorted(cfg['rooms'], key=lambda r: (rank.get(r['room'], 999), r['room']))
     report, picked, suggest = {}, {}, []
+    bad = bad_taglines(cfg)
     for r in rooms:
         sid, room = r['siteId'], r['room']
         rep = report.setdefault(room, {'siteId': sid, 'fetched': 0, 'kept': 0, 'dropped': {}})
@@ -180,7 +219,7 @@ def main():
         except Exception as e:
             rep['skipped'] = 'kill check failed: %s' % e; continue
         if r.get('suggest'):
-            suggest.append({'room': room, 'name': r['name'], 'domain': r['domain'], 'tagline': r['tagline'], 'featured': room in featured})
+            suggest.append({'room': room, 'name': r['name'], 'domain': r['domain'], 'tagline': safe_tagline(r.get('tagline')), 'featured': room in featured})
         per_room = f_per if room in featured else o_per
         if not r.get('highlights') or per_room <= 0:
             rep['skipped'] = 'held: ' + (r.get('hold') or 'highlights off') if not r.get('highlights') else 'suggestion only (otherPerRoom 0)'; continue
@@ -204,6 +243,7 @@ def main():
             if f.get('siteId') != sid: rep['dropped']['wrong_site'] = rep['dropped'].get('wrong_site', 0) + 1; continue
             if f.get('parentId') and f['parentId'] in hidden: rep['dropped']['hidden'] = rep['dropped'].get('hidden', 0) + 1; continue
             why = check(f, doc, hidden)
+            if not why and quotes_bad_tagline(f['text'], bad): why = 'quotes_bad_tagline'
             if not why and not rep['hidesReadable'] and tier_for(f) != 'ai' and not a.allow_unverified_members:
                 why = 'held_hides_unreadable'
             if why: rep['dropped'][why] = rep['dropped'].get(why, 0) + 1; continue
@@ -234,11 +274,7 @@ def main():
               open(os.path.join(DATA, 'highlights.json'), 'w'), indent=1, ensure_ascii=False)
     json.dump({'version': 1, 'generated': now, 'rooms': suggest},
               open(os.path.join(DATA, 'rooms.json'), 'w'), indent=1, ensure_ascii=False)
-    # Right rail (factory rail.outbound cards): suggested live rooms, merged into site.json by tools/brand_render.py.
-    rail = [{'tag': 'Featured room' if s['featured'] else 'Room', 'headline': s['name'], 'snippet': s['tagline'],
-             'meta': s['domain'], 'url': 'https://%s/' % s['domain']} for s in suggest]
-    with open(os.path.join(DATA, 'rail.json'), 'w') as fh:
-        json.dump(rail, fh, indent=1, ensure_ascii=False); fh.write('\n')
+    write_rail(suggest)
     print('highlights: %d items from %d rooms; suggested rooms: %d (wrote %s)' % (len(items), len(counts), len(suggest), DATA))
     for room, rep in report.items():
         print('  %-20s kept %-2s fetched %-3s %s %s' % (room, rep.get('kept'), rep.get('fetched'), rep.get('skipped', ''), rep.get('dropped') or ''))

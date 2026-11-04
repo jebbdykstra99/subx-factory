@@ -137,6 +137,24 @@ ok(not [it['postId'] for it in src_hl['items'] if BH.text_rule(it['text'])], 'hi
 ok('AT1RMUrXqDWrXqKmGn36' not in json.dumps(hl) and 'AT1RMUrXqDWrXqKmGn36' not in idx, 'highlights: 808chat post AT1RMUrXqDWrXqKmGn36 is gone')
 ok(src_hl['counts'] == {r: sum(1 for it in src_hl['items'] if it['room'] == r) for r in src_hl['counts']}
    and sum(src_hl['counts'].values()) == len(src_hl['items']), 'highlights.json: counts match items')
+# Room taglines + rail snippets: same filter (dash / "Seed") plus "pending", "TODO", "Content DB"; failing ones ship as ""
+src_rooms = json.load(open(os.path.join(ROOT, 'hub', 'src', 'rooms.json'), encoding='utf-8'))
+tag_of = {r['room']: r.get('tagline') for r in src_rooms['rooms']}
+for room in ('airlineschat', 'amachat', 'behindtheblackwall'):
+    ok(BH.tagline_rule(tag_of[room]) is not None, 'tagline_rule drops the %s tagline' % room)
+for t, want in (('Personal archive. TODO', 'placeholder'), ('Copy pending review', 'placeholder'), ('Seeded room', 'seed_prefix'),
+                ('Nothing but BART.', None), ('Todo el mundo.', None)):
+    ok(BH.tagline_rule(t) == want, 'tagline_rule(%r) == %r' % (t, want))
+ok(BH.safe_tagline('A \u2014 B') == '' and BH.safe_tagline('Hoods up.') == 'Hoods up.', 'safe_tagline blanks a failing tagline, keeps a clean one verbatim')
+bad_tags = BH.bad_taglines(src_rooms)
+shipped = [x.get('tagline', '') for x in rooms['rooms']] + [x.get('snippet', '') for x in site['rail']['outbound']]
+ok(all(t == '' or BH.tagline_rule(t) is None for t in shipped), 'hub/site rooms.json taglines + site.json rail snippets all pass tagline_rule')
+ok(all(t == '' or t in tag_of.values() for t in shipped), 'shipped taglines are verbatim room copy (never rewritten)')
+leak = [(f, b) for f in files(SITE) if f.endswith(TEXT) for b in bad_tags if b in read(os.path.join(SITE, f))]
+ok(bad_tags and not leak, 'no failing room tagline appears anywhere in hub/site (%d checked, leaks %s)' % (len(bad_tags), leak[:3]))
+ok(all(x['name'] and x['domain'] for x in rooms['rooms']), 'rooms keep name + link')
+ok(not [it['postId'] for it in src_hl['items'] if BH.quotes_bad_tagline(it['text'], bad_tags)], 'highlights.json: no item quotes a failing tagline')
+ok("(r.tagline ? '<p>' + esc(r.tagline) + '</p>' : '')" in read(os.path.join(SITE, 'hub.js')), 'hub.js: a room with no tagline renders no empty tagline line')
 # Key 1 edit E2: sign-up consent wording
 ok('(preview stubs, not final counsel)' not in idx and idx.count('Privacy Policy</a> (preview drafts).') == 2,
    'index.html: both sign-up consent lines say "(preview drafts)"')
