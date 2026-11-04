@@ -168,6 +168,12 @@ ok("(r.tagline ? '<p>' + esc(r.tagline) + '</p>' : '')" in read(os.path.join(SIT
 # Key 1 edit E2: sign-up consent wording
 ok('(preview stubs, not final counsel)' not in idx and '(preview drafts)' not in idx and idx.count('Privacy Policy</a>.</span>') == 2,
    'index.html: both sign-up consent lines link Terms + Privacy with no preview/draft qualifier')
+# Key 1 edit E1 (2026-11-04): DM placeholder is exactly the launch line, no internal dev note
+ok(re.findall(r'<div class="chat-placeholder-sub">([^<]*)</div>', idx) == ['Direct messages are not live yet.'], 'index.html: DM placeholder reads exactly "Direct messages are not live yet."')
+for p in pages:
+    vis = re.sub(r'<!--.*?-->', '', re.sub(r'<(script|style)\b.*?</\1>', '', read(os.path.join(SITE, p)), flags=re.S), flags=re.S)
+    vis = re.sub(r'<[^>]+>', ' ', vis)
+    ok(not re.search(r'site\.json|DMs graph|\bstubs?\b|\bTODO\b|FIXME|not a real inbox|[Ss]ample thread', vis), '%s: no internal dev note in visible text' % p)
 ok('Sign-in opens soon. Guest is browse-only.' in idx and 'Sign-in is closed while the hub is in preview' not in idx and '<span>Read-only</span>' in idx,
    'index.html: launch wording (sign-in opens soon, read-only), no preview claim')
 # launch copy: no preview / draft wording left in any rendered page (CSS class names like compose-image-preview excepted)
