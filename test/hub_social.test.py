@@ -58,6 +58,14 @@ r = subprocess.run(['node', os.path.join(ROOT, 'test', 'hub_social_dom.test.js')
 ok(r.returncode == 0, 'hub_social_dom.test.js (fake DOM): links stay on rooms.json domains, only hub.follows.v1 stored (%s)'
    % (r.stdout.strip().splitlines()[-1:] if r.returncode == 0 else r.stdout + r.stderr))
 
+# Juno Key 2 C1: the hidden notif-overlay stub never shows, even after the shell's openNotif() adds .active
+ok('.notif-overlay[hidden] { display: none !important; }' in css, 'C1: hub.css keeps .notif-overlay[hidden] at display:none (beats .notif-overlay.active)')
+ok("var stubOff = function () { var o = document.getElementById('notif-overlay'); if (o && o.classList.contains('active')) o.classList.remove('active'); };" in js
+   and 'stubOff(); };' in js, 'C1: toHub() drops .active from #notif-overlay')
+r = subprocess.run(['node', os.path.join(ROOT, 'test', 'hub_notif_stub.headless.mjs')], capture_output=True, text=True)
+ok(r.returncode == 0, 'hub_notif_stub.headless.mjs (Chrome): /#notifications and a hash change show the hub view, stub not displayed, focus not aria-hidden (%s)'
+   % (r.stdout.strip().splitlines()[-1:] if r.returncode == 0 else r.stdout + r.stderr))
+
 # storage: the one key, no indirect access (shared guard with stories_module)
 sys.path.insert(0, os.path.join(ROOT, 'test'))
 import hub_storage_guard  # noqa: E402

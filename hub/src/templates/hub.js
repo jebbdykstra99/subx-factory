@@ -261,9 +261,11 @@
         .observe(thoughts, { attributes: true, attributeFilter: ['class'] });
     }
     var LEGACY = { '#following': '#hub-following', '#notifications': '#hub-notifications', '#chat': '#hub-chat' };
-    var toHub = function () { var h = window.history; if (LEGACY[location.hash] && h && h.replaceState) h.replaceState(null, '', LEGACY[location.hash]); };
+    // the shell's openNotif() adds .active to the hidden #notif-overlay stub on #notifications; drop it so the stub never shows
+    var stubOff = function () { var o = document.getElementById('notif-overlay'); if (o && o.classList.contains('active')) o.classList.remove('active'); };
+    var toHub = function () { var h = window.history; if (LEGACY[location.hash] && h && h.replaceState) h.replaceState(null, '', LEGACY[location.hash]); stubOff(); };
     toHub();
-    window.addEventListener('hashchange', function () { toHub(); setTimeout(showHub, 0); });
+    window.addEventListener('hashchange', function () { toHub(); setTimeout(function () { stubOff(); showHub(); }, 0); });
     document.addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('[data-follow-room]'); if (!b) return;
       var room = b.getAttribute('data-follow-room'), i = hub.rooms.indexOf(room);

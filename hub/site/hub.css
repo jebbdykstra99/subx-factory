@@ -121,6 +121,8 @@ body { padding-bottom: 46px; }
 .hub-compose-go:disabled { opacity: 0.45; cursor: default; }
 .hub-compose-note { margin: 0.45rem 0 0; font-size: 0.75rem; color: var(--text-light); }
 .hub-pick[hidden] { display: none !important; }
+/* the hidden notif-overlay stub stays hidden even when the shell's openNotif() adds .active (.notif-overlay.active is display:flex) */
+.notif-overlay[hidden] { display: none !important; }
 .hub-pick { position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center; padding: 1rem; }
 .hub-pick-box { background: var(--bg); color: var(--text); border-radius: 14px; width: min(26rem, 100%); max-height: 85vh; overflow: auto; padding: 1rem 1.1rem; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); }
 .hub-pick-box h2 { margin: 0 0 0.3rem; font-size: 1.1rem; }

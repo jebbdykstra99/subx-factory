@@ -29,16 +29,16 @@ function boot(store, items, hash) {
   function el(id) {
     const cls = new Set();
     return { id, innerHTML: '', textContent: '', hidden: false, attrs: {},
-      classList: { contains: c => cls.has(c), toggle: (c, on) => { if (on === undefined) on = !cls.has(c); on ? cls.add(c) : cls.delete(c); }, add: c => cls.add(c) },
+      classList: { contains: c => cls.has(c), toggle: (c, on) => { if (on === undefined) on = !cls.has(c); on ? cls.add(c) : cls.delete(c); }, add: c => cls.add(c), remove: c => cls.delete(c) },
       getAttribute(k) { return this.attrs[k] == null ? null : this.attrs[k]; }, setAttribute(k, v) { this.attrs[k] = String(v); },
       hasAttribute(k) { return k in this.attrs; }, removeAttribute(k) { delete this.attrs[k]; }, focus() {} };
   }
   const ids = ['page-hub-following', 'page-hub-notifications', 'page-hub-chat', 'page-thoughts', 'hub-following-feed', 'hub-follow-list',
-    'hub-notif-feed', 'hub-notif-rooms', 'hub-chat-rooms', 'hub-notif-badge'];
+    'hub-notif-feed', 'hub-notif-rooms', 'hub-chat-rooms', 'hub-notif-badge', 'notif-overlay'];
   const els = {}; ids.forEach(i => { els[i] = el(i); });
   const pages = ['page-hub-following', 'page-hub-notifications', 'page-hub-chat', 'page-thoughts'].map(i => els[i]);
-  const writes = [];
-  const localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { writes.push(k); store[k] = String(v); } };
+  const writes = [], values = [];
+  const localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { writes.push(k); values.push(String(v)); store[k] = String(v); } };
   const loc = { hash };
   const listeners = {};
   const sandbox = {
@@ -59,7 +59,7 @@ function boot(store, items, hash) {
   vm.runInContext(js, sandbox);
   const go = h => { loc.hash = h; listeners.whashchange.forEach(f => f()); };
   const click = room => listeners.dclick[listeners.dclick.length - 1]({ target: { closest: s => (s === '[data-follow-room]' ? { getAttribute: () => room } : null) } });
-  return { els, loc, go, click, writes };
+  return { els, loc, go, click, writes, values };
 }
 
 const tick = () => new Promise(r => setImmediate(r));
@@ -122,6 +122,30 @@ const badge = b => (b.hidden ? '' : b.textContent);
     e.go('#home'); e.go(from);
     ok(e.loc.hash === to, 'E1: ' + from + ' opens ' + to + ' on hash change');
   }
+  // Key 2 C1: the shell's openNotif() adds .active to the hidden stub; the hub drops it on load and on every hash change
+  const st = boot({}, hl.items, '#hub-following');
+  st.els['notif-overlay'].classList.add('active'); st.go('#notifications');
+  ok(!st.els['notif-overlay'].classList.contains('active') && st.loc.hash === '#hub-notifications', 'C1: #notifications drops .active from the notif-overlay stub');
+  st.els['notif-overlay'].classList.add('active'); st.go('#hub-notifications');
+  ok(!st.els['notif-overlay'].classList.contains('active'), 'C1: .active added after the hash change is dropped too');
+
+  // Iris: hub.follows.v1 holds only rooms and seen ids. Old saves (a seen time, a lastOpened time, a version, anything
+  // else) are rewritten to exactly those two fields on the next write; every write is checked against this list.
+  const ALLOWED = '["rooms","seen"]';
+  const keysOf = v => JSON.stringify(Object.keys(JSON.parse(v)).sort());
+  const legacy = { 'hub.follows.v1': JSON.stringify({ rooms: [first.room], seen: 1730000000000, lastOpened: 1730000000000, v: 1, extra: 'x' }) };
+  const m = boot(legacy, hl.items, '#hub-following');
+  await tick(); await tick();
+  const mig = JSON.parse(legacy['hub.follows.v1']);
+  ok(keysOf(legacy['hub.follows.v1']) === ALLOWED && Array.isArray(mig.seen) && mig.seen.every(x => typeof x === 'string' && /^[a-z0-9-]+\/[A-Za-z0-9_-]+$/.test(x)) &&
+    !/1730000000000|lastOpened/.test(legacy['hub.follows.v1']), 'storage: an old save with seen/lastOpened times and a version is rewritten to rooms + seen ids only');
+  const legacy2 = { 'hub.follows.v1': JSON.stringify({ rooms: [], lastOpened: 1730000000000, v: 1 }) };
+  const m2 = boot(legacy2, hl.items, '#hub-following');
+  await tick(); await tick(); m2.click(first.room); m2.click(first.room); m2.click(quiet[0].room);
+  ok(keysOf(legacy2['hub.follows.v1']) === ALLOWED && !/lastOpened|1730000000000|"v"/.test(legacy2['hub.follows.v1']), 'storage: lastOpened and v are dropped on the next write');
+  const every = [a, b, d, m, m2].reduce((acc, x) => acc.concat(x.values), []);
+  ok(every.length > 0 && every.every(v => keysOf(v) === ALLOWED && JSON.parse(v).rooms.every(r => typeof r === 'string') && JSON.parse(v).seen.every(x => typeof x === 'string')),
+    'storage: every write (' + every.length + ') has exactly the fields rooms (room ids) and seen (highlight ids)');
   console.log('\n' + fails + ' failure(s)');
   process.exit(fails ? 1 : 0);
 })();
