@@ -21,12 +21,19 @@ repo. Their upstream text was authored under UPSTREAM below; when brand.json dif
 strings for the brand.json values, so with today's brand the copies stay byte-identical to the shared files.
 
 The template "topics.html" renders to <topicPathPrefix>index.html, so the topic index follows a path rename.
+Topic pages: every row of the seed named by config.json "topics.seed" (topics/seed_wave1.json) except HOLD rows renders
+hub/src/topic-template.html to <topicPathPrefix><slug>/index.html (listed in shell.noShell). <!--if:NAME--> blocks in
+that template are kept or dropped per topic (status, profile, optional copy) and the markers never reach the output.
+sitemap.xml lists only sitemap-eligible topics (tools/topic_status.py): none while "topics.hubNoindex" is true.
 shell.keep sha256 values in site.json are filled from the rendered files.
 
 Usage: python3 tools/brand_render.py [--check] [--brand PATH] [--out DIR] [--src DIR]
   --check  render to a temp dir and fail (exit 1) if hub/site differs (names every differing file)
 """
 import argparse, filecmp, hashlib, json, os, re, sys, tempfile, urllib.parse
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import topic_slug, topic_status  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Strings the shared upstream files (assets/whomark/*) were written with. Not hub copy: only used to re-brand
@@ -220,6 +227,9 @@ class Renderer:
             if not os.path.isfile(p):
                 raise RenderError('site.json shell.keep %s was not rendered' % k['file'])
             k['sha256'] = sha256_file(p)
+        topics = self.topics()
+        ns = site.setdefault('shell', {}).setdefault('noShell', [])
+        ns += [self.topic_path(t['slug']) for t in topics]
         rail = os.path.join(self.src, 'data', 'rail.json')
         if os.path.isfile(rail):
             site.setdefault('rail', {})['outbound'] = json.load(open(rail, encoding='utf-8'))
@@ -231,22 +241,88 @@ class Renderer:
             raise RenderError('templates without a "pages" entry in config.json: %s' % ', '.join(missing))
         for n, meta in sorted(pages.items()):
             page = {k: expand(v, self.ctx) if isinstance(v, str) else v for k, v in meta.items()}
+            page.setdefault('robots', topic_status.NOINDEX)
             text = self.render_text(open(os.path.join(tdir, n), encoding='utf-8').read(), '.html', page, where=n)
             self.write(self.out_path(n), text.encode('utf-8'))
+        # 4. topic pages (non-HOLD seed rows) and the sitemap (eligible topics only)
+        for t in topics:
+            self.write(self.topic_path(t['slug']), self.render_topic(t).encode('utf-8'))
+        self.write('sitemap.xml', self.sitemap(topics).encode('utf-8'))
         return self
 
+    # ---- topics ----
+    def topic_cfg(self):
+        return dict({'seed': None, 'open': False, 'showDoorways': False, 'hubNoindex': True}, **self.cfg.get('topics', {}))
+
+    def topic_path(self, slug):
+        return '%s/%s/index.html' % (self.topic_dir, slug)
+
+    def topics(self):
+        tc = self.topic_cfg()
+        if not tc['seed']:
+            return []
+        seed = json.load(open(os.path.join(ROOT, tc['seed']), encoding='utf-8'))
+        words = topic_slug.reserved(self.ctx['brand'])
+        out, seen = [], set()
+        for t in seed['topics']:
+            e = topic_slug.errors(t['slug'], words=words)
+            if e or t['slug'] in seen:
+                raise RenderError('seed topic %s refused: %s' % (t['slug'], '; '.join(e) or 'duplicate'))
+            seen.add(t['slug'])
+            if topic_status.rendered(t['status']):
+                out.append(t)
+        return out
+
+    def sitemap(self, topics):
+        b = self.ctx['brand']
+        hub_noindex = self.topic_cfg()['hubNoindex']
+        locs = ['https://%s%s%s/' % (b['primaryDomain'], b['topicPathPrefix'], t['slug'])
+                for t in topics if topic_status.sitemap_eligible(t['status'], hub_noindex)]
+        body = ''.join('  <url><loc>%s</loc></url>\n' % html_attr(u) for u in locs)
+        return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n%s</urlset>\n' % body
+
     def render_topic(self, topic):
-        """Render hub/src/topic-template.html for one topic dict (HUB_COPY 4a-4e). Not emitted to hub/site yet: the
-        topic layer ships in its own PR; tests render it with a dummy topic. Call after run() (assets are known)."""
-        need = ('slug', 'name', 'description', 'longDescription', 'goodPosts', 'offTopic', 'rulesShort')
-        miss = [k for k in need if not str(topic.get(k, '')).strip()]
+        """Render hub/src/topic-template.html for one topic (a seed row with title, or a dict with name) per HUB_COPY
+        4a-4e and ACTIVITY_RULE: <!--if:NAME--> blocks are kept or dropped here, so the page carries only its own
+        state and no HTML comments. Optional copy (longDescription, goodPosts, offTopic, rulesShort, legacyDomain) is
+        left out when empty. Call after the assets are rendered (run() does)."""
+        topic = dict(topic)
+        topic.setdefault('name', topic.get('title', ''))
+        topic.setdefault('status', 'hidden')
+        miss = [k for k in ('slug', 'name', 'description') if not str(topic.get(k, '')).strip()]
         if miss:
             raise RenderError('topic is missing %s' % ', '.join(miss))
-        if not re.match(r'^[a-z0-9][a-z0-9-]*$', topic['slug']):
-            raise RenderError('topic slug %r must be lowercase letters, digits and dashes' % topic['slug'])
-        topic = dict({'legacyDomain': ''}, **topic)
-        page = {'title': topic['name'] + ', ' + self.ctx['brand']['name'], 'description': topic['description']}
+        e = topic_slug.errors(topic['slug'], brand=self.ctx['brand'])
+        if e:
+            raise RenderError('; '.join(e))
+        if not topic_status.rendered(topic['status']):
+            raise RenderError('topic %s is on HOLD and is never rendered' % topic['slug'])
+        tc = self.topic_cfg()
+        st, prof = topic['status'], topic.get('legalProfile', 'standard-18')
+        doors = topic.get('doorwayDomains') or []
+        topic.setdefault('legacyDomain', doors[0] if doors else '')
+        has = lambda k: bool(str(topic.get(k) or '').strip())
+        cond = {'doorway': tc['showDoorways'] and has('legacyDomain'),
+                'not-live': st == 'hidden' and not tc['open'],
+                'state-hidden': st == 'hidden' and tc['open'],
+                'state-archived': st == 'archived', 'state-quiet': st == 'quiet',
+                'state-active-new': st == 'active' and bool(topic.get('justActivated')),
+                'about': has('longDescription'), 'goodPosts': has('goodPosts'), 'offTopic': has('offTopic'),
+                'rulesShort': has('rulesShort'), 'rules-default': not has('rulesShort'),
+                'profile-not-advice': prof in ('sensitive-18', 'alcohol-21'), 'profile-21': prof == 'alcohol-21'}
         text = open(os.path.join(self.src, 'topic-template.html'), encoding='utf-8').read()
+        block = re.compile(r'<!--if:([A-Za-z0-9-]+)-->\n(.*?)<!--/if:\1-->\n', re.S)
+        for _ in range(5):
+            def keep(m):
+                if m.group(1) not in cond:
+                    raise RenderError('topic-template.html: unknown block if:%s' % m.group(1))
+                return m.group(2) if cond[m.group(1)] else ''
+            text = block.sub(keep, text)
+        if '<!--' in text:
+            raise RenderError('topic-template.html: unbalanced <!--if:--> block or stray comment')
+        page = {'title': topic['name'] + ' · ' + self.ctx['brand']['name'], 'description': topic['description'],
+                'robots': topic_status.robots(st, tc['hubNoindex'])}
+        topic = {k: v for k, v in topic.items() if isinstance(v, str)}
         return self.render_text(text, '.html', page, where='topic-template.html', extra={'topic': topic})
 
 
