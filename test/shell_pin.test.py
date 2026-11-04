@@ -987,6 +987,29 @@ for name, (st_, needle) in sorted(ADV10_EXPECT.items()):
         good = good and not r['findings'] and not r['warnings']
     ok(good, 'adv10 %s = %s%s (%s %s %s)' % (name, st_, ' with "%s"' % needle[:50] if needle else '', r['status'], r['findings'][:2], r['warnings'][:2]))
 
+# adv11 (Juno K2 at bca0b62): B1 CSP tokenizer (browsers split only on ASCII whitespace) and vercel routes/headers
+# redirects (C3). Non-legacy rooms, so every CSP problem is DRIFT.
+ADV11 = os.path.join(ROOT, 'test', 'fixtures', 'shell_drift', 'adv11')
+_B1 = 'only printable ASCII and tab/LF/FF/CR/space are allowed'
+ADV11_EXPECT = {
+    'e12_nbsp_in_first_directive': ('DRIFT', 'U+00A0: ' + _B1),
+    'e12b_nbsp_entity': ('DRIFT', 'U+00A0: ' + _B1),
+    'e12c_vt_in_first_directive': ('DRIFT', 'U+000B: ' + _B1),
+    'e12d_u2028_in_first': ('DRIFT', 'U+2028: ' + _B1),
+    'e12e_x1f_in_first': ('DRIFT', 'U+001F: ' + _B1),
+    'e12f_header_nbsp': ('DRIFT', 'firebase.json header CSP for **: the CSP value has character U+00A0'),
+    'e13_nbsp_in_object_src': ('DRIFT', 'U+00A0: ' + _B1),
+    'r11_vercel_routes_legacy': ('DRIFT', 'vercel.json routes sends /go.js to an outside origin'),
+    'r11b_vercel_headers_location': ('DRIFT', 'vercel.json headers Location sends /go.js to an outside origin'),
+}
+ok(sorted(ADV11_EXPECT) == sorted(x for x in os.listdir(ADV11) if os.path.isdir(os.path.join(ADV11, x))), 'every adv11 fixture room has an expectation')
+for name, (st_, needle) in sorted(ADV11_EXPECT.items()):
+    with tempfile.TemporaryDirectory() as t:
+        d = os.path.join(t, name); shutil.copytree(os.path.join(ADV11, name), d)
+        r = run(d, csp=True, legacy=[])
+        ok(r['status'] == st_ and any(needle in x for x in r['findings']),
+           'adv11 %s = %s with "%s" (%s %s)' % (name, st_, needle[:50], r['status'], r['findings'][:2]))
+
 # D1-D3, C1-C3 and worker-src unit rooms (non-legacy: every CSP problem is DRIFT)
 with tempfile.TemporaryDirectory() as t:
     _Z = '0' * 40
@@ -1024,6 +1047,11 @@ with tempfile.TemporaryDirectory() as t:
         '_headers': "/*\n  Content-Security-Policy: script-src 'self' %s%s, script-src *\n" % (_DIR, _TAIL)}), 'OK')
     c_ok('D3: http-equiv with a trailing space', c_room('d3a', '<html><head>' + _m(equiv='Content-Security-Policy ') + _PIN + '</head></html>'), 'DRIFT', 'surrounding whitespace')
     c_ok('D3: http-equiv with a tab', c_room('d3b', '<html><head>' + _m(equiv='\tcontent-security-policy') + _PIN + '</head></html>'), 'DRIFT', 'surrounding whitespace')
+    c_ok('B1: tab/LF/FF/CR between tokens = OK', c_room('b1a', '<html><head>' + _m().replace("script-src 'self' ", "script-src\t'self'\n\x0c\r ") + _PIN + '</head></html>'), 'OK')
+    c_ok('B1: directive name outside [a-z0-9-]', c_room('b1b', '<html><head>' + _m('', "; script_src *") + _PIN + '</head></html>'), 'DRIFT', 'invalid directive name')
+    c_ok('B1: uppercase directive name = OK', c_room('b1c', '<html><head>' + _m().replace('script-src', 'SCRIPT-SRC') + _PIN + '</head></html>'), 'OK')
+    c_ok('B1: NBSP in a _headers CSP with a strict meta too', c_room('b1d', '<html><head>' + _m() + _PIN + '</head></html>', files={
+        '_headers': "/*\n  Content-Security-Policy: object-src\u00a0'none'\n"}), 'DRIFT', '_headers header CSP')
     NOTPIN = "is not this page's pin folder"
     c_ok('C1: pin folder plus factory.js file = OK', c_room('c1a', '<html><head>' + _m(_DIR + 'factory.js') + _PIN + '</head></html>'), 'OK')
     c_ok('C1: pin SHA, other version folder', c_room('c1b', '<html><head>' + _m(_DIR.replace('v1.2.6', 'v1.2.5')) + _PIN + '</head></html>'), 'DRIFT', NOTPIN)

