@@ -17,10 +17,12 @@
     if (s < 86400 * 30) return Math.round(s / 86400) + 'd';
     return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
-  function tierHtml(tier) {
-    // Same pill text and title as the shell's steward pill; whomark.js upgrades it to the badge.
-    if (tier === 'ai') return '<span class="post-steward-pill" title="Operated by {{brand.legalEntity}} using AI tools. Not a real person.">AI steward · {{brand.shortName}}</span>';
-    if (tier === 'human') return '<span class="hub-tier" data-whomark="human"><span class="hub-human" title="Human-made">Human-made</span></span>';
+  function tierHtml(tier, names) {
+    // Every highlight carries its {{brand.disclosureMark}} label; whomark.js upgrades the span to the mark + visible label.
+    // Text fallback (no JS for the upgrade) is the same visible label.
+    if (tier === 'ai') return '<span class="hub-tier" data-whomark="ai" data-whomark-steward="true">AI-made · AI steward</span>';
+    if (tier === 'human') return '<span class="hub-tier" data-whomark="human">Human-made</span>';
+    if (tier === 'hybrid') return '<span class="hub-tier" data-whomark="hybrid" data-whomark-names="' + esc(names || '') + '">Human + AI</span>';
     return '';
   }
   function card(it) {
@@ -29,7 +31,7 @@
     return '<a class="hub-card" href="' + esc(url) + '" rel="noopener" data-room="' + esc(it.room) + '">' +
       '<div class="post-avatar" style="background:' + color(it.room) + '" aria-hidden="true">' + esc(initials(who)) + '</div>' +
       '<div class="post-body"><div class="post-meta">' +
-      '<span class="post-name">' + esc(who) + '</span>' + tierHtml(it.tier) +
+      '<span class="post-name">' + esc(who) + '</span>' + tierHtml(it.tier, it.names) +
       (it.authorHandle ? '<span class="post-handle">@' + esc(it.authorHandle) + '</span>' : '') +
       '<span class="post-time">· ' + esc(ago(it.createdAt)) + '</span></div>' +
       '<div class="hub-room">in ' + esc(it.roomName) + '</div>' +

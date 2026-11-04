@@ -28,6 +28,12 @@ project/site ids).
   and `X-Robots-Tag: noindex, nofollow`.
 - Check: `python3 tools/shell_drift.py hub/site --csp-legacy <file> --strict`.
 
+## Disclosure mark
+
+The hub ships the final-v4.1 mark art from `hub/src/whomark/` (config, `whomark.js`, `whomark-*` SVG/PNG files;
+`MD5SUMS.final-v4.1.txt` pins their bytes), vendored to `assets/whomark/`. The shared `assets/whomark/` used by rooms
+is unchanged. Check: `python3 test/whomark_hub.test.py`.
+
 ## Data
 
 `hub/src/build_highlights.py` refreshes `hub/src/data/` (highlights, rooms, rail) from

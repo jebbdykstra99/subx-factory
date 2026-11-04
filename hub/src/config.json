@@ -12,40 +12,72 @@
       "to": "nests.css"
     },
     {
-      "from": "assets/whomark/config.json",
+      "from": "hub/src/whomark/config.json",
       "to": "assets/whomark/config.json"
     },
     {
-      "from": "assets/whomark/corner-ai.png",
-      "to": "assets/whomark/corner-ai.png"
-    },
-    {
-      "from": "assets/whomark/corner-human.png",
-      "to": "assets/whomark/corner-human.png"
-    },
-    {
-      "from": "assets/whomark/corner-hybrid.png",
-      "to": "assets/whomark/corner-hybrid.png"
-    },
-    {
-      "from": "assets/whomark/og-ai.png",
-      "to": "assets/whomark/og-ai.png"
-    },
-    {
-      "from": "assets/whomark/og-human.png",
-      "to": "assets/whomark/og-human.png"
-    },
-    {
-      "from": "assets/whomark/og-hybrid.png",
-      "to": "assets/whomark/og-hybrid.png"
-    },
-    {
-      "from": "assets/whomark/sprite.svg",
-      "to": "assets/whomark/sprite.svg"
-    },
-    {
-      "from": "assets/whomark/whomark.js",
+      "from": "hub/src/whomark/whomark.js",
       "to": "assets/whomark/whomark.js"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-ai-lg-color-128px.png",
+      "to": "assets/whomark/whomark-ai-lg-color-128px.png"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-ai-lg-color-48px.png",
+      "to": "assets/whomark/whomark-ai-lg-color-48px.png"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-ai-lg-color.svg",
+      "to": "assets/whomark/whomark-ai-lg-color.svg"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-ai-s14-color.svg",
+      "to": "assets/whomark/whomark-ai-s14-color.svg"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-ai-s16-color.svg",
+      "to": "assets/whomark/whomark-ai-s16-color.svg"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-human-lg-color-128px.png",
+      "to": "assets/whomark/whomark-human-lg-color-128px.png"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-human-lg-color-48px.png",
+      "to": "assets/whomark/whomark-human-lg-color-48px.png"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-human-lg-color.svg",
+      "to": "assets/whomark/whomark-human-lg-color.svg"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-human-s14-color.svg",
+      "to": "assets/whomark/whomark-human-s14-color.svg"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-human-s16-color.svg",
+      "to": "assets/whomark/whomark-human-s16-color.svg"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-hybrid-lg-color-128px.png",
+      "to": "assets/whomark/whomark-hybrid-lg-color-128px.png"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-hybrid-lg-color-48px.png",
+      "to": "assets/whomark/whomark-hybrid-lg-color-48px.png"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-hybrid-lg-color.svg",
+      "to": "assets/whomark/whomark-hybrid-lg-color.svg"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-hybrid-s14-color.svg",
+      "to": "assets/whomark/whomark-hybrid-s14-color.svg"
+    },
+    {
+      "from": "hub/src/whomark/art/whomark-hybrid-s16-color.svg",
+      "to": "assets/whomark/whomark-hybrid-s16-color.svg"
     },
     {
       "from": "hub/src/fonts/OFL-Inter.txt",
