@@ -1,0 +1,115 @@
+{
+  "collection": "topics",
+  "wave": 2,
+  "source": {
+    "decision": "Juno released six names from her PR #37 hold back to doorways (2026-11-03)",
+    "rows": 6
+  },
+  "notes": "Hidden, noindex, wave-gated rows for the released doorways. approvalPrereq \"trademark-check\" blocks wave approval (tools/topic_status.approved) until a one-line Trademark Agent check clears it and the field is removed in a reviewed commit.",
+  "topics": [
+    {
+      "slug": "prayer",
+      "title": "Prayer",
+      "description": "Prayer across faiths and traditions: practices, texts and personal experience, shared with respect.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "praychat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "repentance-and-reflection",
+      "title": "Repentance and Reflection",
+      "description": "Repentance, forgiveness and self reflection as different faiths and traditions understand them, discussed with respect.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "repentchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "woke-culture-and-politics",
+      "title": "Woke in Culture and Politics",
+      "description": "How the word woke is used in culture and politics, its history and the debate around it, discussed civilly from all sides.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "wokechat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "carnival-celebrations",
+      "title": "Carnival Celebrations",
+      "description": "Carnaval and Carnival celebrations around the world: parades, costumes, music, food and history.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "carnavalchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18",
+      "approvalPrereq": "trademark-check"
+    },
+    {
+      "slug": "crunk-music",
+      "title": "Crunk Music",
+      "description": "Crunk music and culture: artists, history, the Southern hip hop scene and its sound.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "crunkchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18",
+      "approvalPrereq": "trademark-check"
+    },
+    {
+      "slug": "byob-dining",
+      "title": "BYOB Dining",
+      "description": "Bring your own bottle dining and parties: places that allow it, corkage, etiquette and hosting tips.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "byobchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "alcohol-21"
+    }
+  ]
+}

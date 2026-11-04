@@ -29,6 +29,7 @@
   },
   "disclosureMark": "WHOMARK™",
   "nonAffiliation": "Not affiliated with, endorsed by, or sponsored by X Corp.",
+  "nonAffiliationGov": "Not affiliated with, endorsed by, or speaking for any government agency.",
   "notAdvice": "Posts are opinions from members and stewards, not medical, legal, or financial advice.",
   "footer": "© {{year}} {{brand.legalEntity}} · Terms · Privacy · Report: {{brand.takedownEmail}}"
 }

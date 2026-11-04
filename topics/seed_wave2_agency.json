@@ -1,0 +1,163 @@
+{
+  "collection": "topics",
+  "wave": 2,
+  "source": {
+    "file": "AGENCY_TOPICS_DRAFT_2026-11-03.md",
+    "md5": "e9bf6e557065b100ccaa0b8fb0e51c6e",
+    "rows": 7
+  },
+  "extraSources": [
+    {
+      "file": "FTP_TOPIC_DRAFT_2026-11-03.md",
+      "md5": "7a8f20c18faf03b3b20c6a1c7e6ffd0a",
+      "rows": 1
+    }
+  ],
+  "generatedBy": "tools/topics_seed.py --from-agency-md --from-topic-md",
+  "topics": [
+    {
+      "slug": "justice-system",
+      "title": "Justice System",
+      "description": "Courts, prosecutors and public cases, talked through in plain words. Not legal advice.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "dojchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18",
+      "govNonAffiliation": true
+    },
+    {
+      "slug": "environment-policy",
+      "title": "Environment Policy",
+      "description": "Air, water, climate rules and the public comment process, explained and debated.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "epachat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18",
+      "govNonAffiliation": true
+    },
+    {
+      "slug": "aviation-safety",
+      "title": "Aviation Safety",
+      "description": "Incidents, rules, drones and what keeps flying safe, from public reports.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "faachat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18",
+      "govNonAffiliation": true
+    },
+    {
+      "slug": "consumer-finance",
+      "title": "Consumer Finance",
+      "description": "Fees, credit, banks and your rights as a borrower. Never share account numbers. Not financial advice.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "cfpbchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18",
+      "govNonAffiliation": true
+    },
+    {
+      "slug": "public-lands-policy",
+      "title": "Public Lands Policy",
+      "description": "Parks, leases, water and who decides what happens on public land.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "doichat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18",
+      "govNonAffiliation": true
+    },
+    {
+      "slug": "public-finance",
+      "title": "Public Finance",
+      "description": "Debt, bonds, tariffs and where the money goes, from public data.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "treasurychat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18",
+      "govNonAffiliation": true
+    },
+    {
+      "slug": "russia-watch",
+      "title": "Russia Watch",
+      "description": "News and analysis on Russia from public reporting. No doxxing, no unverified leaks.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "fsbchat.com",
+        "svrchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18",
+      "govNonAffiliation": true
+    },
+    {
+      "slug": "fight-the-power",
+      "title": "Fight the Power",
+      "description": "Civil rights, protest history and people pushing back on power, from the 1960s to now. Debate the ideas, not the people. No threats, no doxxing, no calls to violence.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "ftpchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    }
+  ]
+}

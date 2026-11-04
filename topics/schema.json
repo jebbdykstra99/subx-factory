@@ -22,6 +22,8 @@
     "lastCountedPostAt": {"type": ["string", "null"], "format": "date-time"},
     "doorwayDomains": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"}},
     "stewardOnly": {"type": "boolean", "description": "true while members cannot post (archived = read-only, hold = not open); stewards only"},
+    "govNonAffiliation": {"type": "boolean", "description": "optional; true on a topic reached by a doorway named after a government agency: the topic page shows brand.nonAffiliationGov under the title and in the footer"},
+    "approvalPrereq": {"enum": ["trademark-check"], "description": "optional gate; while present, tools/topic_status.approved() is false whatever the approval record says (wave approval blocked until the one-line Trademark Agent check clears and the field is removed in a reviewed commit)"},
     "legalProfile": {"enum": ["standard-18", "sensitive-18", "alcohol-21"], "description": "optional; drives the not-advice and 21+ lines on the topic page"}
   }
 }
