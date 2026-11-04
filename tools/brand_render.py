@@ -6,7 +6,7 @@ spell the brand; they use tokens:
 
   {{brand.KEY}} / {{brand.KEY.SUB}}   a brand.json value (values may hold tokens too, e.g. footer -> {{year}})
   {{year}}                            year of hub/src/data/highlights.json "generated" (deterministic, not the clock)
-  {{shell.pinUrl}} {{shell.integrity}} {{shell.csp}}   the pinned shared shell (hub/src/config.json)
+  {{shell.pinUrl}} {{shell.integrity}} {{shell.csp}}   the shared shell, self-hosted at /shell/<base>/factory.js (hub/src/config.json)
   {{page.title}} {{page.description}}  per-page values from hub/src/config.json "pages"
   {{asset:/path}}                     /path?v=<sha256[:10] of the rendered file> (cache-bust, rendered first)
   {{> name}}                          hub/src/partials/name.html
@@ -26,18 +26,25 @@ hub/src/topic-template.html to <topicPathPrefix><slug>/index.html (listed in she
 that template are kept or dropped per topic (status, profile, optional copy) and the markers never reach the output.
 A topic row with govNonAffiliation true (topics/seed_wave2_agency.json) shows brand.nonAffiliationGov under the title
 (if:gov) and as a line inside the footer.
-sitemap.xml lists only sitemap-eligible topics (tools/topic_status.py): none while "topics.hubNoindex" is true.
+Robots: "topics.hubNoindex" true = every page noindex,nofollow and an empty sitemap (the pre-launch lock, kept as the rollback switch). When it is false, a hub page
+is index,follow unless its config.json "pages" entry sets "robots" (404 and the topic index keep noindex,nofollow), and
+every topic page follows its own status (tools/topic_status.py: only "active" is indexable; hidden, eligible, quiet and
+archived stay noindex,nofollow). sitemap.xml lists the indexable hub pages and the sitemap-eligible topics, nothing else.
+Every page carries <link rel="canonical"> on https://<brand.primaryDomain>, so the *.web.app hosts never compete with it.
 shell.keep sha256 values in site.json are filled from the rendered files.
 
 Usage: python3 tools/brand_render.py [--check] [--brand PATH] [--out DIR] [--src DIR]
   --check  render to a temp dir and fail (exit 1) if hub/site differs (names every differing file)
 """
-import argparse, filecmp, hashlib, json, os, re, sys, tempfile, urllib.parse
+import argparse, base64, filecmp, hashlib, json, os, re, sys, tempfile, urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import topic_slug, topic_status  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# hub fork of the shared shell (EXCEPTIONS.md E21): the one header line that names the source repo is replaced
+FORK_HEADER_FROM = b'github.com/jebbdykstra99/subx-factory'
+FORK_HEADER = ' * Source: SubX shared shell %s (hub fork, header only)'
 # Strings the shared upstream files (assets/whomark/*) were written with. Not hub copy: only used to re-brand
 # vendored bytes; most specific first.
 UPSTREAM = [('legalEntity', 'Sub' + 'X, LLC'), ('takedownEmail', 'takedown@sub' + 'x.it'),
@@ -113,12 +120,17 @@ class Renderer:
         if not re.fullmatch(r'^\d{4}$', year):
             raise RenderError('hub/src/data/highlights.json has no "generated" year')
         sh = self.cfg['shell']
-        pin = 'https://cdn.jsdelivr.net/gh/%s@%s/shell/%s/factory.js' % (sh['repo'], sh['sha'], sh['base'])
-        csp = "script-src 'self' %s; object-src 'none'; base-uri 'none'; font-src 'self'" % (pin.rsplit('/', 1)[0] + '/')
+        # B2 (2026-11-04): the pinned shell is self-hosted at /shell/<base>/factory.js as a hub-only fork (EXCEPTIONS.md E21):
+        # the pinned bytes with ONLY the header source line replaced, under a new SRI. script-src and connect-src are 'self'
+        # only, so the hub makes no external request and no CDN or repo path appears in the output. shell_bytes() builds it.
+        self.shell_rel = 'shell/%s/factory.js' % sh['base']
+        pin = '/' + self.shell_rel
+        self.shell_data, self.shell_sha, self.shell_sri = self.shell_bytes()
+        csp = "script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'"
         if re.search(r'[^\x20-\x7e]|,', csp):
             raise RenderError('CSP must be printable ASCII without commas')
         self.ctx = {'brand': brand, 'year': year,
-                    'shell': {'pinUrl': pin, 'integrity': sh['integrity'], 'csp': csp, 'base': sh['base']}}
+                    'shell': {'pinUrl': pin, 'integrity': self.shell_sri, 'csp': csp, 'base': sh['base']}}
         prefix = brand.get('topicPathPrefix', '')
         if not re.fullmatch(r'^/[a-z0-9][a-z0-9-]*/$', prefix):
             raise RenderError('brand.topicPathPrefix must look like /t/ (got %r)' % prefix)
@@ -180,6 +192,29 @@ class Renderer:
             fh.write(data)
         return p
 
+    def shell_bytes(self):
+        """The self-hosted hub fork of shell/<base>/factory.js (never re-branded). The pinned file is verified first: its
+        sha384 must equal config.json shell.integrity and SHELL.json, and its sha256 and size must equal SHELL.json, or the
+        render stops. Then exactly one line changes: the header comment line naming the source repo becomes
+        FORK_HEADER. Every other byte is identical. Returns (fork bytes, fork sha256, fork SRI sha384)."""
+        sh = self.cfg['shell']
+        man = json.load(open(os.path.join(ROOT, 'shell', sh['base'], 'SHELL.json'), encoding='utf-8'))['files']['factory.js']
+        data = open(os.path.join(ROOT, 'shell', sh['base'], 'factory.js'), 'rb').read()
+        sri = 'sha384-' + base64.b64encode(hashlib.sha384(data).digest()).decode()
+        if not (sri == sh['integrity'] == man['integrity']):
+            raise RenderError('shell/%s/factory.js sha384 %s != config.json shell.integrity / SHELL.json' % (sh['base'], sri))
+        if hashlib.sha256(data).hexdigest() != man['sha256'] or len(data) != man['bytes']:
+            raise RenderError('shell/%s/factory.js sha256/bytes != SHELL.json' % sh['base'])
+        lines = data.split(b'\n')
+        hits = [i for i, ln in enumerate(lines) if FORK_HEADER_FROM in ln]
+        if len(hits) != 1 or not lines[hits[0]].lstrip().startswith(b'*'):
+            raise RenderError('shell/%s/factory.js: expected exactly one header comment line with %r (found %d)'
+                              % (sh['base'], FORK_HEADER_FROM.decode(), len(hits)))
+        lines[hits[0]] = (FORK_HEADER % sh['base']).encode()
+        fork = b'\n'.join(lines)
+        fsri = 'sha384-' + base64.b64encode(hashlib.sha384(fork).digest()).decode()
+        return fork, hashlib.sha256(fork).hexdigest(), fsri
+
     def rebrand_vendor(self, data):
         brand = self.ctx['brand']
         text = data.decode('utf-8')
@@ -205,6 +240,8 @@ class Renderer:
                 data = self.rebrand_vendor(data)
             self.write(v['to'], data)
             self.assets['/' + v['to']] = hashlib.sha256(data).hexdigest()[:10]
+        # 1b. the self-hosted shell (byte copy, no ?v= query: a pin URL may not carry one)
+        self.write(self.shell_rel, self.shell_data)
         # 2. data files copied as is (room content, not brand copy)
         for d in cfg.get('data', []):
             data = open(os.path.join(self.src, 'data', d), 'rb').read()
@@ -224,6 +261,10 @@ class Renderer:
             self.assets['/' + n] = hashlib.sha256(data).hexdigest()[:10]
         site = json.loads(self.render_text(open(os.path.join(tdir, 'site.json'), encoding='utf-8').read(), '.json',
                                            where='site.json'))
+        # the self-hosted shell is a declared hub-only fork (header line only; shell_drift reports FORK with 2 diff lines), E21
+        site.setdefault('shell', {}).update({'fork': True, 'file': self.shell_rel, 'sha256': self.shell_sha,
+                                             'reason': 'Self-hosted hub fork of shell/%s/factory.js: header source line only, new SRI; script-src and connect-src are self only' % self.cfg['shell']['base'],
+                                             'exception': 'E21'})
         for k in site.get('shell', {}).get('keep', []):
             p = os.path.join(self.out, k['file'])
             if not os.path.isfile(p):
@@ -241,9 +282,18 @@ class Renderer:
         missing = [n for n in names if n.endswith('.html') and n not in pages]
         if missing:
             raise RenderError('templates without a "pages" entry in config.json: %s' % ', '.join(missing))
+        hub_noindex = self.topic_cfg()['hubNoindex']
+        self.indexable_pages = []
         for n, meta in sorted(pages.items()):
-            page = {k: expand(v, self.ctx) if isinstance(v, str) else v for k, v in meta.items()}
-            page.setdefault('robots', topic_status.NOINDEX)
+            page = {k: expand(v, self.ctx) if isinstance(v, str) else v for k, v in meta.items() if not k.startswith('_')}
+            if hub_noindex:
+                page['robots'] = topic_status.NOINDEX
+            page.setdefault('robots', topic_status.INDEX)
+            if page['robots'] not in (topic_status.INDEX, topic_status.NOINDEX):
+                raise RenderError('config.json pages.%s.robots must be %r or %r' % (n, topic_status.INDEX, topic_status.NOINDEX))
+            page['canonical'] = self.canonical(self.out_path(n))
+            if page['robots'] == topic_status.INDEX:
+                self.indexable_pages.append(page['canonical'])
             text = self.render_text(open(os.path.join(tdir, n), encoding='utf-8').read(), '.html', page, where=n)
             self.write(self.out_path(n), text.encode('utf-8'))
         # 4. topic pages (non-HOLD seed rows) and the sitemap (eligible topics only)
@@ -255,6 +305,12 @@ class Renderer:
     # ---- topics ----
     def topic_cfg(self):
         return dict({'seed': None, 'open': False, 'showDoorways': False, 'hubNoindex': True}, **self.cfg.get('topics', {}))
+
+    def canonical(self, rel):
+        """https://<primaryDomain>/<rel>, with a trailing index.html dropped (index.html -> /, t/x/index.html -> /t/x/)."""
+        if rel == 'index.html' or rel.endswith('/index.html'):
+            rel = rel[:-len('index.html')]
+        return 'https://%s/%s' % (self.ctx['brand']['primaryDomain'], rel)
 
     def topic_path(self, slug):
         return '%s/%s/index.html' % (self.topic_dir, slug)
@@ -278,8 +334,9 @@ class Renderer:
     def sitemap(self, topics):
         b = self.ctx['brand']
         hub_noindex = self.topic_cfg()['hubNoindex']
-        locs = ['https://%s%s%s/' % (b['primaryDomain'], b['topicPathPrefix'], t['slug'])
-                for t in topics if topic_status.sitemap_eligible(t['status'], hub_noindex)]
+        locs = [] if hub_noindex else list(getattr(self, 'indexable_pages', []))
+        locs += ['https://%s%s%s/' % (b['primaryDomain'], b['topicPathPrefix'], t['slug'])
+                 for t in topics if topic_status.sitemap_eligible(t['status'], hub_noindex)]
         body = ''.join('  <url><loc>%s</loc></url>\n' % html_attr(u) for u in locs)
         return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n%s</urlset>\n' % body
 
@@ -326,7 +383,7 @@ class Renderer:
         if '<!--' in text:
             raise RenderError('topic-template.html: unbalanced <!--if:--> block or stray comment')
         page = {'title': topic['name'] + ' · ' + self.ctx['brand']['name'], 'description': topic['description'],
-                'robots': topic_status.robots(st, tc['hubNoindex'])}
+                'robots': topic_status.robots(st, tc['hubNoindex']), 'canonical': self.canonical(self.topic_path(topic['slug']))}
         gov = cond['gov']
         topic = {k: v for k, v in topic.items() if isinstance(v, str)}
         out = self.render_text(text, '.html', page, where='topic-template.html', extra={'topic': topic})

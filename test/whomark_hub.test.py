@@ -162,7 +162,19 @@ DENVER_ADDR = re.compile(
 def banned(t):
     return BANNED.search(t) or DENVER_ADDR.search(t)
 hits = []
+# the self-hosted shell (hub/site/shell/<base>/factory.js) is the hub-only fork of shell/<base>/factory.js (EXCEPTIONS.md E21):
+# one header line differs; its upstream code keeps the functional reserved-handle regex "jebb". hub_brand.test.py pins it.
+SELF_SHELL = os.path.abspath(os.path.join(ROOT, 'hub', 'site', 'shell'))
 for p in list(walk(os.path.join(ROOT, 'hub'))) + [os.path.join(SRC, 'topic-template.html')]:
+    if os.path.abspath(p).startswith(SELF_SHELL + os.sep):
+        fl = read(p, 'rb').split(b'\n')
+        pl = read(os.path.join(ROOT, os.path.relpath(p, os.path.join(ROOT, 'hub', 'site'))), 'rb').split(b'\n')
+        dl = [i for i in range(len(pl)) if len(fl) != len(pl) or fl[i] != pl[i]]
+        ft = b'\n'.join(fl).decode('utf-8')
+        ok(len(dl) == 1 and fl[dl[0]].startswith(b' * Source: SubX shared shell') and not banned(ft)
+           and re.findall(r'jebb\w*|dykstra', ft, re.I) == ['jebb'],
+           '%s: hub fork of the shared shell (one header line), no repo path or private string besides the reserved-handle regex' % os.path.relpath(p, ROOT))
+        continue
     b = read(p, 'rb')
     try:
         t = b.decode('utf-8')

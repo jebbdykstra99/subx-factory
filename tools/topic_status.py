@@ -26,8 +26,9 @@ the list (or a row losing its record) fails closed: nothing in that wave can be 
                         to eligible, not active. Nothing is indexed without a valid approval.
   hold     -> hold      manual only (never rendered, never changed by this rule)
 
-Only `active` is indexable and sitemap-eligible, and only when the hub itself is not under the hub-wide noindex (it is
-tonight, so the sitemap lists 0 topics). Every other status is noindex,nofollow.
+Only `active` is indexable and sitemap-eligible, and only when the hub itself is not under the hub-wide noindex (lifted
+for the go-live on 2026-11-04; no topic is active yet, so the sitemap lists 0 topics). Every other status is
+noindex,nofollow.
 
 A doorway domain redirects 302 to the topic until the topic has been active for 60 days since activatedAt, then 301.
 activatedAt restarts on every (re)entry into active, so a quiet or archived topic that reopens starts a new 60-day clock.

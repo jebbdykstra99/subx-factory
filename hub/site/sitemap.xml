@@ -1,3 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://subx.it/about.html</loc></url>
+  <url><loc>https://subx.it/guidelines.html</loc></url>
+  <url><loc>https://subx.it/</loc></url>
+  <url><loc>https://subx.it/privacy.html</loc></url>
+  <url><loc>https://subx.it/report.html</loc></url>
+  <url><loc>https://subx.it/rooms.html</loc></url>
+  <url><loc>https://subx.it/terms.html</loc></url>
 </urlset>

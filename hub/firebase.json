@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "subx-skins",
+    "target": "hub",
     "public": "site",
     "ignore": [
       "firebase.json",
@@ -12,12 +12,8 @@
         "source": "**",
         "headers": [
           {
-            "key": "X-Robots-Tag",
-            "value": "noindex, nofollow"
-          },
-          {
             "key": "Content-Security-Policy",
-            "value": "script-src 'self' https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@88ce6dc1fe9b2d7fce809695e8ac4ef94ec89236/shell/v1.2.6/; object-src 'none'; base-uri 'none'; font-src 'self'; frame-ancestors 'none'"
+            "value": "script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'; frame-ancestors 'none'"
           },
           {
             "key": "X-Content-Type-Options",
@@ -26,6 +22,15 @@
           {
             "key": "Referrer-Policy",
             "value": "strict-origin-when-cross-origin"
+          }
+        ]
+      },
+      {
+        "source": "**/*.json",
+        "headers": [
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex"
           }
         ]
       }

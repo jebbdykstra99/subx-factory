@@ -1,22 +1,27 @@
-# SubX hub robots.txt · PREVIEW LOCK
-# Preview only: do not crawl, index, scrape, or use any content for AI training.
-# Operator: SubX, LLC · Contact: takedown@subx.it
+# SubX hub robots.txt
+# Search engines may crawl the hub. Pages that must stay out of search (new and quiet topics, the topic index, 404)
+# carry <meta name="robots" content="noindex,nofollow">; they are not disallowed here so crawlers can read that tag.
+# No use of any content for AI training. Search/answer agents may fetch pages to cite and link them. Operator: SubX, LLC · Contact: takedown@subx.it
 
 User-agent: *
-Disallow: /
+Allow: /
 
-# Named AI crawlers and training bots: also fully disallowed (redundant with *, listed for clarity)
-User-agent: GPTBot
-User-agent: ChatGPT-User
+# Search and answer agents (they fetch pages to cite and link them, not to train): allowed
 User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: PerplexityBot
+User-agent: Claude-SearchBot
+Allow: /
+
+# AI training crawlers: fully disallowed
+User-agent: GPTBot
 User-agent: ClaudeBot
 User-agent: anthropic-ai
 User-agent: Google-Extended
 User-agent: Applebot-Extended
-User-agent: PerplexityBot
 User-agent: CCBot
 User-agent: Bytespider
 User-agent: Meta-ExternalAgent
 Disallow: /
 
-# No Sitemap line during preview.
+Sitemap: https://subx.it/sitemap.xml
