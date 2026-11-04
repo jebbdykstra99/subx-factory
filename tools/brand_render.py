@@ -24,6 +24,8 @@ The template "topics.html" renders to <topicPathPrefix>index.html, so the topic 
 Topic pages: every row of the seed named by config.json "topics.seed" (topics/seed_wave1.json) except HOLD rows renders
 hub/src/topic-template.html to <topicPathPrefix><slug>/index.html (listed in shell.noShell). <!--if:NAME--> blocks in
 that template are kept or dropped per topic (status, profile, optional copy) and the markers never reach the output.
+A topic row with govNonAffiliation true (topics/seed_wave2_agency.json) shows brand.nonAffiliationGov under the title
+(if:gov) and as a line inside the footer.
 sitemap.xml lists only sitemap-eligible topics (tools/topic_status.py): none while "topics.hubNoindex" is true.
 shell.keep sha256 values in site.json are filled from the rendered files.
 
@@ -309,7 +311,10 @@ class Renderer:
                 'state-active-new': st == 'active' and bool(topic.get('justActivated')),
                 'about': has('longDescription'), 'goodPosts': has('goodPosts'), 'offTopic': has('offTopic'),
                 'rulesShort': has('rulesShort'), 'rules-default': not has('rulesShort'),
-                'profile-not-advice': prof in ('sensitive-18', 'alcohol-21'), 'profile-21': prof == 'alcohol-21'}
+                'profile-not-advice': prof in ('sensitive-18', 'alcohol-21'), 'profile-21': prof == 'alcohol-21',
+                'gov': topic.get('govNonAffiliation') is True}
+        if cond['gov'] and not str(self.ctx['brand'].get('nonAffiliationGov') or '').strip():
+            raise RenderError('topic %s: govNonAffiliation needs brand.nonAffiliationGov' % topic['slug'])
         text = open(os.path.join(self.src, 'topic-template.html'), encoding='utf-8').read()
         block = re.compile(r'<!--if:([A-Za-z0-9-]+)-->\n(.*?)<!--/if:\1-->\n', re.S)
         for _ in range(5):
@@ -322,8 +327,17 @@ class Renderer:
             raise RenderError('topic-template.html: unbalanced <!--if:--> block or stray comment')
         page = {'title': topic['name'] + ' · ' + self.ctx['brand']['name'], 'description': topic['description'],
                 'robots': topic_status.robots(st, tc['hubNoindex'])}
+        gov = cond['gov']
         topic = {k: v for k, v in topic.items() if isinstance(v, str)}
-        return self.render_text(text, '.html', page, where='topic-template.html', extra={'topic': topic})
+        out = self.render_text(text, '.html', page, where='topic-template.html', extra={'topic': topic})
+        if gov:
+            # the shared footer partial has no per-topic blocks; add the line inside this page's footer
+            end = out.rfind('</footer>')
+            if end < 0:
+                raise RenderError('topic-template.html: govNonAffiliation needs the footer partial')
+            line = '  <span class="legal-footer-line legal-footer-gov">%s</span>\n' % esc_for('.html')(self.ctx['brand']['nonAffiliationGov'])
+            out = out[:end] + line + out[end:]
+        return out
 
 
 def files_under(d):

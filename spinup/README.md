@@ -28,3 +28,15 @@ Doorways redirect `https://<domain>/*` to `{{brand.primaryDomain}}{{brand.topicP
 302 while the topic is hidden, eligible, quiet or not seeded yet, and becomes 301 once the topic has been active for 60 days
 (`tools/topic_status.py doorway_status`). That status is computed and never stored. Before a doorway can go live, its topic
 needs a row in the seed (`doorwaysNeedingTopicRow` in plan.json).
+
+Government-agency doorways (owner go, 2026-11-03): a doorway named after a government agency carries `govAgency: true`
+in candidates.json and its site.json. Its topic must be seeded with `govNonAffiliation: true`. The 8 agency doorways
+reach 7 hidden topics in `topics/seed_wave2_agency.json`, built with
+`python3 tools/topics_seed.py --from-agency-md <draft> --write` and checked by `topics_seed.py --check`. Such a topic
+page shows `{{brand.nonAffiliationGov}}` ("Not affiliated with, endorsed by, or speaking for any government agency.")
+under the title (`<!--if:gov-->` in hub/src/topic-template.html) and as a line inside the footer
+(tools/brand_render.py render_topic). The render refuses that topic if the brand key is missing.
+
+`--check` refuses a flag on a non-doorway, a flagged doorway whose topic lacks govNonAffiliation, and a missing brand
+key. shell_drift allows `govAgency` only as `true` on a doorway. The agency seed is not in hub/src/config.json
+`topics.seed`, so no hub/site page renders from it yet, and everything stays hidden.

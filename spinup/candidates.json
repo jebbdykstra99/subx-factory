@@ -1,5 +1,5 @@
 {
-  "notes": "CONFIG ONLY: the spin-up candidate domains (step 3 prep). tools/spinup_render.py renders one site.json per candidate into a dry-run dir that is never served; nothing here touches DNS, a registrar, a room repo or hub/. Source: the owned-domain inventory in the 2026-11-03 topic-rooms plan (151 names; live rooms and personal names were already left out). Names held for legal or trademark review are NOT listed here in any form; the reviewed list is kept off-repo, and only the count by reason is recorded below.",
+  "notes": "CONFIG ONLY: the spin-up candidate domains (step 3 prep). tools/spinup_render.py renders one site.json per candidate into a dry-run dir that is never served; nothing here touches DNS, a registrar, a room repo or hub/. Source: the owned-domain inventory in the 2026-11-03 topic-rooms plan (151 names; live rooms and personal names were already left out). Names held for legal or trademark review are NOT listed here in any form; the reviewed list is kept off-repo, and only the count by reason is recorded below. Doorways named after a government agency carry govAgency: true (owner go, 2026-11-03); their topics are in topics/seed_wave2_agency.json with govNonAffiliation true.",
   "source": {
     "plan": "topic-rooms plan 2026-11-03, section 12-13 domain map",
     "inventory": 151
@@ -7,7 +7,6 @@
   "excludedByReason": {
     "brand reserve (mark not cleared)": 2,
     "doorway topic on HOLD": 1,
-    "government agency name": 9,
     "personal name or real person": 14,
     "sensitive term (profanity, drugs, other)": 15,
     "third-party mark (trademark review)": 22
@@ -62,6 +61,11 @@
       "group": "place",
       "mode": "doorway",
       "topic": "philadelphia"
+    },
+    {
+      "domain": "222chat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
     },
     {
       "domain": "224chat.com",
@@ -220,6 +224,11 @@
       "topic": "houston"
     },
     {
+      "domain": "73chat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
       "domain": "81chat.com",
       "group": "place",
       "mode": "doorway",
@@ -242,16 +251,6 @@
       "group": "place",
       "mode": "doorway",
       "topic": "san-diego"
-    },
-    {
-      "domain": "222chat.com",
-      "group": "topic",
-      "note": "slug: owner picks (no mode, so the default applies)"
-    },
-    {
-      "domain": "73chat.com",
-      "group": "topic",
-      "note": "slug: owner picks (no mode, so the default applies)"
     },
     {
       "domain": "agachat.com",
@@ -300,6 +299,13 @@
       "topic": "culture-debates"
     },
     {
+      "domain": "cfpbchat.com",
+      "group": "agency",
+      "mode": "doorway",
+      "topic": "consumer-finance",
+      "govAgency": true
+    },
+    {
       "domain": "complaintchat.com",
       "group": "topic",
       "mode": "doorway",
@@ -329,6 +335,20 @@
       "topic": "birthdays"
     },
     {
+      "domain": "doichat.com",
+      "group": "agency",
+      "mode": "doorway",
+      "topic": "public-lands-policy",
+      "govAgency": true
+    },
+    {
+      "domain": "dojchat.com",
+      "group": "agency",
+      "mode": "doorway",
+      "topic": "justice-system",
+      "govAgency": true
+    },
+    {
       "domain": "dpchat.com",
       "group": "topic",
       "note": "slug: owner picks (no mode, so the default applies)"
@@ -340,10 +360,24 @@
       "topic": "envy"
     },
     {
+      "domain": "epachat.com",
+      "group": "agency",
+      "mode": "doorway",
+      "topic": "environment-policy",
+      "govAgency": true
+    },
+    {
       "domain": "etachat.com",
       "group": "topic",
       "mode": "doorway",
       "topic": "travel-delays"
+    },
+    {
+      "domain": "faachat.com",
+      "group": "agency",
+      "mode": "doorway",
+      "topic": "aviation-safety",
+      "govAgency": true
     },
     {
       "domain": "fdchat.com",
@@ -368,6 +402,13 @@
       "group": "topic",
       "mode": "doorway",
       "topic": "forgiveness"
+    },
+    {
+      "domain": "fsbchat.com",
+      "group": "agency",
+      "mode": "doorway",
+      "topic": "russia-watch",
+      "govAgency": true
     },
     {
       "domain": "ftpchat.com",
@@ -410,6 +451,12 @@
       "group": "topic",
       "mode": "doorway",
       "topic": "meetups"
+    },
+    {
+      "domain": "interiorchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "interior-design"
     },
     {
       "domain": "intervalchat.com",
@@ -501,6 +548,13 @@
       "topic": "startups"
     },
     {
+      "domain": "svrchat.com",
+      "group": "agency",
+      "mode": "doorway",
+      "topic": "russia-watch",
+      "govAgency": true
+    },
+    {
       "domain": "taxeschat.com",
       "group": "topic",
       "mode": "doorway",
@@ -528,6 +582,13 @@
       "group": "topic",
       "mode": "doorway",
       "topic": "summaries"
+    },
+    {
+      "domain": "treasurychat.com",
+      "group": "agency",
+      "mode": "doorway",
+      "topic": "public-finance",
+      "govAgency": true
     },
     {
       "domain": "upsetchat.com",

@@ -18,6 +18,9 @@ Rules (same site.json fields as topics/site_mode.schema.json; topic_domains.vali
   - a 64-hex string anywhere in candidates.json is refused (no hashes of held names)
   - a domain label that is a platform word (or that word + "chat") is refused
   - brand is a key into brand/brand.json ("default"); no literal brand name, contact detail or address in output
+  - govAgency: true marks a doorway named after a government agency (owner go 2026-11-03). Only on a doorway, its topic
+    must be seeded (wave 1 or topics/seed_wave2_agency.json) with govNonAffiliation true, and brand.nonAffiliationGov
+    must exist: that topic page shows it under the title and in the footer (tools/brand_render.py render_topic)
 Doorways would redirect https://<domain>/* to {{brand.primaryDomain}}{{brand.topicPathPrefix}}<slug>/?via=<domain>, 302 while
 the topic is not established (hidden, eligible, quiet or not seeded yet) and 301 once active 60 days
 (tools/topic_status.py doorway_status). That status is computed, never written into site.json, and nothing here
@@ -27,14 +30,14 @@ import argparse, json, os, re, subprocess, sys, tempfile
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import topic_domains, topic_slug, topic_status  # noqa: E402
+import topic_domains, topic_slug, topic_status, topics_seed  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CANDIDATES = os.path.join(ROOT, 'spinup', 'candidates.json')
 PLAN = os.path.join(ROOT, 'spinup', 'plan.json')
 OUT_OK = os.path.join(ROOT, 'spinup', 'out')
 MODES = ('room', 'doorway', 'parked')
-SITE_KEYS = ('domain', 'mode', 'topic', 'brand', 'doorway')
+SITE_KEYS = ('domain', 'mode', 'topic', 'brand', 'doorway', 'govAgency')
 DOMAIN_RE = re.compile(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+')
 HEX64 = re.compile(r'[0-9a-fA-F]{64}')
 # hard rules: nothing private may land in a rendered file (the candidate list itself is public registrations)
@@ -70,7 +73,7 @@ def resolve(cfg=None, seed=None, rooms=None, existing=None, brand=None, exclusio
         raw = open(CANDIDATES, encoding='utf-8').read()
         cfg = json.loads(raw)
     raw = raw if raw is not None else json.dumps(cfg)
-    seed = seed if seed is not None else load(topic_domains.SEED)
+    seed = seed if seed is not None else topics_seed.all_topics_seed()
     rooms = rooms if rooms is not None else topic_domains.room_domains()
     existing = existing if existing is not None else {x['domain']: x for x in load(topic_domains.DOMAINS)['domains']}
     brand = brand if brand is not None else load(topic_domains.BRANDS['default'])
@@ -146,6 +149,23 @@ def resolve(cfg=None, seed=None, rooms=None, existing=None, brand=None, exclusio
         t = topics.get(ent.get('topic'))
         if ent['mode'] == 'doorway' and t is not None and t['status'] == 'hold':
             e.append('candidate %s: doorway to a HOLD topic; park or exclude it' % ent['domain'])
+    for c in cfg.get('candidates', []):
+        if isinstance(c, dict) and 'govAgency' in c:
+            ent = next((x for x in out if x['domain'] == c.get('domain')), None)
+            w = 'candidate %s' % c.get('domain')
+            if c['govAgency'] is not True:
+                e.append('%s: govAgency must be true or absent' % w)
+            elif ent is None:
+                continue
+            elif ent['mode'] != 'doorway':
+                e.append('%s: govAgency is only for doorways (this one is %s)' % (w, ent['mode']))
+            else:
+                t = topics.get(ent['topic'])
+                if t is None or t.get('govNonAffiliation') is not True:
+                    e.append('%s: govAgency doorway needs its topic %s seeded with govNonAffiliation true' % (w, ent['topic']))
+                if not str(brand.get('nonAffiliationGov') or '').strip():
+                    e.append('%s: govAgency needs brand.nonAffiliationGov in brand/brand.json' % w)
+                ent['govAgency'] = True
     out.sort(key=lambda x: x['domain'])
     return out, e
 
@@ -159,6 +179,8 @@ def site_json(ent, cfg=None):
     s['brand'] = d.get('brand', 'default')
     if ent['mode'] == 'doorway':
         s['doorway'] = dict(d.get('doorway') or {'style': 'redirect', 'keepQuery': False})
+    if ent.get('govAgency'):
+        s['govAgency'] = True
     return s
 
 
@@ -168,7 +190,7 @@ def dump(o):
 
 def plan(entries, cfg=None, seed=None):
     cfg = cfg if cfg is not None else load(CANDIDATES)
-    seed = seed if seed is not None else load(topic_domains.SEED)
+    seed = seed if seed is not None else topics_seed.all_topics_seed()
     seeded = {t['slug'] for t in seed['topics']}
     counts = {m: 0 for m in MODES}
     rows = []
@@ -181,6 +203,8 @@ def plan(entries, cfg=None, seed=None):
                 r['topicSeeded'] = ent['topic'] in seeded
         if ent.get('ownership'):
             r['ownership'] = ent['ownership']
+        if ent.get('govAgency'):
+            r['govAgency'] = True
         rows.append(r)
     ebr = cfg.get('excludedByReason', {})
     return {'notes': 'DRY RUN PLAN (generated by tools/spinup_render.py --plan --write). Not served. One row per rendered '
@@ -189,6 +213,7 @@ def plan(entries, cfg=None, seed=None):
             'inventory': (cfg.get('source') or {}).get('inventory'),
             'rendered': len(rows), 'excluded': sum(ebr.values()), 'byMode': counts,
             'doorwaysNeedingTopicRow': sum(1 for r in rows if r.get('topicSeeded') is False),
+            'govAgency': [r['domain'] for r in rows if r.get('govAgency')],
             'excludedByReason': dict(sorted(ebr.items())), 'domains': rows}
 
 
@@ -284,7 +309,7 @@ def check(exclusions=None):
 
 
 def redirects(entries, now, seed=None):
-    seed = seed if seed is not None else load(topic_domains.SEED)
+    seed = seed if seed is not None else topics_seed.all_topics_seed()
     topics = {t['slug']: t for t in seed['topics']}
     lines = []
     for ent in entries:

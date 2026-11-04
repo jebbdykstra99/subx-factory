@@ -12,7 +12,7 @@ A room may differ from the pinned shell only through DECLARED layers in its site
   keep           room scripts that are not shell code (gate.js, takedown.js ...), each sha256-pinned
 Anything else is DRIFT. Status per room: OK, WARN (OK + non-blocking notes), FORK (declared fork), DRIFT.
 A site.json with mode doorway or parked (topics/site_mode.schema.json) is not a room: its dir must contain exactly that
-site.json (a regular file) with only the hybrid keys (domain, mode, topic, brand, doorway); any other file, subdirectory
+site.json (a regular file) with only the hybrid keys (domain, mode, topic, brand, doorway, govAgency); any other file, subdirectory
 (even empty or .git), symlink, key or mode is DRIFT. A site.json that is not a JSON object is DRIFT.
 
 Pages are parsed with html.parser (quoted, single-quoted and unquoted attributes; comments ignored), and every
@@ -1156,7 +1156,7 @@ def redirect_stub(pg):
     return (True, 'nest stub') if NEST_RE.fullmatch(text) else (True, 'bare same-origin location.replace')
 
 
-NONROOM_KEYS = ('domain', 'mode', 'topic', 'brand', 'doorway')
+NONROOM_KEYS = ('domain', 'mode', 'topic', 'brand', 'doorway', 'govAgency')
 
 
 def check_nonroom(room, name, site):
@@ -1171,6 +1171,8 @@ def check_nonroom(room, name, site):
     extra = sorted(k for k in site if k not in NONROOM_KEYS)
     if extra:
         f.append('a %s site.json carries only %s, not %s' % (mode, '/'.join(NONROOM_KEYS), ', '.join(extra)))
+    if 'govAgency' in site and (site['govAgency'] is not True or mode != 'doorway'):
+        f.append('govAgency must be true and only on a doorway')
     if os.path.islink(os.path.normpath(room)):
         f.append('a %s dir may not be a symlink' % mode)
     try:

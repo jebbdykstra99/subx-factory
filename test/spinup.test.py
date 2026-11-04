@@ -31,9 +31,9 @@ inv = cfg['source']['inventory']
 ebr = cfg['excludedByReason']
 ok(inv == 151, 'inventory is the 151 names in the plan')
 ok(len(cfg['candidates']) + sum(ebr.values()) == inv, 'candidates + excludedByReason = inventory (%d + %d)' % (len(cfg['candidates']), sum(ebr.values())))
-ok(len(entries) == 88 and sum(ebr.values()) == 63, 'rendered 88, excluded 63')
+ok(len(entries) == 97 and sum(ebr.values()) == 54, 'rendered 97, excluded 54')
 modes = {m: sum(1 for e in entries if e['mode'] == m) for m in SR.MODES}
-ok(modes == {'room': 0, 'doorway': 78, 'parked': 10}, 'by mode: %s' % modes)
+ok(modes == {'room': 0, 'doorway': 87, 'parked': 10}, 'by mode: %s' % modes)
 ok(len({c['domain'] for c in cfg['candidates']}) == len(cfg['candidates']), 'no candidate listed twice')
 ok('excluded' not in cfg, 'candidates.json has no excluded list')
 hexre = re.compile(r'[0-9a-fA-F]{64}')
@@ -95,10 +95,66 @@ for d in ('awolchat.com', 'ftpchat.com'):
     c = [x for x in cfg['candidates'] if x['domain'] == d][0]
     ok('mode' not in c and 'topic' not in c, 'Key 1: %s takes the parked default' % d)
 
-# ---- C1 dropped: no government-agency flag or brand key anywhere ----
-ok('govNonAffiliation' not in brand, 'brand.json has no govNonAffiliation key')
-ok(not any('govAgencyNotice' in c for c in cfg['candidates']) and 'govAgencyNotice' not in SR.SITE_KEYS, 'no govAgencyNotice flag')
-ok('govAgencyNotice' not in shell_drift.NONROOM_KEYS, 'drift does not allow a govAgencyNotice key')
+# ---- government-agency doorways (owner go 2026-11-03): govAgency flag, wave-2 agency topics, brand line ----
+import topics_seed  # noqa: E402
+AGENCY = {'cfpbchat.com': 'consumer-finance', 'doichat.com': 'public-lands-policy', 'dojchat.com': 'justice-system',
+          'epachat.com': 'environment-policy', 'faachat.com': 'aviation-safety', 'fsbchat.com': 'russia-watch',
+          'svrchat.com': 'russia-watch', 'treasurychat.com': 'public-finance'}
+GOV = 'Not affiliated with, endorsed by, or speaking for any government agency.'
+ok(brand.get('nonAffiliationGov') == GOV, 'brand.nonAffiliationGov has the exact text')
+flagged = {e['domain']: e['topic'] for e in entries if e.get('govAgency')}
+ok(flagged == AGENCY, 'the 8 agency doorways carry govAgency and point at the agreed topics')
+ok(byd['interiorchat.com']['mode'] == 'doorway' and byd['interiorchat.com']['topic'] == 'interior-design' and not byd['interiorchat.com'].get('govAgency'),
+   'interiorchat is a doorway to interior-design, not flagged as an agency')
+ok(all(SR.site_json(byd[d], cfg).get('govAgency') is True for d in AGENCY), 'every agency site.json carries govAgency: true')
+ok(not any('govAgency' in SR.site_json(e, cfg) for e in entries if e['domain'] not in AGENCY), 'no other site.json carries govAgency')
+s2 = json.load(open(topics_seed.AGENCY_SEED))
+ok(not topics_seed.check_agency(s2), 'agency seed passes its check: %s' % topics_seed.check_agency(s2)[:2])
+ok(s2['source'] == {'file': 'AGENCY_TOPICS_DRAFT_2026-11-03.md', 'md5': 'e9bf6e557065b100ccaa0b8fb0e51c6e', 'rows': 7}, 'agency seed built from the 7-row draft md5 e9bf6e55')
+ok(sorted(t['slug'] for t in s2['topics']) == sorted(set(AGENCY.values())), 'agency seed has exactly the 7 agency topics')
+ok(all(t['status'] == 'hidden' and t['govNonAffiliation'] is True for t in s2['topics']), 'every agency topic is hidden with govNonAffiliation true')
+ok({d: t['slug'] for t in s2['topics'] for d in t['doorwayDomains']} == AGENCY, 'agency topic doorwayDomains match the flagged doorways')
+ok(not re.search(r'jebb|denver|\b310[-. ]|peekai|dmca-1|[\u2013\u2014]', json.dumps(s2, ensure_ascii=False).lower()), 'agency seed: no private names, contacts or dashes')
+for mut, why in ((lambda t: t.update(govNonAffiliation=False), 'govNonAffiliation false'), (lambda t: t.update(status='active'), 'a non-hidden row'),
+                 (lambda t: t.update(posts14d=2), 'non-zero stats'), (lambda t: t.update(slug='interior-design'), 'a wave-1 slug'),
+                 (lambda t: t.update(doorwayDomains=['interiorchat.com']), 'a wave-1 doorway'), (lambda t: t.update(title='A \u2014 B'), 'a dash')):
+    b2 = copy.deepcopy(s2); mut(b2['topics'][0])
+    ok(topics_seed.check_agency(b2), 'agency seed check refuses %s' % why)
+if os.path.isfile('/workspace/subx-hub/AGENCY_TOPICS_DRAFT_2026-11-03.md'):
+    ok(topics_seed.dump(topics_seed.build_agency('/workspace/subx-hub/AGENCY_TOPICS_DRAFT_2026-11-03.md')) == open(topics_seed.AGENCY_SEED).read(),
+       'agency seed is what --from-agency-md builds')
+bad = plus({'domain': 'unknownexample.com', 'govAgency': True})
+ok(any('only for doorways' in x for x in SR.resolve(bad)[1]), 'govAgency on a parked domain is refused')
+bad = plus({'domain': 'unknownexample.com', 'mode': 'doorway', 'topic': 'russia-watch', 'govAgency': 'yes'})
+ok(any('must be true' in x for x in SR.resolve(bad)[1]), 'govAgency other than true is refused')
+bad = plus({'domain': 'unknownexample.com', 'mode': 'doorway', 'topic': 'interior-design', 'govAgency': True})
+ok(any('govNonAffiliation true' in x for x in SR.resolve(bad)[1]), 'govAgency on a doorway whose topic lacks govNonAffiliation is refused')
+nob = dict(brand); nob.pop('nonAffiliationGov')
+ok(any('needs brand.nonAffiliationGov' in x for x in SR.resolve(cfg, brand=nob)[1]), 'govAgency without the brand key is refused')
+ok(SR.plan(entries, cfg)['govAgency'] == sorted(AGENCY), 'plan.json lists the 8 agency doorways')
+# topic page rendering: the agency topic shows the line under the title and in the footer; wave-1 pages do not
+import brand_render  # noqa: E402
+with tempfile.TemporaryDirectory() as tr:
+    R = brand_render.Renderer(os.path.join(ROOT, 'hub', 'src'), os.path.join(ROOT, 'brand', 'brand.json'), os.path.join(tr, 'o'))
+    if R is not None and hasattr(R, 'run'):
+        R.run()
+        for t in s2['topics']:
+            html = R.render_topic(t)
+            h1 = html.index('<h1>'); g = html.find(brand_render.html_attr(GOV)); ft = html.rfind('<footer')
+            ok(g > h1 and 'class="topic-gov" data-gov="title"' in html[h1:html.index('</header>')]
+               and 'legal-footer-gov' in html[ft:] and html.count(brand_render.html_attr(GOV)) == 2 and '<!--' not in html,
+               'topic page %s shows nonAffiliationGov under the title and in the footer' % t['slug'])
+        w1 = json.load(open(os.path.join(ROOT, 'topics', 'seed_wave1.json')))['topics']
+        hw = R.render_topic([t for t in w1 if t['slug'] == 'interior-design'][0])
+        ok(brand_render.html_attr(GOV) not in hw and 'topic-gov' not in hw, 'a wave-1 page (interior-design) has no government line')
+        try:
+            R.ctx['brand'] = dict(R.ctx['brand']); R.ctx['brand'].pop('nonAffiliationGov')
+            R.render_topic(s2['topics'][0]); ok(False, 'render refuses a gov topic without brand.nonAffiliationGov')
+        except brand_render.RenderError:
+            ok(True, 'render refuses a gov topic without brand.nonAffiliationGov')
+    else:
+        ok(False, 'brand_render.Renderer with run() not found')
+ok('{{brand.nonAffiliationGov}}' in open(os.path.join(ROOT, 'spinup', 'README.md')).read(), 'README documents the {{brand.nonAffiliationGov}} rule')
 
 # ---- reserved slugs (fullmatch) and platform-word labels ----
 for s in ('x', 'x-com', 'xcom', 'xcorp', 'x-corp', 'twitter', 'grok', 'subx', 'admin', 'grok\n', 'Twitter'):
@@ -130,11 +186,11 @@ ok(any('HOLD topic' in x for x in SR.resolve(bad)[1]), 'a doorway to a HOLD topi
 # ---- rendered site.json ----
 with tempfile.TemporaryDirectory() as tmp:
     dirs, e = SR.render(entries, tmp, cfg)
-    ok(not e and len(dirs) == 88, 'render writes 88 site.json files with no errors')
+    ok(not e and len(dirs) == 97, 'render writes 97 site.json files with no errors')
     files = sorted(os.listdir(tmp))
     ok(files == sorted(byd), 'one dir per rendered domain, nothing else')
     sj = [json.load(open(os.path.join(d, 'site.json'))) for d in dirs]
-    ok(all(set(s) <= set(SR.SITE_KEYS) for s in sj), 'site.json carries only domain/mode/topic/brand/doorway')
+    ok(all(set(s) <= set(SR.SITE_KEYS) for s in sj), 'site.json carries only domain/mode/topic/brand/doorway/govAgency')
     ok(all(s['brand'] == 'default' for s in sj), 'brand is the brand.json key "default"')
     ok(all(not topic_domains.validate_fields(s, 'x') for s in sj), 'every site.json passes topic_domains.validate_fields')
     ok(all('status' not in (s.get('doorway') or {}) for s in sj), 'no stored doorway status (302/301 is computed)')
@@ -190,7 +246,11 @@ with tempfile.TemporaryDirectory() as tmp:
         ok(okc and r.returncode == 1 and 'Traceback' not in r.stderr and '| DRIFT |' in r.stdout,
            'site.json that is %s is DRIFT with no exception' % why)
         shutil.rmtree(d2)
-    for extra, why in (({'shell': {'base': 'v1'}}, 'shell block'), ({'mode': 'portal'}, 'unknown mode'), ({'name': 'Z'}, 'room key')):
+    ag = [d for d in dirs if os.path.basename(d) == 'dojchat.com'][0]
+    ok(shell_drift.check_nonroom(ag, 'a', json.load(open(os.path.join(ag, 'site.json'))))['status'] == 'OK', 'drift allows govAgency on a doorway')
+    s = dict(json.load(open(os.path.join(ag, 'site.json')))); s['mode'] = 'parked'; s.pop('doorway'); s.pop('topic')
+    ok(shell_drift.check_nonroom(ag, 'a', s)['status'] == 'DRIFT', 'drift refuses govAgency on a parked dir')
+    for extra, why in (({'shell': {'base': 'v1'}}, 'shell block'), ({'mode': 'portal'}, 'unknown mode'), ({'name': 'Z'}, 'room key'), ({'govAgency': 1}, 'govAgency not true')):
         s = dict(json.load(open(os.path.join(d0, 'site.json')))); s.update(extra)
         ok(shell_drift.check_nonroom(d0, 'a', s)['status'] == 'DRIFT', 'non-room site.json with %s is DRIFT' % why)
     inside = os.path.join(ROOT, 'hub', 'spinup-test')
@@ -237,7 +297,7 @@ ok(SR.output_errors('f', 'Visit ' + brand['name'], brand), 'guard catches a lite
 # ---- redirects: config only, 302 while hidden or unseeded, 301 after 60 days active ----
 lines = SR.redirects(entries, '2026-11-03T00:00:00Z')
 dl = [l for l in lines if not l.startswith('#')]
-ok(len(dl) == 78 and all(l.endswith(' 302') for l in dl), 'every doorway plans 302 today (no topic active 60 days)')
+ok(len(dl) == 87 and all(l.endswith(' 302') for l in dl), 'every doorway plans 302 today (no topic active 60 days)')
 ok(all('{{brand.primaryDomain}}{{brand.topicPathPrefix}}' in l for l in dl), 'redirect targets use brand placeholders')
 seed = {'topics': [{'slug': 'seattle', 'status': 'active', 'activatedAt': '2026-08-01T00:00:00Z', 'doorwayDomains': []}]}
 one = [e for e in entries if e['domain'] == '206chat.com']
@@ -254,7 +314,8 @@ if os.path.isfile(BOX):
     for f in subprocess.run(['git', 'ls-files', 'spinup', 'tools/spinup_render.py', 'test/spinup.test.py', 'tools/shell_drift.py'],
                             cwd=ROOT, capture_output=True, text=True).stdout.split():
         blob += open(os.path.join(ROOT, f), encoding='utf-8', errors='replace').read().lower()
-    hit = sorted(h for h in held if h in blob or h.split('.')[0] in blob)
+    tok = lambda k: re.search(r'(?<![a-z0-9-])%s(?![a-z0-9-])' % re.escape(k), blob)  # whole names, not substrings
+    hit = sorted(h for h in held if tok(h) or tok(h.split('.')[0]))
     ok(not hit, 'no off-repo held name in spinup files (%d names checked, %d hit)' % (len(held), len(hit)))
     ok(not (held & set(byd)), 'no held name is a candidate')
 else:
@@ -263,8 +324,8 @@ else:
 # ---- plan.json and --check write nothing ----
 p = SR.plan(entries, cfg)
 ok(open(SR.PLAN).read() == SR.dump(p), 'spinup/plan.json is current')
-ok(all(set(r) <= {'domain', 'mode', 'topic', 'topicSeeded', 'ownership'} for r in p['domains']), 'plan rows carry no hash')
-ok(p['byMode'] == modes and p['rendered'] == 88 and p['excluded'] == 63 and p['excludedByReason'] == ebr, 'plan counts match')
+ok(all(set(r) <= {'domain', 'mode', 'topic', 'topicSeeded', 'ownership', 'govAgency'} for r in p['domains']), 'plan rows carry no hash')
+ok(p['byMode'] == modes and p['rendered'] == 97 and p['excluded'] == 54 and p['excludedByReason'] == ebr, 'plan counts match')
 before = subprocess.run(['git', 'status', '--porcelain', '--ignored'], cwd=ROOT, capture_output=True, text=True).stdout
 r = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'spinup_render.py'), '--check'], capture_output=True, text=True)
 after = subprocess.run(['git', 'status', '--porcelain', '--ignored'], cwd=ROOT, capture_output=True, text=True).stdout

@@ -38,8 +38,9 @@ CSP = "script-src 'self' %s; object-src 'none'; base-uri 'none'; font-src 'self'
 # ---- brand.json ----
 want_keys = ['name', 'legalEntity', 'primaryDomain', 'shortName', 'tagline', 'takedownEmail', 'topicPathPrefix',
              'reviewerLine', 'taglineOptions', 'contactPhone', 'mailingAddress', 'roomNoun', 'topicNoun',
-             'disclosureMark', 'nonAffiliation', 'notAdvice', 'footer']
-ok(list(brand) == want_keys, 'brand.json has the 17 keys of the brand.json draft, in order, and no _draft (%s)' % list(brand))
+             'disclosureMark', 'nonAffiliation', 'nonAffiliationGov', 'notAdvice', 'footer']
+ok(list(brand) == want_keys, 'brand.json has the 18 keys (17 of the brand.json draft plus nonAffiliationGov), in order, and no _draft (%s)' % list(brand))
+ok(brand['nonAffiliationGov'] == 'Not affiliated with, endorsed by, or speaking for any government agency.', 'brand.nonAffiliationGov has the exact text')
 ok(brand['tagline'] == 'Small rooms for big interests.' and brand['tagline'] in brand['taglineOptions'], 'brand.json tagline is the chosen option')
 ok(brand['legalEntity'] == 'SubX, LLC' and brand['takedownEmail'] == 'takedown@subx.it', 'brand.json legal entity + takedown email')
 ok(re.fullmatch(r'[0-9a-f]{40}', cfg['shell']['sha']) is not None, 'hub pin is a full 40-char SHA')
