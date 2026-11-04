@@ -59,7 +59,7 @@
       {
         "tag": "Featured room",
         "headline": "popechat",
-        "snippet": "Urbi et orbi.",
+        "snippet": "Pray. Sing. Meditate.",
         "meta": "popechat.com",
         "url": "https://popechat.com/"
       },
@@ -192,7 +192,7 @@
       },
       {
         "file": "hub.js",
-        "sha256": "bd0c1d4c8895c4cc934a11c796280c0e9ae93c998f25255a0fa01ddc7a479ea8",
+        "sha256": "9e635e266f48c9bd6b1b4c7680457b35991a2800a98803d000989f0437e15ba8",
         "reason": "hub: renders highlights.json + rooms.json (read-only, no auth, no writes)",
         "noShellOk": true
       },
