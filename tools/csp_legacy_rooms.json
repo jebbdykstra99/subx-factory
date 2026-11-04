@@ -1,0 +1,25 @@
+{
+  "_comment": "CSP rule legacy list (tools/shell_drift.py). These rooms predate the CSP rule (2026-11-03): a missing or weak CSP is WARN for them, DRIFT for every other room. A room leaves this list in its CSP migration PR (which also sets shell.cspRequired to true). Never add a new room, the hub, topic mode or a new domain here.",
+  "rooms": [
+    "311chat",
+    "atmchat",
+    "behindtheblackwall",
+    "cobra",
+    "boyfriend",
+    "buffet",
+    "gaichat",
+    "cia",
+    "booze",
+    "27chat",
+    "bartchat",
+    "buffettchat",
+    "recruitchat",
+    "808chat",
+    "415chat",
+    "samochat",
+    "airlineschat",
+    "amachat",
+    "popechat",
+    "gpchat"
+  ]
+}

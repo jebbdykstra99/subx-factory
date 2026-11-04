@@ -13,12 +13,21 @@ A room may differ from the pinned shell only through DECLARED layers in its site
 Anything else is DRIFT. Status per room: OK, WARN (OK + non-blocking notes), FORK (declared fork), DRIFT.
 
 Pages are parsed with html.parser (quoted, single-quoted and unquoted attributes; comments ignored), and every
-page-like file (*.html, *.htm, *.xhtml, *.shtml, *.svg, *.php, *.phtml) under the room is scanned (except .git,
-node_modules, dot-dirs). Besides <script>:
+page-like file (*.html, *.htm, *.xhtml, *.xht, *.xml, *.xsl, *.xslt, *.svg, *.shtml, *.php, *.phtml) under the room is
+scanned (except .git, node_modules, dot-dirs). This is a static guardrail; the strict CSP below is the enforcement
+layer. Besides <script>:
   - on*= event handlers and javascript: URLs are code: declared in overrides.inline like inline scripts
   - iframe/frame srcdoc, object, embed are DRIFT unless declared in overrides.frames; a remote iframe/frame src is
     WARN unless declared; data:/blob:/javascript: frame sources are DRIFT
   - <base href> is DRIFT (it retargets every relative src, including declared modules)
+  - N1: every page and room JS file must be UTF-8 (a UTF-8 BOM is fine; a UTF-16/32 BOM, invalid UTF-8 or a NUL
+    byte is DRIFT), and a declared charset (meta charset, http-equiv Content-Type, XML encoding) must be utf-8
+  - N3: the pin must be a plain <script> start tag that is a direct child of <head> or <body>, with only src,
+    integrity, crossorigin="anonymous" and data-site; a page with <frameset> has no live pin. A dead pin is DRIFT
+  - N6: <script type=importmap> is DRIFT unless shell.importmap is true; then it must be inline, declared in
+    overrides.inline, and map only to local paths
+  - CSP rule: every HTML page needs a strict CSP (meta or hosting header; see csp_weak and shell/csp.md). Rooms on
+    tools/csp_legacy_rooms.json get WARN until their migration PR; elsewhere it is DRIFT (cspRequired defaults true)
   - a pin counts only if it will run: classic type (empty/JS; type=module is DRIFT since currentScript is null), no
     nomodule, no query/fragment on the URL, not inside <template>, <noscript>, raw-text or foreign (svg/math, so
     also <foreignObject>) elements, no duplicated attributes, and not blocked by a CSP (meta tag, or a header rule in
@@ -51,6 +60,8 @@ node_modules, dot-dirs). Besides <script>:
     with // or a scheme is remote
 Runtime injection detection is BEST-EFFORT static analysis: createElement('script') or a non-literal createElement,
 import(), importScripts, document.write('<script'), eval, new Function, Worker/SharedWorker, serviceWorker.register.
+On a noShell page (N5) its inline code and keep files may also not use Function( (with or without new), eval(,
+setTimeout/setInterval with a string, or document.write at all, declared "injects" or not.
 Each is DRIFT unless the declaring entry carries "injects": "<reason>"; one that names a factory/shell file is always
 DRIFT. Obfuscated code can evade this, so every declared module/keep file still needs human review; its sha256 pins
 the reviewed bytes. Any local .js that is a shell copy (release hash or SubX factory header) and is not the declared
@@ -58,7 +69,7 @@ fork is DRIFT.
 
 Never writes to the room, Firestore, or the network. Exit 1 with --strict when any room has DRIFT.
 """
-import argparse, glob, hashlib, json, os, posixpath, re, subprocess, sys
+import argparse, base64, glob, hashlib, json, os, posixpath, re, subprocess, sys
 from collections import Counter
 from html import unescape as html_unescape
 from urllib.parse import unquote
@@ -75,16 +86,25 @@ DATA_TYPES = ('application/ld+json', 'application/json', 'text/template', 'text/
 JS_TYPES = ('', 'text/javascript', 'application/javascript', 'module', 'text/ecmascript', 'application/ecmascript')
 # a <script> inside these never runs as a page script (template/noscript content, raw text, foreign content)
 INERT_CTX = ('template', 'noscript', 'textarea', 'title', 'xmp', 'noembed', 'noframes', 'iframe', 'svg', 'math', 'plaintext')
-PAGE_EXTS = ('.html', '.htm', '.xhtml', '.shtml', '.svg', '.php', '.phtml')
-# B12: JS lets a comment stand wherever whitespace may, so every gap between tokens below also skips comments
-JS_GAP = r"""(?:\s|/\*[\s\S]*?\*/|//[^\n]*)*"""
-INJECT_RE = re.compile((r"""createElement(?:NS)?G\([^)]*?['"`]script['"`]G\)|createElementG\(G[^'"`\s)/]|\bimportG\("""
+# N2: every served file a browser may render as HTML/XML (case-insensitive extension) is scanned
+PAGE_EXTS = ('.html', '.htm', '.xhtml', '.xht', '.xml', '.xsl', '.xslt', '.svg', '.shtml', '.php', '.phtml')
+XML_EXTS = ('.xhtml', '.xht', '.xml', '.xsl', '.xslt', '.svg')
+# pages that must carry a strict CSP (the CSP rule); .svg/.xml/.xsl(t) take a header CSP only, so they are exempt
+CSP_PAGE_EXTS = ('.html', '.htm', '.xhtml', '.xht', '.shtml', '.php', '.phtml')
+# B12: JS lets a comment stand wherever whitespace may, so every gap between tokens below also skips comments.
+# N4: U+FEFF is JS whitespace (Python's \s misses it); a line comment also ends at CR, U+2028 and U+2029
+JS_GAP = r"""(?:[\s\ufeff]|/\*[\s\S]*?\*/|//[^\n\r\u2028\u2029]*)*"""
+INJECT_RE = re.compile((r"""createElement(?:NS)?G\([^)]*?['"`]script['"`]G\)|createElementG\(G[^'"`\s\ufeff)/]|\bimportG\("""
                         r"""|\bimportScriptsG\(|document\s*\.\s*write(?:ln)?\s*\([^)]*<\s*script|\bevalG\(|[(,=:]G\s*evalG[),;]"""
-                        r"""|\bnew(?:\s|/\*[\s\S]*?\*/)+FunctionG\(|\bnew(?:\s|/\*[\s\S]*?\*/)+(?:Shared)?WorkerG\("""
+                        r"""|\bnew(?:[\s\ufeff]|/\*[\s\S]*?\*/)+FunctionG\(|(?-i:(?<![\w$.])Function)G\("""
+                        r"""|\bnew(?:[\s\ufeff]|/\*[\s\S]*?\*/)+(?:Shared)?WorkerG\("""
                         r"""|serviceWorkerG\.G\s*register""").replace('G', JS_GAP), re.I)
+# N5: string-to-code sinks a keep file on a noShell page may never use (with or without a declared "injects")
+NS_EVAL_RE = re.compile((r"""(?<![\w$.])FunctionG\(|\bevalG\(|\bset(?:Timeout|Interval)G\(G['"`]"""
+                         r"""|\bdocumentG(?:\.G|\[G['"`])write""").replace('G', JS_GAP))
 # static ES module imports / re-exports: import x from 'spec', import 'spec', export {a} from 'spec'. Comments may
 # sit anywhere between the tokens (/**/import, import/**/'x', from/**/'x'); they are skipped, not trusted (B12)
-IMPORT_RE = re.compile((r"""(?:^|(?<=[\s;{}/)]))(?:import|export)G(?:(?:[\w*{}\s,$]|/\*[\s\S]*?\*/|//[^\n]*\n)*?(?<![\w$])fromG)?"""
+IMPORT_RE = re.compile((r"""(?:^|(?<=[\s\ufeff;{}/)]))(?:import|export)G(?:(?:[\w*{}\s\ufeff,$]|/\*[\s\S]*?\*/|//[^\n\r\u2028\u2029]*[\n\r\u2028\u2029])*?(?<![\w$])fromG)?"""
                         r"""(['"])([^'"\n]*)\1""").replace('G', JS_GAP), re.M)
 REMOTE_RE = re.compile(r'^(?:[a-z][a-z0-9+.-]*:|//)', re.I)
 SHELL_REF_RE = re.compile(r'factory(?:-[a-z]+)?\.js|subx-factory|/shell/v\d', re.I)
@@ -186,7 +206,8 @@ class _Page(HTMLParser):
                     if a.get(k) is not None:
                         a['src'] = a[k]
                         break
-            rec = {'attrs': a, 'dup': dup, 'inert': [t for t in INERT_CTX if self._ctx[t]], 'line': line}
+            rec = {'attrs': a, 'dup': dup, 'inert': [t for t in INERT_CTX if self._ctx[t]], 'line': line,
+                   'key': self.tags[-1]}
             if closed:
                 rec['text'] = ''
                 self.out.append(rec)
@@ -245,11 +266,63 @@ def walk(room, exts):
                 yield os.path.join(d, fn)
 
 
+def decode_utf8(data):
+    """N1: (text, issues). Pages and room JS must be UTF-8: a UTF-16/UTF-32 byte-order mark, a NUL byte or bytes that
+    are not valid UTF-8 make a browser (or the checker) read different characters, so each is an issue (DRIFT).
+    A UTF-8 BOM is fine and is stripped, as browsers do."""
+    issues = []
+    if data.startswith((b'\x00\x00\xfe\xff', b'\xff\xfe\x00\x00')):
+        issues.append('a UTF-32 byte-order mark')
+    elif data.startswith((b'\xfe\xff', b'\xff\xfe')):
+        issues.append('a UTF-16 byte-order mark')
+    if b'\x00' in data:
+        issues.append('NUL bytes')
+    if data.startswith(b'\xef\xbb\xbf'):
+        data = data[3:]
+    try:
+        text = data.decode('utf-8')
+    except UnicodeDecodeError as e:
+        issues.append('bytes that are not valid UTF-8 (first at offset %d)' % e.start)
+        text = data.decode('utf-8', 'replace')
+    # newline normalization, as a browser's input stream (and the old text-mode read) does; CR ends a JS line too
+    return text.replace('\r\n', '\n').replace('\r', '\n'), issues
+
+
+UTF8_LABELS = ('utf-8', 'utf8', 'unicode-1-1-utf-8')
+
+
+def charset_findings(raw, toks):
+    """N1: a declared charset other than UTF-8 (<meta charset>, http-equiv Content-Type, <?xml encoding?>,
+    <script charset>) makes a browser decode the bytes differently from the checker."""
+    f = []
+    for t in toks:
+        if t['kind'] != 'start' or t['name'] not in ('meta', 'script'):
+            continue
+        a = {}
+        for k, v in t['attrs']:
+            a.setdefault(k, html_unescape(v or ''))
+        cs = []
+        if 'charset' in a:
+            cs.append(('charset', a['charset']))
+        if t['name'] == 'meta' and a.get('http-equiv', '').strip().lower() == 'content-type':
+            m = re.search(r'charset\s*=\s*["\']?([^"\';\s]*)', a.get('content', ''), re.I)
+            if m:
+                cs.append(('http-equiv Content-Type charset', m.group(1)))
+        for what, v in cs:
+            if v.strip().lower() not in UTF8_LABELS:
+                f.append('%d <%s %s=%r>: a declared charset other than utf-8 (the page must be UTF-8)'
+                         % (_ln(raw, t['pos']), t['name'], what, v[:30]))
+    m = re.match(r'\s*<\?xml[^>]*?\bencoding\s*=\s*["\']([^"\']*)', raw)
+    if m and m.group(1).strip().lower() not in UTF8_LABELS:
+        f.append('1 <?xml encoding=%r?>: a declared charset other than utf-8 (the page must be UTF-8)' % m.group(1)[:30])
+    return f
+
+
 def pages(room):
     """(relpath, parsed _Page) for every page-like file. Comments are not markup."""
     for page in walk(room, PAGE_EXTS):
         p = _Page()
-        raw = open(page, encoding='utf-8', errors='replace').read()
+        raw, p.enc = decode_utf8(open(page, 'rb').read())
         # browsers end a comment at <!-->, <!---> or --!>; flag them on the raw bytes so no parser version can hide markup
         p.comment_traps = [(raw.count('\n', 0, m.start()) + 1, m.group(0)) for m in COMMENT_TRAP_RE.finditer(raw)]
         p.feed(raw)
@@ -368,6 +441,105 @@ def csp_allows_pin(policy, url, integrity, nonce):
             continue
         return True
     return False
+
+
+# ---- CSP rule: every HTML page carries a strict CSP (meta tag, or a header rule from the hosting config) ----
+CSP_LEGACY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'csp_legacy_rooms.json')
+# host sources a strict script-src may list: the pin path with its full 40-char commit SHA, and exact-version paths
+PIN_SRC_RE = re.compile(r'^https://cdn\.jsdelivr\.net/gh/jebbdykstra99/subx-factory@[0-9a-f]{40}/\S*$')
+FIREBASE_SRC_RE = re.compile(r'^https://www\.gstatic\.com/firebasejs/\d+\.\d+\.\d+/\S*$')
+EMOJI_SRC_RE = re.compile(r'^https://cdn\.jsdelivr\.net/npm/emoji-picker-element@(\d+\.\d+\.\d+)/\S*$')
+RECAPTCHA_SRC_RE = re.compile(r'^https://www\.(?:google\.com|gstatic\.com)/recaptcha/\S*$')  # Firebase App Check
+CSP_WEAK_KEYWORDS = ("'unsafe-inline'", "'unsafe-eval'", "'unsafe-hashes'", "'wasm-unsafe-eval'", "'strict-dynamic'",
+                     "'unsafe-allow-redirects'", "'inline-speculation-rules'")
+
+
+def load_csp_legacy(path=None):
+    """Site ids of the rooms that predate the CSP rule (tools/csp_legacy_rooms.json): a missing or weak CSP is WARN
+    for them, DRIFT for every other room."""
+    try:
+        d = json.load(open(path or CSP_LEGACY_FILE))
+        return {x for x in (d.get('rooms') if isinstance(d, dict) else d) or [] if isinstance(x, str)}
+    except Exception:
+        return set()
+
+
+def script_hash_sources(text):
+    """The CSP hash sources for an inline script's text (browsers hash the text after newline normalization)."""
+    b = text.replace('\r\n', '\n').replace('\r', '\n').encode('utf-8')
+    return {"'%s-%s'" % (alg, base64.b64encode(getattr(hashlib, alg)(b).digest()).decode()) for alg in ('sha256', 'sha384', 'sha512')}
+
+
+def csp_weak(policy, room_hashes, has_pin):
+    """Why one CSP policy is not strict ([] = strict). Strict: script-src (or default-src) lists only 'self', 'none',
+    hashes of the room's redirect-stub / 404.html inline scripts, the pinned shell path with its full 40-char commit SHA, and
+    exact-version Firebase / emoji-picker-element / reCAPTCHA paths; no unsafe-*, nonce, strict-dynamic, wildcard or
+    scheme source; object-src 'none'; base-uri 'none'."""
+    why = []
+    srcs = policy.get('script-src', policy.get('default-src'))
+    if srcs is None:
+        return ['no script-src or default-src']
+    lists = [('script-src' if 'script-src' in policy else 'default-src', srcs)] + \
+        [(k, policy[k]) for k in ('script-src-elem', 'script-src-attr') if k in policy]
+    pin_listed = False
+    for dname, lst in lists:
+        for x in lst:
+            lx = x.lower()
+            if lx in ("'self'", "'none'", "'report-sample'"):
+                continue
+            if lx in CSP_WEAK_KEYWORDS:
+                why.append('%s has %s' % (dname, x))
+            elif lx.startswith("'nonce-"):
+                why.append('%s has a nonce (a static page cannot rotate it)' % dname)
+            elif re.match(r"^'sha(?:256|384|512)-", lx):
+                if x not in room_hashes:
+                    why.append('%s lists hash %s that matches no redirect-stub or 404.html inline script (the only '
+                               'inline scripts a strict CSP may allow)' % (dname, x[:20]))
+            elif x.startswith("'"):
+                why.append('%s has unknown keyword %s' % (dname, x))
+            elif PIN_SRC_RE.match(x):
+                pin_listed = True
+            elif EMOJI_SRC_RE.match(x) or FIREBASE_SRC_RE.match(x) or RECAPTCHA_SRC_RE.match(x):
+                continue
+            elif 'jsdelivr' in lx and 'subx-factory' in lx or lx.rstrip('/') in ('https://cdn.jsdelivr.net', 'cdn.jsdelivr.net'):
+                why.append('%s source %s is not the full pinned path with the 40-char commit SHA (bare host, repo path, '
+                           'tag or branch)' % (dname, x[:80]))
+            else:
+                why.append('%s source %s is not allowed in a strict CSP (wildcard, scheme, or a host path that is not '
+                           'pinned to an exact version)' % (dname, x[:80]))
+    if has_pin and not pin_listed:
+        why.append('script-src does not list the pinned shell path (https://cdn.jsdelivr.net/gh/jebbdykstra99/'
+                   'subx-factory@<40-char sha>/...)')
+    obj = policy.get('object-src', policy.get('default-src'))
+    if obj is None or [x.lower() for x in obj] != ["'none'"]:
+        why.append("object-src is not 'none'")
+    if [x.lower() for x in policy.get('base-uri') or []] != ["'none'"]:
+        why.append("base-uri is not 'none'")
+    return why
+
+
+def meta_csps(pg):
+    """[(line, content, placement problem or None)] for every <meta http-equiv=Content-Security-Policy>, as a browser
+    tokenizes the page. A meta CSP counts only inside <head> and only for content after it."""
+    toks = pg.toks
+    ctx, _ = tree_ctx(toks)
+    first_script = next((i for i, t in enumerate(toks) if t['kind'] == 'start' and t['name'] == 'script'), None)
+    out = []
+    for i, t in enumerate(toks):
+        if t['kind'] != 'start' or t['name'] != 'meta':
+            continue
+        a = {}
+        for k, v in t['attrs']:
+            a.setdefault(k, html_unescape(v or ''))
+        if a.get('http-equiv', '').strip().lower() != 'content-security-policy':
+            continue
+        bad = None
+        if not set(ctx.get(i, ())) <= {'html', 'head'}:
+            bad = 'the meta CSP is not inside <head> (browsers ignore it there)'
+        elif first_script is not None and first_script < i:
+            bad = 'the meta CSP comes after a <script> (it does not cover scripts before it)'
+        out.append((_ln(pg.raw, t['pos']), a.get('content', ''), bad))
+    return out
 
 
 def _pat_re(pat, kind):
@@ -600,6 +772,82 @@ def _attr_key(name, attrs):
     return (name, tuple((k, html_unescape(v) if v is not None else None) for k, v in attrs))
 
 
+VOID_EL = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr',
+           'basefont', 'bgsound', 'frame', 'keygen'}
+_P_CLOSERS = {'address', 'article', 'aside', 'blockquote', 'details', 'div', 'dl', 'fieldset', 'figcaption', 'figure',
+              'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'main', 'menu', 'nav', 'ol',
+              'p', 'pre', 'section', 'table', 'ul'}
+_IMPLIED = {'li': ('li',), 'option': ('option',), 'dt': ('dt', 'dd'), 'dd': ('dt', 'dd'), 'tr': ('tr', 'td', 'th'),
+            'td': ('td', 'th'), 'th': ('td', 'th')}
+
+
+def tree_ctx(toks):
+    """N3: a small, conservative open-element stack over browser_tokens. Returns ({token index: tuple of open
+    ancestors} for every <script> and <meta> start tag, whether any <frameset> start tag appears). A self-closing
+    flag is honoured only on void elements and inside svg/math (as browsers do); a few implied end tags (p, li,
+    option, dt/dd, table cells and rows) are applied. Anything it cannot model leaves an extra ancestor, which reads
+    as "not a direct child of <head>/<body>" (DRIFT), never the other way round."""
+    stack, ctx, frameset = [], {}, False
+    for i, t in enumerate(toks):
+        if t['kind'] == 'start':
+            n = t['name']
+            if n == 'frameset':
+                frameset = True
+            if n in ('script', 'meta'):
+                ctx[i] = tuple(stack)
+            if n == 'body' and 'head' in stack:  # <body> implicitly closes <head>
+                del stack[stack.index('head'):]
+            if stack and (stack[-1] == 'p' and n in _P_CLOSERS or stack[-1] in _IMPLIED.get(n, ())):
+                stack.pop()
+            if n in VOID_EL or (t['closed'] and ('svg' in stack or 'math' in stack or n in ('svg', 'math'))):
+                continue
+            stack.append(n)
+        elif t['kind'] == 'end' and t['name'] in stack:
+            del stack[len(stack) - 1 - stack[::-1].index(t['name']):]
+    return ctx, frameset
+
+
+PIN_ATTRS = ('src', 'integrity', 'crossorigin', 'data-site')  # the real template; factory-rail.js omits data-site
+
+
+def pin_form(pg, rec):
+    """N3: problems with a pin <script> (a py _Page record) as a browser reads it: it must be a plain classic
+    <script> start tag the browser also sees, a direct child of <head> or <body> (no other ancestor than <html>),
+    with only the template attributes, and no <frameset> anywhere on the page. [] = the pin is live."""
+    toks = pg.toks
+    ctx, frameset = tree_ctx(toks)
+    hits = [i for i, t in enumerate(toks) if t['kind'] == 'start' and t['name'] == 'script'
+            and _attr_key('script', t['attrs']) == rec['key']]
+    out = []
+    if frameset:
+        out.append('the page has a <frameset> (a browser then never runs the body)')
+    if not hits:
+        out.append('a browser does not see this <script> start tag (it sits inside raw text such as <noscript>, '
+                   '<textarea>, <title>, <iframe> or an earlier unclosed tag)')
+        return out
+    for i in hits:
+        anc = [x for x in ctx.get(i, ()) if x != 'html']
+        if not (anc in (['head'], ['body'], []) or anc == ['head', 'body']):
+            out.append('it is not a direct child of <head> or <body> (open ancestors: %s)' % ' > '.join(ctx.get(i, ())))
+        extra = sorted({k for k, _ in toks[i]['attrs']} - set(PIN_ATTRS))
+        if extra:
+            out.append('it carries attributes outside the pin template (%s): only %s are allowed'
+                       % (', '.join(extra), ', '.join(PIN_ATTRS)))
+    return list(dict.fromkeys(out))
+
+
+def xml_findings(raw, toks):
+    """N2: XML-family pages (.xhtml .xht .xml .xsl .xslt .svg): a prefixed <x:script> runs in the XHTML namespace and
+    an <?xml-stylesheet?> can run an XSLT that writes script; neither is visible to the HTML checks."""
+    f = []
+    for t in toks:
+        if t['kind'] in ('start', 'end') and ':' in t['name'] and t['name'].rsplit(':', 1)[1] in ('script', 'iframe', 'object', 'embed', 'foreignobject'):
+            f.append('%d <%s>: a namespace-prefixed element the checker does not read as HTML' % (_ln(raw, t['pos']), t['name']))
+        if t['kind'] == 'bogus' and re.match(r'(?i)xml-stylesheet\b', t['text']) and not re.search(r'(?i)type\s*=\s*["\']text/css', t['text']):
+            f.append('%d <?%s>: an XSLT stylesheet can generate script' % (_ln(raw, t['pos']), t['text'][:40]))
+    return list(dict.fromkeys(f))
+
+
 def prescan(raw, toks, pg):
     """B8-B10 (all pages): markup that html.parser and a browser read differently. Returns findings (str)."""
     f = []
@@ -634,6 +882,10 @@ def prescan(raw, toks, pg):
         pos = next(t['pos'] for t in toks if t['kind'] == 'start' and _attr_key(t['name'], t['attrs']) == (name, attrs))
         f.append('%d a browser sees <%s%s> that the checker does not (parsers disagree)'
                  % (_ln(raw, pos), name, ''.join(' %s=%r' % kv for kv in attrs)[:80]))
+    # N3/C18: and the other way round: a start tag the checker sees that a browser does not (it sits in raw text)
+    for (name, attrs), c in sorted((py - mine).items(), key=str):
+        f.append('a <%s%s> the checker sees is raw text to a browser (parsers disagree)'
+                 % (name, ''.join(' %s=%r' % kv for kv in attrs)[:80]))
     my_txt = Counter(t['text'] for t in toks if t['kind'] == 'raw' and t['name'] == 'script'
                      and not any(k in ('src', 'href', 'xlink:href') for k, _ in t['attrs']))
     py_txt = Counter(s['text'] for s in pg.out if s['attrs'].get('src') is None)
@@ -734,7 +986,7 @@ def redirect_stub(pg):
     return (True, 'nest stub') if NEST_RE.match(text) else (True, 'bare same-origin location.replace')
 
 
-def check(room, mans):
+def check(room, mans, legacy=None):
     name = os.path.basename(os.path.normpath(room))
     try:
         site = json.load(open(os.path.join(room, 'site.json')))
@@ -754,6 +1006,25 @@ def check(room, mans):
     man = mans.get(base)
     if not man:
         f.append('shell.base %r has no shell/%s/SHELL.json' % (base, base))
+    # CSP rule: born strict. cspRequired defaults to true; only rooms on tools/csp_legacy_rooms.json may run without a
+    # strict CSP (WARN) until their migration PR sets it true and takes them off the list
+    site_id = site.get('siteId')
+    legacy_set = load_csp_legacy() if legacy is None else legacy
+    is_legacy = isinstance(site_id, str) and site_id in legacy_set
+    req_top, req_sh = site.get('cspRequired'), sh.get('cspRequired')
+    if req_top is not None and req_sh is not None and req_top != req_sh:
+        f.append('CSP rule: site.json cspRequired (%r) and shell.cspRequired (%r) disagree' % (req_top, req_sh))
+    req = req_sh if req_sh is not None else req_top
+    if req is not None and not isinstance(req, bool):
+        f.append('CSP rule: cspRequired must be true or false, not %r' % (req,))
+        req = True
+    if req is False and not is_legacy:
+        f.append('CSP rule: cspRequired:false is allowed only for rooms on tools/csp_legacy_rooms.json (siteId %r is not '
+                 'on it): every new room, the hub, topic mode and new domains start with a strict CSP' % (site_id,))
+    csp_soft = is_legacy and req is not True  # legacy rooms: WARN; explicit cspRequired:true enforces (DRIFT)
+    layers['csp'] = 'legacy (WARN)' if csp_soft else 'required'
+    if sh.get('importmap') is not None and not isinstance(sh.get('importmap'), bool):
+        f.append('shell.importmap must be true or false')
     fork = bool(sh.get('fork'))
     fork_file = posixpath.normpath(sh.get('file', 'factory.js')) if fork else None
     ov = sh.get('overrides') or {}
@@ -870,7 +1141,7 @@ def check(room, mans):
             decl = {}
         else:
             used_inline.add((page, h))
-            ns_decl.append((page, where, decl))
+            ns_decl.append((page, where, decl, text))
             f.extend(injection_findings(text, where + ' ' + kind, bool(decl.get('injects'))))
         fb = FIREBASE_SDK_RE.search(text)
         if fb:  # C15: a Firebase-host import (static or dynamic) loads the Firebase SDK
@@ -878,13 +1149,20 @@ def check(room, mans):
             ns_add(page, where, 'Firebase SDK (%s names %s)' % (kind, fb.group(0)), False)
         return decl
 
-    all_pages, page_objs, ns_preload = [], {}, []
+    all_pages, page_objs, ns_preload, emoji_tags = [], {}, [], []
     for page, pg in pages(room):
         all_pages.append(page)
         page_objs[page] = pg
         # B8-B10: markup that html.parser and a browser tokenize differently is DRIFT on every page
         for msg in prescan(pg.raw, pg.toks, pg):
             f.append('%s:%s' % (page, msg))
+        for msg in pg.enc:  # N1
+            f.append('%s has %s: a page must be UTF-8 with no NUL bytes' % (page, msg))
+        for msg in charset_findings(pg.raw, pg.toks):
+            f.append('%s:%s' % (page, msg))
+        if page.lower().endswith(XML_EXTS):  # N2
+            for msg in xml_findings(pg.raw, pg.toks):
+                f.append('%s:%s' % (page, msg))
         is_stub, stub_why = redirect_stub(pg)
         is_stub = is_stub and page != 'index.html'  # the main page is never a stub, whatever it contains
         if is_stub:
@@ -976,6 +1254,28 @@ def check(room, mans):
             if s['dup']:
                 f.append('%s <script> has duplicated attributes %s (browsers use the first)' % (where, s['dup']))
             src = a.get('src')
+            if typ == 'importmap':  # N6: an import map remaps every module specifier on the page, pinned ones included
+                ns_add(page, where, '<script type=importmap>', False)
+                if src is not None:
+                    f.append('%s <script type=importmap src=...>: external import maps are not allowed' % where)
+                elif sh.get('importmap') is not True:
+                    f.append('%s <script type=importmap>: an import map can remap module specifiers; not allowed unless '
+                             'shell.importmap is true (default false)' % where)
+                else:
+                    try:
+                        im = json.loads(s['text'])
+                        tgts = list((im.get('imports') or {}).values()) + [v for sc in (im.get('scopes') or {}).values()
+                                                                            for v in (sc or {}).values()]
+                    except Exception:
+                        tgts = None
+                    if tgts is None or not all(isinstance(x, str) for x in tgts):
+                        f.append('%s <script type=importmap> is not a JSON {imports, scopes} map' % where)
+                    else:
+                        for x in tgts:
+                            if REMOTE_RE.match(norm_js(x)) or norm_js(x).startswith('//'):
+                                f.append('%s import map points a specifier at remote %s' % (where, x[:60]))
+                    code_block(page, where, s['text'], 'import map')
+                continue
             if src is None:
                 if typ in DATA_TYPES or not s['text'].strip():
                     continue
@@ -997,8 +1297,7 @@ def check(room, mans):
             em = EMOJI_RE.match(src)
             if em:
                 ns_add(page, where, 'remote script %s' % src, False)
-                if not EXACT_VER.match(em.group(1)) or not a.get('integrity'):
-                    w.append('%s emoji-picker-element@%s has no SRI pin (mutable range / no integrity)' % (where, em.group(1)))
+                emoji_tags.append((page, where, em.group(1), bool(a.get('integrity'))))  # decided after the CSP rule
                 continue
             bare = re.split(r'[?#]', src, maxsplit=1)[0]
             if bare != src and (PIN_RE.match(bare) or PRE_RE.match(bare)):
@@ -1011,6 +1310,10 @@ def check(room, mans):
                 if typ == 'module':
                     f.append('%s %s pin has type=module: document.currentScript is null there, so the shell ignores data-site '
                              '(and runs deferred); use a classic <script>' % (where, fn))
+                    continue
+                pf = pin_form(pg, s)  # N3: strict pin form, as a browser builds the page
+                if pf:
+                    f.append('%s %s pin is not live: %s' % (where, fn, '; '.join(pf)))
                     continue
                 if not runs:
                     why = ([('type=%s' % typ)] if typ not in JS_TYPES else []) + (['nomodule'] if 'nomodule' in a else []) \
@@ -1041,8 +1344,13 @@ def check(room, mans):
                 f.append('%s loads a script outside the room: %s' % (where, src))
                 continue
             loaded_local.setdefault(rel, where)
+            if 'emoji-picker-element' in rel and not a.get('integrity'):  # self-hosted emoji: 'self' file with SRI
+                w.append('%s self-hosted %s has no integrity (SRI) attribute' % (where, rel))
             if fork and rel == fork_file:
-                if runs and typ != 'module':
+                pf = pin_form(pg, s)
+                if pf:
+                    f.append('%s fork file tag is not live: %s' % (where, '; '.join(pf)))
+                elif runs and typ != 'module':
                     shell_tags.append((page, 'factory.js'))
                     running.add(page)
                 else:
@@ -1122,7 +1430,13 @@ def check(room, mans):
                 f.append('%s imports %s, which does not exist' % (via, rel))
             continue
         decl = modules.get(rel) or keep.get(rel) or {}
-        text = open(p, encoding='utf-8', errors='replace').read()
+        text, enc_ = decode_utf8(open(p, 'rb').read())
+        for msg in enc_:  # N1
+            f.append('%s has %s: room JS must be UTF-8 with no NUL bytes' % (rel, msg))
+        if rel in ns_keep:  # N5: no string-to-code on a noShell page, declared "injects" or not
+            for m_ in NS_EVAL_RE.finditer(text):
+                f.append('%s is loaded on noShell page %s and evaluates a string as code (%s): not allowed on a noShell '
+                         'page' % (rel, ns_keep[rel], m_.group(0)[:30]))
         f.extend(injection_findings(text, rel, bool(decl.get('injects'))))
         if rel in ns_keep and decl.get('injects'):  # B13
             f.append('%s is loaded on noShell page %s but declares "injects" (%s): code on a noShell page may not inject '
@@ -1160,9 +1474,12 @@ def check(room, mans):
                 f.append('%s noShell page loads %s: a noShell page may load only keep files%s and declared inline code'
                          % (where, what, ' flagged noShellOk' if ns_flag else ''))
         # C15: declared inline code on a noShell page may not inject code or import remote modules
-        for page_, where, decl in ns_decl:
+        for page_, where, decl, text_ in ns_decl:
             if page_ != pg_:
                 continue
+            for m_ in NS_EVAL_RE.finditer(text_):  # N5
+                f.append('%s noShell page inline code evaluates a string as code (%s): not allowed on a noShell page'
+                         % (where, m_.group(0)[:30]))
             if decl.get('injects'):
                 f.append('%s noShell page declares inline code with "injects" (%s): inline code on a noShell page may not '
                          'inject or evaluate code' % (where, str(decl['injects'])[:40]))
@@ -1202,6 +1519,66 @@ def check(room, mans):
     else:
         if not any(fn == 'factory.js' for _, fn in shell_tags):
             f.append('no pinned factory.js <script> on any page (no shell runs)')
+    # CSP rule: every HTML page needs a strict CSP that applies to it (meta in <head>, or a hosting header rule)
+    room_hashes = set()  # hashes a strict CSP may list: inline scripts of redirect stubs and 404.html only
+    for p_, pg_ in page_objs.items():
+        if p_ not in stubs and os.path.basename(p_).lower() != '404.html':
+            continue
+        for s_ in pg_.out:
+            if s_['attrs'].get('src') is None and s_['text'].strip():
+                room_hashes |= script_hash_sources(s_['text'])
+    pin_pages = {p_ for p_, pg_ in page_objs.items()
+                 if any(PIN_RE.match(norm_url(s_['attrs'].get('src'))) for s_ in pg_.out)}
+    missing, weak, strict_pols = [], {}, {}
+    csp_pages = [p_ for p_ in all_pages if p_.lower().endswith(CSP_PAGE_EXTS)]
+    for page in csp_pages:
+        pg = page_objs[page]
+        pols = [(pol, bad) for ln_, content, bad in meta_csps(pg) for pol in csp_policies(content)]
+        for fn_, pat, rx, val in hdr_rules:
+            if rx is None or any(rx.match(u) for u in page_urls(page)):
+                pols += [(pol, None) for pol in csp_policies(val)]
+        if not pols:
+            missing.append(page)
+            continue
+        good, reasons = [], []
+        for pol, bad in pols:
+            why = [bad] if bad else csp_weak(pol, room_hashes, page in pin_pages)
+            (reasons.extend(why) if why else good.append(pol))
+        if good:
+            strict_pols[page] = good
+            listed = {x for pol in good for d_ in ('script-src', 'default-src', 'script-src-elem') for x in pol.get(d_) or []}
+            for s_ in pg.out:
+                if s_['attrs'].get('src') is None and s_['text'].strip() and \
+                        (s_['attrs'].get('type') or '').strip().lower() not in DATA_TYPES and not (script_hash_sources(s_['text']) & listed):
+                    w.append('CSP rule: %s:%d inline <script> hash is not in the CSP: the strict CSP will block it' % (page, s_['line']))
+            for c_ in pg.code:
+                w.append('CSP rule: %s:%d %s: a strict CSP blocks inline handlers and javascript: URLs' % (page, c_['line'], c_['kind']))
+        else:
+            weak.setdefault('; '.join(dict.fromkeys(reasons)), []).append(page)
+
+    def _pl(xs):
+        return ', '.join(xs[:8]) + (', ... (%d more)' % (len(xs) - 8) if len(xs) > 8 else '')
+    csp_msgs = []
+    if missing:
+        csp_msgs.append('no Content-Security-Policy on %d of %d pages (%s): add the shell/csp.md meta tag or a hosting '
+                        'header CSP' % (len(missing), len(csp_pages), _pl(missing)))
+    for why, pgs in sorted(weak.items()):
+        csp_msgs.append('CSP is not strict on %s: %s' % (_pl(pgs), why))
+    for m_ in csp_msgs:
+        if csp_soft:
+            w.append('CSP rule (legacy room on tools/csp_legacy_rooms.json, WARN until its migration PR): ' + m_)
+        else:
+            f.append('CSP rule: ' + m_)
+    # emoji-picker-element from jsDelivr: only at an exact version whose folder a strict CSP on the page lists
+    # (index.js imports ./picker.js and ./database.js, which SRI on the tag cannot cover); the other accepted form is
+    # a self-hosted 'self' copy with integrity (checked where local scripts are read)
+    for page, where, ver, has_sri in emoji_tags:
+        pinned_by_csp = EXACT_VER.match(ver) and any(
+            EMOJI_SRC_RE.match(x) and EMOJI_SRC_RE.match(x).group(1) == ver and x.endswith('@%s/' % ver)
+            for pol in strict_pols.get(page, []) for d_ in ('script-src', 'default-src', 'script-src-elem') for x in pol.get(d_) or [])
+        if not pinned_by_csp:
+            w.append('%s emoji-picker-element@%s has no SRI pin: load it from an exact-version folder listed in a strict '
+                     'script-src, or self-host it with integrity (shell/csp.md)' % (where, ver))
     layers['redirectStubs'] = len(stubs)
     f = list(dict.fromkeys(f))
     w = list(dict.fromkeys(w))
@@ -1251,12 +1628,15 @@ def main():
     ap.add_argument('--md')
     ap.add_argument('--strict', action='store_true')
     ap.add_argument('--suggest', action='store_true')
+    ap.add_argument('--csp-legacy', default=CSP_LEGACY_FILE,
+                    help='legacy-room list for the CSP rule (default tools/csp_legacy_rooms.json)')
     a = ap.parse_args()
     if a.suggest:
         print(json.dumps({os.path.basename(os.path.normpath(r)): suggest(r) for r in a.rooms}, indent=2))
         return
     mans = manifests(a.shell_root)
-    res = [check(r, mans) for r in a.rooms]
+    legacy = load_csp_legacy(a.csp_legacy)
+    res = [check(r, mans, legacy) for r in a.rooms]
     lines = ['| Room | Status | Base | Declared layers | Findings | Warnings |', '|---|---|---|---|---|---|']
     for r in res:
         lay = ', '.join('%s=%s' % (k, v) for k, v in r['layers'].items() if v) or '-'
