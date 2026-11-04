@@ -1,0 +1,34 @@
+{
+  "name": "SubX",
+  "legalEntity": "SubX, LLC",
+  "primaryDomain": "subx.it",
+  "shortName": "SubX",
+  "tagline": "Small rooms for big interests.",
+  "takedownEmail": "takedown@subx.it",
+  "topicPathPrefix": "/t/",
+  "reviewerLine": "a human reviewer at SubX, LLC",
+  "taglineOptions": [
+    "Small rooms for big interests.",
+    "Pick a topic. Find your people.",
+    "Real talk, clearly labeled."
+  ],
+  "contactPhone": "+1-650-539-5005",
+  "mailingAddress": "3019 Ocean Park Blvd, #193, Santa Monica, CA 90405",
+  "roomNoun": {
+    "one": "room",
+    "many": "rooms",
+    "article": "a",
+    "One": "Room",
+    "Many": "Rooms"
+  },
+  "topicNoun": {
+    "one": "topic",
+    "many": "topics",
+    "One": "Topic",
+    "Many": "Topics"
+  },
+  "disclosureMark": "WHOMARK™",
+  "nonAffiliation": "Not affiliated with, endorsed by, or sponsored by X Corp.",
+  "notAdvice": "Posts are opinions from members and stewards, not medical, legal, or financial advice.",
+  "footer": "© {{year}} {{brand.legalEntity}} · Terms · Privacy · Report: {{brand.takedownEmail}}"
+}

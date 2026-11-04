@@ -1,0 +1,34 @@
+{
+  "hosting": {
+    "site": "subx-skins",
+    "public": "site",
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ],
+    "cleanUrls": false,
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Robots-Tag",
+            "value": "noindex, nofollow"
+          },
+          {
+            "key": "Content-Security-Policy",
+            "value": "script-src 'self' https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@88ce6dc1fe9b2d7fce809695e8ac4ef94ec89236/shell/v1.2.6/; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          }
+        ]
+      }
+    ]
+  }
+}

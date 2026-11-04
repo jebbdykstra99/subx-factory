@@ -1,0 +1,242 @@
+{
+ "version": 1,
+ "generated": "2026-10-31 (MT) from subx-factory@63e2dca rooms.json + home-room taglines",
+ "rooms": [
+  {
+   "room": "27chat",
+   "siteId": "27chat",
+   "domain": "27chat.com",
+   "name": "27chat",
+   "tagline": "The work didn’t stop.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "311chat",
+   "siteId": "311chat",
+   "domain": "311chat.com",
+   "name": "311chat",
+   "tagline": "Non-emergency city help. Find your 311.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "415chat",
+   "siteId": "415chat",
+   "domain": "415chat.com",
+   "name": "415chat",
+   "tagline": "San Francisco, talking.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "808chat",
+   "siteId": "808chat",
+   "domain": "808chat.com",
+   "name": "808chat",
+   "tagline": "All things Hawaii. Local, not brochure.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "airlineschat",
+   "siteId": "airlineschat",
+   "domain": "airlineschat.com",
+   "name": "airlineschat",
+   "tagline": "Airline issue-resolution. Delays, bags, refunds — not official support.",
+   "status": "paused",
+   "highlights": false,
+   "suggest": false,
+   "hold": "Paused room: excluded from highlights and suggestions."
+  },
+  {
+   "room": "amachat",
+   "siteId": "amachat",
+   "domain": "amachat.com",
+   "name": "amachat",
+   "tagline": "Great women of religious history — amas, nuns, and mothers of wisdom.",
+   "status": "paused",
+   "highlights": false,
+   "suggest": false,
+   "hold": "Paused room: excluded from highlights and suggestions."
+  },
+  {
+   "room": "atmchat",
+   "siteId": "atmchat",
+   "domain": "atmchat.com",
+   "name": "atmchat",
+   "tagline": "Find a nearby ATM. Public map data · Maps outbound.",
+   "status": "paused",
+   "highlights": false,
+   "suggest": false,
+   "hold": "Paused room: excluded from highlights and suggestions."
+  },
+  {
+   "room": "bartchat",
+   "siteId": "bartchat",
+   "domain": "bartchat.com",
+   "name": "bartchat",
+   "tagline": "Nothing but BART.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "behindtheblackwall",
+   "siteId": "behindtheblackwall",
+   "domain": "behindtheblackwall.com",
+   "name": "behindtheblackwall",
+   "tagline": "Personal archive room — Substack + Docs. Content DB pending.",
+   "status": "paused",
+   "highlights": false,
+   "suggest": false,
+   "hold": "Paused room: excluded from highlights and suggestions."
+  },
+  {
+   "room": "boozechat",
+   "siteId": "booze",
+   "domain": "boozechat.com",
+   "name": "boozechat",
+   "tagline": "Pour. Argue. Learn.",
+   "status": "live",
+   "highlights": false,
+   "suggest": false,
+   "hold": "21+ room: live site.json has no minAge 21 yet; kept out of hub highlights and suggestions until the 21+ gate ships and a hub age treatment is approved."
+  },
+  {
+   "room": "boyfriendchat",
+   "siteId": "boyfriend",
+   "domain": "boyfriendchat.com",
+   "name": "boyfriendchat",
+   "tagline": "His stories. Your table.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "buffetchat",
+   "siteId": "buffet",
+   "domain": "buffetchat.com",
+   "name": "buffetchat",
+   "tagline": "The plate never ends.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "buffettchat",
+   "siteId": "buffettchat",
+   "domain": "buffettchat.com",
+   "name": "buffettchat",
+   "tagline": "The Oracle still talks.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "ciachat",
+   "siteId": "cia",
+   "domain": "ciachat.com",
+   "name": "ciachat",
+   "tagline": "FOIA, not fanfic.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "cobrachat",
+   "siteId": "cobra",
+   "domain": "cobrachat.com",
+   "name": "cobrachat",
+   "tagline": "Hoods up.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "gaichat",
+   "siteId": "gaichat",
+   "domain": "gaichat.com",
+   "name": "gaichat",
+   "tagline": "Tools, not oracles.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "gpchat",
+   "siteId": "gpchat",
+   "domain": "gpchat.com",
+   "name": "gpchat",
+   "tagline": "Nothing but Grand Prix.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "popechat",
+   "siteId": "popechat",
+   "domain": "popechat.com",
+   "name": "popechat",
+   "tagline": "Urbi et orbi.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "recruitchat",
+   "siteId": "recruitchat",
+   "domain": "recruitchat.com",
+   "name": "recruitchat",
+   "tagline": "The room, not the funnel.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  },
+  {
+   "room": "samochat",
+   "siteId": "samochat",
+   "domain": "samochat.com",
+   "name": "samochat",
+   "tagline": "Santa Monica, talking.",
+   "status": "live",
+   "highlights": true,
+   "suggest": true
+  }
+ ],
+ "featuredRooms": [
+  "gpchat",
+  "popechat",
+  "gaichat",
+  "27chat"
+ ],
+ "featuredPerRoom": 6,
+ "otherPerRoom": 1,
+ "roomOrder": [
+  "gpchat",
+  "popechat",
+  "gaichat",
+  "415chat",
+  "samochat",
+  "808chat",
+  "bartchat",
+  "buffettchat",
+  "27chat",
+  "recruitchat",
+  "311chat",
+  "airlineschat",
+  "amachat",
+  "atmchat",
+  "behindtheblackwall",
+  "boozechat",
+  "boyfriendchat",
+  "buffetchat",
+  "ciachat",
+  "cobrachat"
+ ],
+ "rankedBy": "30-day unique visitors (console), order only; refreshed 2026-10-31"
+}

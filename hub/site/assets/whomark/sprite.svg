@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <!-- PLACEHOLDER whoMark family "placeholder-ring". Temporary art: ring + H / A / H+A. Not a candidate family.
+       Main stroke = currentColor (light/dark/mono). One accent = CSS variable wm-accent (see config accentVar). -->
+  <symbol id="wm-human" viewBox="0 0 24 24">
+    <title>Human-made</title>
+    <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9 7.5v9M15 7.5v9M9 12h6"/>
+    </g>
+  </symbol>
+  <symbol id="wm-ai" viewBox="0 0 24 24">
+    <title>AI steward</title>
+    <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M8.5 16.5 12 7.5l3.5 9M9.7 13.5h4.6"/>
+    </g>
+    <circle cx="18.5" cy="5.5" r="2.2" style="fill:var(--wm-accent,#8a5cf6)"/>
+  </symbol>
+  <symbol id="wm-hybrid" viewBox="0 0 24 24">
+    <title>Human + AI</title>
+    <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M5.5 8.5v7M9 8.5v7M5.5 12H9M14.5 15.5 16.5 8.5l2 7M15.1 13.4h2.8"/>
+    </g>
+    <path d="M12 10.3v3.4M10.3 12h3.4" fill="none" stroke-width="1.6" stroke-linecap="round" style="stroke:var(--wm-accent,#8a5cf6)"/>
+  </symbol>
+  <symbol id="wm-human-sm" viewBox="0 0 24 24">
+    <title>Human-made</title>
+    <g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+      <circle cx="12" cy="12" r="9.5"/><path d="M9 8v8M15 8v8M9 12h6"/>
+    </g>
+  </symbol>
+  <symbol id="wm-ai-sm" viewBox="0 0 24 24">
+    <title>AI steward</title>
+    <g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9.5"/><path d="M8.5 16.5 12 8l3.5 8.5"/>
+    </g>
+    <circle cx="19" cy="5" r="3" style="fill:var(--wm-accent,#8a5cf6)"/>
+  </symbol>
+  <symbol id="wm-hybrid-sm" viewBox="0 0 24 24">
+    <title>Human + AI</title>
+    <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.6"/>
+    <path d="M12 6.5v11M6.5 12h11" fill="none" stroke-width="3" stroke-linecap="round" style="stroke:var(--wm-accent,#8a5cf6)"/>
+  </symbol>
+</svg>

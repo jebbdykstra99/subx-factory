@@ -1,0 +1,93 @@
+{
+  "_doc": "tools/brand_render.py renders hub/src/templates (+ partials) to hub/site with brand/brand.json. hub/site is generated: edit here, then run python3 tools/brand_render.py.",
+  "shell": {
+    "repo": "jebbdykstra99/subx-factory",
+    "sha": "88ce6dc1fe9b2d7fce809695e8ac4ef94ec89236",
+    "base": "v1.2.6",
+    "integrity": "sha384-P1qjkeL0BmNyUksLCAUJJ0Lws2AX1bx7hdOGxVHEbHjXQsof63F7DxNAZQbDXFpY"
+  },
+  "vendor": [
+    {
+      "from": "factory/nests.css",
+      "to": "nests.css"
+    },
+    {
+      "from": "assets/whomark/config.json",
+      "to": "assets/whomark/config.json"
+    },
+    {
+      "from": "assets/whomark/corner-ai.png",
+      "to": "assets/whomark/corner-ai.png"
+    },
+    {
+      "from": "assets/whomark/corner-human.png",
+      "to": "assets/whomark/corner-human.png"
+    },
+    {
+      "from": "assets/whomark/corner-hybrid.png",
+      "to": "assets/whomark/corner-hybrid.png"
+    },
+    {
+      "from": "assets/whomark/og-ai.png",
+      "to": "assets/whomark/og-ai.png"
+    },
+    {
+      "from": "assets/whomark/og-human.png",
+      "to": "assets/whomark/og-human.png"
+    },
+    {
+      "from": "assets/whomark/og-hybrid.png",
+      "to": "assets/whomark/og-hybrid.png"
+    },
+    {
+      "from": "assets/whomark/sprite.svg",
+      "to": "assets/whomark/sprite.svg"
+    },
+    {
+      "from": "assets/whomark/whomark.js",
+      "to": "assets/whomark/whomark.js"
+    }
+  ],
+  "data": [
+    "highlights.json",
+    "rooms.json"
+  ],
+  "pages": {
+    "index.html": {
+      "title": "{{brand.name}}: {{brand.tagline}}",
+      "description": "{{brand.name}} is a home for small, single-topic {{brand.roomNoun.many}}. Highlights from live {{brand.roomNoun.many}}, each linking back to its {{brand.roomNoun.one}}. Read-only preview."
+    },
+    "rooms.html": {
+      "title": "{{brand.roomNoun.Many}}, {{brand.name}}",
+      "description": "Live {{brand.name}} {{brand.roomNoun.many}}, one {{brand.topicNoun.one}} each."
+    },
+    "about.html": {
+      "title": "About, {{brand.name}}",
+      "description": "About {{brand.name}}: who runs it, how posts are labeled, rules, reports and takedowns."
+    },
+    "topics.html": {
+      "title": "{{brand.topicNoun.Many}} (coming soon), {{brand.name}}",
+      "description": "{{brand.topicNoun.Many}} are not open yet. How they are planned to work."
+    },
+    "terms.html": {
+      "title": "Terms of Service, {{brand.name}}",
+      "description": "Terms of Service for the {{brand.name}} hub."
+    },
+    "privacy.html": {
+      "title": "Privacy Policy, {{brand.name}}",
+      "description": "Privacy Policy for the {{brand.name}} hub."
+    },
+    "guidelines.html": {
+      "title": "Community guidelines, {{brand.name}}",
+      "description": "Community guidelines for {{brand.name}}."
+    },
+    "report.html": {
+      "title": "Report / takedown request, {{brand.name}}",
+      "description": "Report content or request a takedown on {{brand.name}}."
+    },
+    "404.html": {
+      "title": "Not found, {{brand.name}}",
+      "description": "Page not found."
+    }
+  }
+}

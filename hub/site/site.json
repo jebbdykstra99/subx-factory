@@ -1,0 +1,215 @@
+{
+  "siteId": "subx",
+  "domain": "subx.it",
+  "name": "SubX",
+  "tagline": "Small rooms for big interests.",
+  "accountsOpen": false,
+  "pixel": false,
+  "whoMark": true,
+  "minAge": 18,
+  "dms": false,
+  "imageUploads": false,
+  "earlyWelcome": false,
+  "composePlaceholder": "The hub is read-only. Post in a room.",
+  "emptyState": "The hub is read-only. Pick a room to read or post.",
+  "trustBlurb": "Read-only hub. Highlights link back to the original post in its room.",
+  "exploreExplainer": "Every SubX room, one hop away.",
+  "theme": {
+    "bg": "#f3f1ec",
+    "surface": "#fbfaf7",
+    "nav-bg": "#121214",
+    "nav-text": "#b9b4aa",
+    "nav-hover": "#f1ede4",
+    "nav-active": "#fbfaf7",
+    "text": "#18171a",
+    "text-muted": "#57534c",
+    "text-light": "#8b867c",
+    "accent": "#a11d33",
+    "accent-dark": "#7d1426",
+    "teal": "#7d1426",
+    "silver": "#cfcac0",
+    "border": "#e2ddd3",
+    "avatarColors": [
+      "#121214",
+      "#a11d33",
+      "#3a3a40",
+      "#7d1426",
+      "#5a554c",
+      "#26262b"
+    ]
+  },
+  "rail": {
+    "kind": "room-brief",
+    "kicker": "Live SubX rooms",
+    "title": "Suggested rooms",
+    "footer": "Each room has its own rules. Paused rooms are not listed.",
+    "meta": "Room",
+    "maxCards": 15,
+    "outbound": [
+      {
+        "tag": "Featured room",
+        "headline": "gpchat",
+        "snippet": "Nothing but Grand Prix.",
+        "meta": "gpchat.com",
+        "url": "https://gpchat.com/"
+      },
+      {
+        "tag": "Featured room",
+        "headline": "popechat",
+        "snippet": "Urbi et orbi.",
+        "meta": "popechat.com",
+        "url": "https://popechat.com/"
+      },
+      {
+        "tag": "Featured room",
+        "headline": "gaichat",
+        "snippet": "Tools, not oracles.",
+        "meta": "gaichat.com",
+        "url": "https://gaichat.com/"
+      },
+      {
+        "tag": "Featured room",
+        "headline": "27chat",
+        "snippet": "The work didn’t stop.",
+        "meta": "27chat.com",
+        "url": "https://27chat.com/"
+      },
+      {
+        "tag": "Room",
+        "headline": "415chat",
+        "snippet": "San Francisco, talking.",
+        "meta": "415chat.com",
+        "url": "https://415chat.com/"
+      },
+      {
+        "tag": "Room",
+        "headline": "samochat",
+        "snippet": "Santa Monica, talking.",
+        "meta": "samochat.com",
+        "url": "https://samochat.com/"
+      },
+      {
+        "tag": "Room",
+        "headline": "808chat",
+        "snippet": "All things Hawaii. Local, not brochure.",
+        "meta": "808chat.com",
+        "url": "https://808chat.com/"
+      },
+      {
+        "tag": "Room",
+        "headline": "bartchat",
+        "snippet": "Nothing but BART.",
+        "meta": "bartchat.com",
+        "url": "https://bartchat.com/"
+      },
+      {
+        "tag": "Room",
+        "headline": "buffettchat",
+        "snippet": "The Oracle still talks.",
+        "meta": "buffettchat.com",
+        "url": "https://buffettchat.com/"
+      },
+      {
+        "tag": "Room",
+        "headline": "recruitchat",
+        "snippet": "The room, not the funnel.",
+        "meta": "recruitchat.com",
+        "url": "https://recruitchat.com/"
+      },
+      {
+        "tag": "Room",
+        "headline": "311chat",
+        "snippet": "Non-emergency city help. Find your 311.",
+        "meta": "311chat.com",
+        "url": "https://311chat.com/"
+      },
+      {
+        "tag": "Room",
+        "headline": "boyfriendchat",
+        "snippet": "His stories. Your table.",
+        "meta": "boyfriendchat.com",
+        "url": "https://boyfriendchat.com/"
+      },
+      {
+        "tag": "Room",
+        "headline": "buffetchat",
+        "snippet": "The plate never ends.",
+        "meta": "buffetchat.com",
+        "url": "https://buffetchat.com/"
+      },
+      {
+        "tag": "Room",
+        "headline": "ciachat",
+        "snippet": "FOIA, not fanfic.",
+        "meta": "ciachat.com",
+        "url": "https://ciachat.com/"
+      },
+      {
+        "tag": "Room",
+        "headline": "cobrachat",
+        "snippet": "Hoods up.",
+        "meta": "cobrachat.com",
+        "url": "https://cobrachat.com/"
+      }
+    ]
+  },
+  "trends": [],
+  "places": [],
+  "topics": [],
+  "nests": [],
+  "shell": {
+    "base": "v1.2.6",
+    "fork": false,
+    "cspRequired": true,
+    "overrides": {
+      "theme": [
+        "styles.css",
+        "nests.css",
+        "hub.css"
+      ],
+      "copy": [
+        "site.json:name",
+        "site.json:tagline",
+        "site.json:rail"
+      ],
+      "legal": [
+        "terms.html",
+        "privacy.html",
+        "guidelines.html",
+        "report.html",
+        "about.html"
+      ]
+    },
+    "keep": [
+      {
+        "file": "assets/whomark/whomark.js",
+        "sha256": "393b84f5bf5f46d3c1f0c05237b5d2c17985cfcf8b9d1aab2211adb91cfedf3e",
+        "reason": "WHOMARK disclosure badges (vendored byte copy of subx-factory assets/whomark, re-branded only when brand.json changes)",
+        "noShellOk": true
+      },
+      {
+        "file": "hub.js",
+        "sha256": "0f054f6a9de5422beffb7ff88ea0f7516f27996282c33ff7225ac4a42fc86cd9",
+        "reason": "hub: renders highlights.json + rooms.json (read-only, no auth, no writes)",
+        "noShellOk": true
+      },
+      {
+        "file": "takedown.js",
+        "sha256": "34894c915efb36a98b26d5f37d414ae3abef5eb249b0247dc548c3547729cd26",
+        "reason": "hub: takedown/report mailto from brand.json takedownEmail",
+        "noShellOk": true
+      }
+    ],
+    "notes": "Generated by tools/brand_render.py from brand/brand.json + hub/src; keep sha256 values are filled at render time.",
+    "noShell": [
+      "rooms.html",
+      "about.html",
+      "/t/index.html",
+      "terms.html",
+      "privacy.html",
+      "guidelines.html",
+      "report.html",
+      "404.html"
+    ]
+  }
+}
