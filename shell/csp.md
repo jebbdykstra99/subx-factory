@@ -35,6 +35,11 @@ Fill in:
   `https://www.google.com/recaptcha/enterprise.js`) and `https://www.gstatic.com/recaptcha/releases/`. Nothing
   wider: the rest of `/recaptcha/` on both hosts serves a public AngularJS gadget that turns injected markup into
   script execution. Without the opt-in these sources are `DRIFT`.
+- For Firebase Auth Google sign-in (the popup loads Google's gapi loader), set `"googleSignIn": true` in `site.json`
+  `shell` (default `false`) and add exactly `https://apis.google.com/js/api.js` and
+  `https://apis.google.com/_/scs/abc-static/` (the gapi iframes module). Never the bare `https://apis.google.com`
+  host or another folder on it: it is a known CSP-bypass host (JSONP). Without the opt-in these sources are `DRIFT`
+  (shell_drift rule C2g).
 
 Not allowed (the checker reports them): `'unsafe-inline'`, `'unsafe-eval'`, `'unsafe-hashes'`, `'wasm-unsafe-eval'`,
 `'strict-dynamic'`, nonces (a static page cannot rotate them), `*`, scheme sources (`https:`, `data:`, `blob:`), a

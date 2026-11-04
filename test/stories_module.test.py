@@ -4,7 +4,7 @@
 - factory.js: Stories default-on (storiesOn reads `enabled !== false`), text-only when the room sets imageUploads:false
   (no image/clip buttons, uploadStoryMedia refuses), and #story / #compose=<text> hand-off from the hub on boot.
 - hub: stories.json schema (rooms + live text items only, no media URLs), hub-* markup present, the hub still never writes
-  (no Firestore/Auth/fetch-POST in hub.js, CSP connect-src stays 'self'), copy does not claim the hub posts.
+  (no Firestore/Auth/fetch-POST in hub.js; CSP connect-src is 'self' plus the pinned sign-in origins), copy does not claim the hub posts.
 Run: python3 test/stories_module.test.py
 """
 import json, os, re, sys
@@ -61,7 +61,10 @@ import hub_storage_guard  # noqa: E402
 probs = hub_storage_guard.problems(js)
 ok(not probs, 'hub.js: storage only via window.localStorage get/setItem(HUB_STORE = hub.follows.v1), no indirect access (%s)' % probs)
 csp = re.search(r"connect-src ([^;\"]+)", read('hub', 'firebase.json') if os.path.exists(os.path.join(ROOT, 'hub', 'firebase.json')) else idx)
-ok(csp is None or csp.group(1).strip() == "'self'", "hub CSP connect-src stays 'self'")
+# HUB SIGN-IN (2026-11-04): connect-src adds only the Firebase Auth / App Check / Firestore origins the shell's
+# sign-in needs (pinned in test/hub_brand.test.py); hub.js itself still writes nothing (checked above).
+HUB_CONNECT = "'self' https://subx-skins.web.app https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://content-firebaseappcheck.googleapis.com https://www.google.com/recaptcha/"
+ok(csp is None or csp.group(1).strip() == HUB_CONNECT, "hub CSP connect-src is 'self' plus only the pinned sign-in origins")
 vis = re.sub(r'<[^>]+>', ' ', re.sub(r'<(script|style)\b.*?</\1>', '', idx, flags=re.S))
 ok('The hub does not save or send your text: it opens that room and copies your words so you can paste them there.' in vis, 'index.html: composer note (Key 1 E1 wording)')
 ok('<!--' not in idx.split('id="hub-stories"')[0][-400:] and 'STORIES.md' not in idx, 'index.html: no internal note comment before the Stories row')
@@ -69,6 +72,6 @@ ok('source' not in st, 'stories.json: no internal source note')
 ok('data/' not in json.dumps(json.loads(read('hub', 'site', 'site.json')).get('stories')), 'hub site.json: no internal data/ path note')
 ok(not re.search(r'post(ed)? (here|on the hub|from the hub) (now|today)|your post is live', vis, re.I), 'index.html: no claim that the hub posts')
 hs = json.loads(read('hub', 'site', 'site.json'))
-ok(hs.get('stories', {}).get('enabled') is False and hs.get('accountsOpen') is False, 'hub site.json: hub runs no Stories of its own, accounts closed')
+ok(hs.get('stories', {}).get('enabled') is False and hs.get('accountsOpen') is True, 'hub site.json: hub runs no Stories of its own; accounts open for sign-in only (HUB SIGN-IN)')
 print('\n%d ok, %d fail' % (oks, fails))
 sys.exit(1 if fails else 0)

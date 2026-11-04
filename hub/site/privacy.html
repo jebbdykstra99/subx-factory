@@ -11,17 +11,17 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=dc6b174963">
   <link rel="stylesheet" href="/styles.css?v=58ba24a874">
   <link rel="stylesheet" href="/nests.css?v=a67c57a6bb">
-  <link rel="stylesheet" href="/hub.css?v=5ed8ae77db">
+  <link rel="stylesheet" href="/hub.css?v=2fffc9c4f4">
 </head>
 <body class="legal-page">
 
   <article class="legal-doc">
-    <p class="legal-kicker">Effective November 4, 2026. The hub is read-only: it does not take accounts, posts, or messages, and does not send the visit beacon. Highlights link to the original post in its room, where that room’s own terms apply.</p>
+    <p class="legal-kicker">Effective November 4, 2026. The hub takes sign-in but no posts: you can sign in with the same account the rooms use, and posts, replies, stories, and messages stay in each room. The hub does not send the visit beacon. Highlights link to the original post in its room, where that room’s own terms apply.</p>
     <p class="legal-kicker">Governing law: State of California, United States of America</p>
     <h1>Privacy Policy</h1>
     <p>This Privacy Policy explains how SubX, LLC (“Operator,” “we,” “us”) collects, uses, and shares information when you use <strong>SubX</strong>, the hub site for the SubX family of niche community rooms (the “Service”).</p>
     <p>The email listed for notices is Operator’s designated legal contact channel.</p>
-    <p><em>SubX is a read-only index of public highlights from SubX rooms. Each room is a separate Service with its own posted rules. Not affiliated with any person, brand, or organization a room discusses.</em></p>
+    <p><em>SubX is an index of public highlights from SubX rooms, where you can sign in with your SubX account. Each room is a separate Service with its own posted rules. Not affiliated with any person, brand, or organization a room discusses.</em></p>
     <p>International users: the Service is operated in the United States. If you use it from another country, your information will be processed in the United States (and other locations where our processors operate), which may have different data-protection rules than your home country.</p>
 
     <h2>1. Who we are</h2>
@@ -32,10 +32,11 @@
 
     <h2>2. Information we collect</h2>
     <ul>
-      <li><strong>Account data</strong> when you register: email address, password (stored by our auth provider as hashes), display name / handle, and a site identifier (<code>siteId</code>).</li>
+      <li><strong>Account data</strong> when you register: email address, password (our sign-in provider stores it only as a hash), display name / handle, and a site identifier (<code>siteId</code>). Your public handle is something you choose. We do not make it from your email address, and we do not show your email address to other users.</li>
       <li><strong>Sign-in providers</strong>: if Google (or another provider) is enabled, we receive identifiers and profile fields the provider shares with us when you authorize sign-in.</li>
+      <li><strong>Hub accounts</strong>: signing in on the hub uses the same SubX account as the rooms. When you sign in on the hub, we store your account ID (<code>uid</code>), your display name, the hub’s site identifier (<code>siteId</code>), and the basic profile fields your sign-in provider shares with us (for Google: your name, email address, and profile photo link). Follows and direct messages you make with that account in a room are stored with your account. Follows you make on the hub stay in your browser only (see Hub follows below). The hub does not take posts, replies, or stories.</li>
       <li><strong>Content you submit</strong>: posts, replies, images, polls, direct messages (where enabled), reports, and similar UGC.</li>
-      <li><strong>Usage / device data</strong>: approximate logs such as IP address, browser type, referring URL, timestamps, and App Check / abuse-prevention signals needed to secure Firebase Auth, Firestore, and Storage. Request logs kept in SubX, LLC's own Google Cloud project (such as those for the visit beacon and link previews) are deleted automatically after about 30 days. The pages are hosted on Firebase Hosting (Google), and sign-in, database and file storage run on Google Firebase; those providers keep their own server logs, including IP addresses, under their own retention policies, which SubX, LLC does not control.</li>
+      <li><strong>Usage / device data</strong>: approximate logs such as IP address, browser type, referring URL, timestamps, and App Check / abuse-prevention signals needed to secure Firebase Auth, Firestore, and Storage. For abuse prevention, App Check uses Google reCAPTCHA, which runs on the pages where you can sign in and sends browser and device signals to Google to tell people from automated traffic. Request logs kept in SubX, LLC's own Google Cloud project (such as those for the visit beacon and link previews) are deleted automatically after about 30 days. The pages are hosted on Firebase Hosting (Google), and sign-in, database and file storage run on Google Firebase; those providers keep their own server logs, including IP addresses, under their own retention policies, which SubX, LLC does not control.</li>
       <li><strong>Automated-traffic signals</strong>: SubX, LLC's visit records do not store your browser's user agent, brand headers, language settings, or automation (headless or webdriver) flags. Google Cloud's standard request logs for the visit beacon record the IP address, browser user agent and referring page along with the visitor ID, and are kept for about 30 days. They may be reviewed to detect abuse or automated traffic.</li>
       <li><strong>Unique-visitor ID</strong>: to count unique visitors, SubX, LLC has each browser create a random visitor ID that does not contain your name or contact details, kept in the browser's local storage as <code>subx.vid</code>, and sends it with the visit beacon. SubX, LLC's visit records do not include a name, email address, account ID, or IP address. Google Cloud's standard request logs for the visit beacon record the IP address, browser user agent and referring page along with the visitor ID, and are kept for about 30 days. Individual visit records are deleted after about 90 days, but SubX, LLC keeps a record of each visitor ID seen on SubX and the dates it was first and last seen for up to 25 months after it was last seen, so long-term unique-visitor counts stay accurate. Clearing the browser's site data creates a new ID. To ask SubX, LLC to delete a visitor ID, email <a data-takedown href="mailto:takedown@subx.it">takedown@subx.it</a> with the subject “Delete my visitor ID: SubX” and, if you can, the <code>subx.vid</code> value from your browser. SubX, LLC does not use the visitor ID for advertising or cross-site tracking, does not combine it with other data to identify you, and does not sell or share it. If you are in the EU, UK, or Switzerland, SubX, LLC keeps this record on the basis of its legitimate interest in accurate audience counts, and you may object or request deletion at the address above.</li>
       <li><strong>Cookies / local storage</strong>: session and preference data required to keep you signed in and remember UI settings. We do not currently run third-party advertising pixels on the Service; if that changes, we will update this Policy.</li>
@@ -61,13 +62,14 @@
     </ul>
 
     <h2>5. Retention</h2>
-    <p>We retain account and content data while your account is active and as needed for legitimate operations, disputes, and legal obligations. You may delete many posts in-product; residual copies may remain in backups for a limited period.</p>
+    <p>We retain account and content data while your account is active and as needed for legitimate operations, disputes, and legal obligations. You may delete many posts in-product; residual copies may remain in backups for a limited period. Hub account data, including follows and messages made with a hub account in a room, is kept the same way as room account data. Follows made on the hub stay in your browser (see Hub follows). The hub does not send the visit beacon, so it creates no visitor ID; where a room sends it, the 25-month visitor-ID limit above applies.</p>
+    <p id="hub-account-delete"><strong>Deleting your hub account:</strong> there is no in-app delete button. Email <a data-takedown href="mailto:takedown@subx.it">takedown@subx.it</a> from the address on the account with the subject “Delete my account: SubX”. We verify the request, then delete the account and the data stored with it, except what the law requires us to keep. The hub and the rooms share one account, so this deletes it on the hub and in every room. To remove hub follows, clear your browser data for subx.it.</p>
 
     <h2>6. Security</h2>
     <p>We use industry-standard measures (encrypted transport, access controls, App Check, server rules). No method of transmission or storage is 100% secure.</p>
 
     <h2>7. Children’s privacy</h2>
-    <p>The Service is not directed to anyone under 18. We do not knowingly collect personal information from children below that age. If you believe we have, contact us and we will delete it.</p>
+    <p>You must be at least 18 to have an account on SubX. The Service is not directed to children, and we do not knowingly collect personal information from anyone under 18, including children under 13. If we learn that we have, we close the account and delete the information, except what the law requires us to keep. If you believe we have information about someone under 18, contact us at <a data-takedown href="mailto:takedown@subx.it">takedown@subx.it</a>.</p>
 
     <h2>8. Your privacy rights</h2>
     <p><strong>Global / U.S. state rights (including California):</strong> Subject to applicable law, you may request access to, correction of, or deletion of personal information we hold about you, or appeal a denial. Email <a data-takedown href="mailto:takedown@subx.it">takedown@subx.it</a> with the subject line “Privacy request: SubX.” We will verify your request and respond as required. You will not be discriminated against for exercising rights under CCPA/CPRA.</p>

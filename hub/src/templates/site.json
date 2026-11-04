@@ -3,7 +3,7 @@
   "domain": "{{brand.primaryDomain}}",
   "name": "{{brand.name}}",
   "tagline": "{{brand.tagline}}",
-  "accountsOpen": false,
+  "accountsOpen": true,
   "pixel": false,
   "whoMark": true,
   "minAge": 18,
@@ -11,9 +11,9 @@
   "imageUploads": false,
   "stories": { "enabled": false },
   "earlyWelcome": false,
-  "composePlaceholder": "The hub is read-only. Post in a {{brand.roomNoun.one}}.",
-  "emptyState": "The hub is read-only. Pick a {{brand.roomNoun.one}} to read or post.",
-  "trustBlurb": "Read-only hub. Highlights link back to the original post in its {{brand.roomNoun.one}}.",
+  "composePlaceholder": "Posts live in the {{brand.roomNoun.many}}. Post in a {{brand.roomNoun.one}}.",
+  "emptyState": "Posts live in the {{brand.roomNoun.many}}. Pick a {{brand.roomNoun.one}} to read or post.",
+  "trustBlurb": "Sign in here, post in the {{brand.roomNoun.many}}. Highlights link back to the original post in its {{brand.roomNoun.one}}.",
   "exploreExplainer": "Every {{brand.name}} {{brand.roomNoun.one}}, one hop away.",
   "theme": {
     "bg": "#f3f1ec",
@@ -56,6 +56,8 @@
     "base": "{{shell.base}}",
     "fork": false,
     "cspRequired": true,
+    "recaptcha": true,
+    "googleSignIn": true,
     "overrides": {
       "theme": [
         "styles.css",
@@ -85,7 +87,7 @@
       {
         "file": "hub.js",
         "sha256": "",
-        "reason": "hub: renders highlights.json + rooms.json (read-only, no auth, no writes)",
+        "reason": "hub: renders highlights.json + rooms.json, and the header Sign in / Join button that opens the shell sign-in (no writes of its own)",
         "noShellOk": true
       },
       {

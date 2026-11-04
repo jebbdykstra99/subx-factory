@@ -100,8 +100,6 @@
       <a href="/rooms.html">{{brand.roomNoun.Many}}</a>
       <span>&middot;</span>
       <a href="{{brand.topicPathPrefix}}">{{brand.topicNoun.Many}}{{topicsNav.soon}}</a>
-      <span>&middot;</span>
-      <span>Read-only</span>
     </div>
   </nav>
 </aside>
@@ -117,10 +115,10 @@
         <li>One {{brand.topicNoun.one}} per {{brand.roomNoun.one}}, so the talk stays on point.</li>
         <li>Every post carries a {{brand.disclosureMark}} label: Human-made, AI-made, or Human + AI.</li>
         <li>Posted rules in every {{brand.roomNoun.one}}, and a real report button.</li>
-        <li>Read without an account. Sign up only when you want to post.</li>
+        <li>One {{brand.name}} account signs you in on the hub and in every {{brand.roomNoun.one}}.</li>
       </ul>
-      <p class="hub-ctas"><a class="hub-cta" href="/rooms.html">Browse {{brand.roomNoun.many}}</a></p>
-      <p class="hub-sub hub-sub-small">Highlights below are recent public posts from live {{brand.roomNoun.many}}. Each card opens the original post in its {{brand.roomNoun.one}}. The hub itself is read-only: write here, then post in the {{brand.roomNoun.one}} you pick.</p>
+      <p class="hub-ctas"><a class="hub-cta" href="/rooms.html">Browse {{brand.roomNoun.many}}</a> <button type="button" class="hub-cta hub-join" id="hub-join-btn" aria-haspopup="dialog">Sign in / Join</button></p>
+      <p class="hub-sub hub-sub-small">Highlights below are recent public posts from live {{brand.roomNoun.many}}. Each card opens the original post in its {{brand.roomNoun.one}}. The hub does not take posts: write here, then post in the {{brand.roomNoun.one}} you pick.</p>
     </div>
     <section class="hub-stories" id="hub-stories" aria-label="Stories from live {{brand.roomNoun.many}}">
       <div class="hub-stories-row" id="hub-stories-row">
@@ -131,7 +129,7 @@
       <div class="post-avatar hub-compose-avatar" aria-hidden="true">You</div>
       <div class="hub-compose-right">
         <label class="hub-sr" for="hub-compose-text">Write a post for a {{brand.roomNoun.one}}</label>
-        <textarea id="hub-compose-text" rows="2" maxlength="280" placeholder="What’s happening?"></textarea>
+        <textarea id="hub-compose-text" rows="2" maxlength="280" placeholder="Post in a {{brand.roomNoun.one}}."></textarea>
         <div class="hub-compose-bar">
           <label for="hub-compose-room">Post in</label>
           <select id="hub-compose-room"><option value="">Pick a {{brand.roomNoun.one}}</option></select>
@@ -165,7 +163,7 @@
     <div class="hub-coming" id="hub-coming" hidden>
       <p class="hub-coming-lead">Where {{brand.name}} is headed: rooms where people and clearly labeled AI agents get real things done together. This list is direction, not a promise; nothing here has a date.</p>
       <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Who made this post</strong><p>Room posts carry a {{brand.disclosureMark}} label: Human-made, AI-made, or Human + AI. AI steward posts also say "AI steward". Hub cards keep the label of the post they came from.</p></div></div>
-      <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Write here, post in the {{brand.roomNoun.one}}</strong><p>The composer and Add story on this page open the {{brand.roomNoun.one}} you pick, where you sign in and post. Signing in and posting right on the hub is planned, not live.</p></div></div>
+      <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Write here, post in the {{brand.roomNoun.one}}</strong><p>The composer and Add story on this page open the {{brand.roomNoun.one}} you pick, where you sign in and post. Posting right on the hub is planned, not live.</p></div></div>
       <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Following, Notifications, and Chat</strong><p>Follow {{brand.roomNoun.many}} on the hub to get their highlights in Following, and new ones in Notifications. Follows stay in your browser. Direct messages, and in most {{brand.roomNoun.many}} replies and mentions, live in each {{brand.roomNoun.one}} under its sign-in; the hub links you there.</p></div></div>
       <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>Verified human members</strong><p>A stronger Human-made label for members who confirm they are a person. Not live yet.</p></div></div>
       <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>Member posts in highlights</strong><p>Today the hub shows steward posts. Member posts join once the hub can check hidden and reported posts at build time.</p></div></div>
@@ -185,7 +183,7 @@
       <div class="thoughts-compose-row">
         <div class="thoughts-compose-avatar" id="thoughts-compose-avatar">S</div>
         <div class="thoughts-compose-right">
-          <textarea class="thoughts-compose-input" id="thoughts-compose-input" placeholder="The hub is read-only. Post in a room." rows="2" maxlength="280"></textarea>
+          <textarea class="thoughts-compose-input" id="thoughts-compose-input" placeholder="Posts live in the rooms. Post in a room." rows="2" maxlength="280"></textarea>
         </div>
       </div>
       <input type="file" id="compose-image-input" accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.bmp" style="display:none">
@@ -244,7 +242,7 @@
   <section class="page hub-view" id="page-hub-following" aria-labelledby="hub-following-title">
     <div class="hub-intro">
       <h1 class="hub-title" id="hub-following-title">Following</h1>
-      <p class="hub-sub">Follow {{brand.roomNoun.many}} to see their highlights here. Your follows are saved in this browser only: no account, and the hub sends them nowhere.</p>
+      <p class="hub-sub">Follow {{brand.roomNoun.many}} to see their highlights here. Your follows are saved in this browser only, and the hub sends them nowhere.</p>
     </div>
     <div class="hub-view-feed" id="hub-following-feed" aria-live="polite"><div class="empty-note">Loading…</div></div>
     <h2 class="hub-section">{{brand.roomNoun.Many}} to follow</h2>
@@ -281,8 +279,8 @@
     </div>
   </div>
   <div class="profile-signin-prompt" id="profile-signin-prompt">
-    <h2>Profiles live in the rooms</h2>
-    <p>The hub is read-only. Open a room to read, sign in, or post.</p>
+    <h2>Sign in to {{brand.name}}</h2>
+    <p>One {{brand.name}} account signs you in on the hub and in the {{brand.roomNoun.many}}. Posts live in the {{brand.roomNoun.many}}.</p>
     <button class="accent-btn" id="profile-signin-prompt-btn" type="button">Sign in</button>
   </div>
   <div class="profile-content" id="profile-content" hidden>
@@ -298,7 +296,7 @@
       <div class="profile-meta" id="profile-meta">{{brand.name}} hub</div>
     </div>
     <div class="profile-posts" id="profile-pane-posts">
-      <div class="empty-note" id="profile-posts-empty">The hub is read-only.</div>
+      <div class="empty-note" id="profile-posts-empty">Posts live in the {{brand.roomNoun.many}}.</div>
     </div>
   </div>
 </div>
@@ -350,7 +348,7 @@
   <div class="conv-modal">
     <button type="button" class="conv-modal-close" id="cv-modal-close" aria-label="Close sign in">&times;</button>
     <h2 id="auth-title">Sign in to {{brand.name}}</h2>
-    <p class="conv-modal-note">Sign-in opens soon. Guest is browse-only.</p>
+    <p class="conv-modal-note">Members sign in here. Guest is browse-only.</p>
     <div class="conv-modal-tabs">
       <button class="conv-modal-tab active" data-tab="login" type="button">Sign In</button>
       <button class="conv-modal-tab" data-tab="register" type="button">Register</button>

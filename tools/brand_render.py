@@ -6,7 +6,9 @@ spell the brand; they use tokens:
 
   {{brand.KEY}} / {{brand.KEY.SUB}}   a brand.json value (values may hold tokens too, e.g. footer -> {{year}})
   {{year}}                            year of hub/src/data/highlights.json "generated" (deterministic, not the clock)
-  {{shell.pinUrl}} {{shell.integrity}} {{shell.csp}}   the shared shell, self-hosted at /shell/<base>/factory.js (hub/src/config.json)
+  {{shell.pinUrl}} {{shell.integrity}} {{shell.csp}}   the shared shell, self-hosted at /shell/<base>/factory.js (hub/src/config.json);
+                                                       shell.csp is CSP_AUTH on shell pages, CSP_STATIC on noShell pages
+  {{shell.firebaseVersion}}                            the exact Firebase compat SDK version the shell page loads
   {{page.title}} {{page.description}}  per-page values from hub/src/config.json "pages"
   {{asset:/path}}                     /path?v=<sha256[:10] of the rendered file> (cache-bust, rendered first)
   {{> name}}                          hub/src/partials/name.html
@@ -110,6 +112,24 @@ def footer_links(ctx):
     return text
 
 
+# HUB SIGN-IN (2026-11-04). Static (noShell) pages: self only. The shell page (index.html) adds exactly what the
+# shell's sign-in needs: the Firebase compat SDK at one exact version, reCAPTCHA v3 for App Check (shell.recaptcha),
+# Google's sign-in helper (gapi: api.js plus the gapi_iframes module it loads from /_/scs/abc-static/, needed by
+# signInWithPopup / signInWithRedirect), the shell's web-config fetch, the Auth / Firestore / App Check APIs, and the
+# reCAPTCHA v3 score call (connect to www.google.com/recaptcha/). Found by headless Chrome CSP-violation capture.
+FIREBASE_VERSION = '10.12.2'
+CSP_STATIC = "script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'"
+CSP_AUTH_SCRIPT = ["'self'", 'https://www.gstatic.com/firebasejs/%s/' % FIREBASE_VERSION,
+                   'https://www.google.com/recaptcha/api.js', 'https://www.gstatic.com/recaptcha/releases/',
+                   'https://apis.google.com/js/api.js', 'https://apis.google.com/_/scs/abc-static/']
+CSP_AUTH_CONNECT = ["'self'", 'https://subx-skins.web.app', 'https://identitytoolkit.googleapis.com',
+                    'https://securetoken.googleapis.com', 'https://firestore.googleapis.com',
+                    'https://content-firebaseappcheck.googleapis.com', 'https://www.google.com/recaptcha/']
+CSP_AUTH_FRAME = ['https://subx-skins.firebaseapp.com', 'https://www.google.com/recaptcha/']
+CSP_AUTH = '; '.join(['script-src ' + ' '.join(CSP_AUTH_SCRIPT), 'connect-src ' + ' '.join(CSP_AUTH_CONNECT),
+                      'frame-src ' + ' '.join(CSP_AUTH_FRAME), "object-src 'none'", "base-uri 'none'", "font-src 'self'"])
+
+
 class Renderer:
     def __init__(self, src, brand_path, out):
         self.src, self.out = src, out
@@ -126,11 +146,16 @@ class Renderer:
         self.shell_rel = 'shell/%s/factory.js' % sh['base']
         pin = '/' + self.shell_rel
         self.shell_data, self.shell_sha, self.shell_sri = self.shell_bytes()
-        csp = "script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'"
-        if re.search(r'[^\x20-\x7e]|,', csp):
-            raise RenderError('CSP must be printable ASCII without commas')
+        csp = CSP_STATIC
+        # HUB SIGN-IN (2026-11-04): pages that run the shell (index.html) get CSP_AUTH, the exact Firebase Auth +
+        # Firestore + App Check origins the shell's sign-in needs; every noShell static page keeps the strict policy.
+        for c in (CSP_STATIC, CSP_AUTH):
+            if re.search(r'[^\x20-\x7e]|,', c):
+                raise RenderError('CSP must be printable ASCII without commas')
+        self.csp_auth = CSP_AUTH
         self.ctx = {'brand': brand, 'year': year,
-                    'shell': {'pinUrl': pin, 'integrity': self.shell_sri, 'csp': csp, 'base': sh['base']}}
+                    'shell': {'pinUrl': pin, 'integrity': self.shell_sri, 'csp': csp, 'base': sh['base'],
+                              'firebaseVersion': FIREBASE_VERSION}}
         prefix = brand.get('topicPathPrefix', '')
         if not re.fullmatch(r'^/[a-z0-9][a-z0-9-]*/$', prefix):
             raise RenderError('brand.topicPathPrefix must look like /t/ (got %r)' % prefix)
@@ -267,7 +292,7 @@ class Renderer:
                                            where='site.json'))
         # the self-hosted shell is a declared hub-only fork (header line only; shell_drift reports FORK with 2 diff lines), E21
         site.setdefault('shell', {}).update({'fork': True, 'file': self.shell_rel, 'sha256': self.shell_sha,
-                                             'reason': 'Self-hosted hub fork of shell/%s/factory.js: header source line only, new SRI; script-src and connect-src are self only' % self.cfg['shell']['base'],
+                                             'reason': 'Self-hosted hub fork of shell/%s/factory.js: header source line only, new SRI; static pages are self only, the shell page adds only the Firebase Auth origins' % self.cfg['shell']['base'],
                                              'exception': 'E21'})
         for k in site.get('shell', {}).get('keep', []):
             p = os.path.join(self.out, k['file'])
@@ -286,6 +311,7 @@ class Renderer:
         missing = [n for n in names if n.endswith('.html') and n not in pages]
         if missing:
             raise RenderError('templates without a "pages" entry in config.json: %s' % ', '.join(missing))
+        shell_noshell = set(x.lstrip('/') for x in site.get('shell', {}).get('noShell', []))
         hub_noindex = self.topic_cfg()['hubNoindex']
         self.indexable_pages = []
         for n, meta in sorted(pages.items()):
@@ -298,7 +324,10 @@ class Renderer:
             page['canonical'] = self.canonical(self.out_path(n))
             if page['robots'] == topic_status.INDEX:
                 self.indexable_pages.append(page['canonical'])
-            text = self.render_text(open(os.path.join(tdir, n), encoding='utf-8').read(), '.html', page, where=n)
+            extra = None
+            if self.out_path(n) not in shell_noshell:
+                extra = {'shell': dict(self.ctx['shell'], csp=self.csp_auth)}
+            text = self.render_text(open(os.path.join(tdir, n), encoding='utf-8').read(), '.html', page, where=n, extra=extra)
             self.write(self.out_path(n), text.encode('utf-8'))
         # 4. topic pages (non-HOLD seed rows) and the sitemap (eligible topics only)
         for t in topics:

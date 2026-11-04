@@ -21,16 +21,23 @@ left outside `brand/brand.json` (allowed: the Firebase project/site ids).
   only the header comment line that names the source repo with
   ` * Source: SubX shared shell v1.2.6 (hub fork, header only)`, and loads the result with its own new
   SRI. Every other byte is identical. `site.json` declares it (`shell.fork`, EXCEPTIONS.md E21), so
-  shell_drift reports `FORK` with 2 diff lines (one line out, one in). No CDN: script-src and
-  connect-src are `'self'` only, so the hub makes no external request.
+  shell_drift reports `FORK` with 2 diff lines (one line out, one in).
+- Sign in (2026-11-04): `site.json` `accountsOpen` is `true`. The shell's own sign-in (left nav / mobile drawer
+  `#sidebar-auth`, and the header Sign in / Join button, which only clicks it) signs in the same account the
+  rooms use (Firebase project `subx-skins`, `siteId` `subx`). The hub still takes no posts. `index.html` loads the
+  Firebase compat SDK (`shell.firebaseVersion`, pinned with SRI) and carries `CSP_AUTH` (`tools/brand_render.py`).
 - The other pages (rooms, about, topics, legal, 404) are static and declared in
   `site.json` `shell.noShell` (see `shell/README.md`): the v1.2.6 shell is an app shell
   and needs the app DOM, so it is not loaded on them. They only load files listed in
   `shell.keep`.
-- Every page has the strict meta CSP as the first element of `<head>`:
+- Every static page has the strict meta CSP as the first element of `<head>`:
   `script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'` (fonts are self-hosted under assets/fonts, OFL 1.1).
-  `hub/firebase.json` sends the same policy as a header plus `frame-ancestors 'none'`,
-  and `X-Robots-Tag: noindex` on the JSON data files only.
+  `index.html` has `CSP_AUTH` there instead: the strict policy plus exactly the Firebase Auth, App Check
+  (reCAPTCHA v3), Firestore and Google sign-in sources (pinned in `test/hub_brand.test.py`).
+  `hub/firebase.json` sends `CSP_AUTH` as a header plus `frame-ancestors 'none'` (browsers enforce header and meta
+  together, so static pages stay strict), and `X-Robots-Tag: noindex` on the JSON data files only.
+- Rules: `rules/firestore.rules.hub-signin.proposed` (unpublished) lets `siteId` `subx` hold profiles, follows,
+  blocks, mutes, follow alerts and DMs; never posts or stories. Test: `cd rules/tests && npm run test:hub`.
 - Check: `python3 tools/shell_drift.py hub/site --csp-legacy <file> --strict`.
 
 ## Disclosure mark

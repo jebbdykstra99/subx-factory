@@ -32,11 +32,24 @@ TEXT = BR.TEXT_EXT
 cfg = json.load(open(os.path.join(SRC, 'config.json')))
 brand = json.load(open(BRAND))
 # B2 (Key 2, 2026-11-04): the shell is self-hosted at /shell/<base>/factory.js as a hub-only fork (header line only, new SRI);
-# script-src and connect-src are 'self' only (Round 5: the hub makes no external request)
+# static (noShell) pages: script-src and connect-src are 'self' only (Round 5: no external request).
+# HUB SIGN-IN (2026-11-04): the shell page (index.html) carries CSP_AUTH, pinned here source by source. Every origin
+# was found by headless Chrome CSP-violation capture of the real sign-in (Firebase Auth popup, App Check reCAPTCHA v3,
+# Firestore). Exact files or exact folders only; no wildcard, no bare Google host.
 SHELL_REL = 'shell/%s/factory.js' % cfg['shell']['base']
 PIN = '/' + SHELL_REL
 CDN_PIN = 'https://cdn.jsdelivr.net/gh/%s@%s/shell/%s/factory.js' % (cfg['shell']['repo'], cfg['shell']['sha'], cfg['shell']['base'])
 CSP = "script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'"
+CSP_AUTH_SCRIPT = ["'self'", 'https://www.gstatic.com/firebasejs/10.12.2/', 'https://www.google.com/recaptcha/api.js',
+                   'https://www.gstatic.com/recaptcha/releases/', 'https://apis.google.com/js/api.js',
+                   'https://apis.google.com/_/scs/abc-static/']
+CSP_AUTH_CONNECT = ["'self'", 'https://subx-skins.web.app', 'https://identitytoolkit.googleapis.com',
+                    'https://securetoken.googleapis.com', 'https://firestore.googleapis.com',
+                    'https://content-firebaseappcheck.googleapis.com', 'https://www.google.com/recaptcha/']
+CSP_AUTH_FRAME = ['https://subx-skins.firebaseapp.com', 'https://www.google.com/recaptcha/']
+CSP_AUTH = ("script-src " + ' '.join(CSP_AUTH_SCRIPT) + "; connect-src " + ' '.join(CSP_AUTH_CONNECT) +
+            "; frame-src " + ' '.join(CSP_AUTH_FRAME) + "; object-src 'none'; base-uri 'none'; font-src 'self'")
+FB_SDK = ['app', 'app-check', 'auth', 'firestore', 'storage']
 
 # ---- brand.json ----
 want_keys = ['name', 'legalEntity', 'primaryDomain', 'shortName', 'tagline', 'takedownEmail', 'topicPathPrefix',
@@ -80,8 +93,11 @@ ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_inde
 site = json.load(open(os.path.join(SITE, 'site.json')))
 sh = site['shell']
 no_shell = set(x.lstrip('/') for x in sh.get('noShell', []))
-ok(site['siteId'] == 'subx' and site['accountsOpen'] is False and sh['cspRequired'] is True and sh['base'] == cfg['shell']['base'],
-   'site.json: siteId subx, accounts closed, cspRequired true, base = pin base')
+ok(site['siteId'] == 'subx' and site['accountsOpen'] is True and sh['cspRequired'] is True and sh['base'] == cfg['shell']['base'],
+   'site.json: siteId subx, accounts open (HUB SIGN-IN), cspRequired true, base = pin base')
+ok(site.get('minAge') == 18 and site.get('dms') is False and not (site.get('features') or {}).get('following') and not (site.get('features') or {}).get('notifs')
+   and site.get('imageUploads') is False and (site.get('stories') or {}).get('enabled') is False,
+   'site.json: hub sign-in only: minAge 18, DMs, following, notifications, uploads and stories stay off')
 _man = json.load(open(os.path.join(ROOT, 'shell', cfg['shell']['base'], 'SHELL.json')))['files']['factory.js']
 _sb = open(os.path.join(SITE, SHELL_REL), 'rb').read()
 _pb = open(os.path.join(ROOT, SHELL_REL), 'rb').read()
@@ -112,17 +128,21 @@ ok(not _jb and 'jebbdykstra99' not in open(os.path.join(ROOT, 'hub', 'firebase.j
 ok(not any('jsdelivr' in open(os.path.join(SITE, f), encoding='utf-8', errors='replace').read() for f in files(SITE) if f.endswith('.html')), 'no page references jsDelivr')
 leg = json.load(open(os.path.join(ROOT, 'tools', 'csp_legacy_rooms.json')))['rooms']
 ok('subx' not in leg and 'hub' not in leg, 'the hub is not on the CSP legacy list')
-ok(not sh.get('recaptcha') and 'recaptcha' not in ''.join(read(os.path.join(SITE, p)) for p in pages).lower(), 'no reCAPTCHA (shell.recaptcha not set)')
+ok(sh.get('recaptcha') is True and sh.get('googleSignIn') is True, 'site.json shell: recaptcha and googleSignIn opt-ins set (App Check reCAPTCHA v3, Google popup gapi)')
+ok(not [p for p in pages if p != 'index.html' and re.search(r'(google|gstatic)\.com/recaptcha', read(os.path.join(SITE, p)))], 'no static page loads reCAPTCHA (only the shell page CSP lists it)')
+ok(not [p for p in pages if p not in ('index.html', 'privacy.html') and 'recaptcha' in read(os.path.join(SITE, p)).lower()], 'no static page but privacy mentions reCAPTCHA (privacy names it under abuse prevention)')
 ok('index.html' not in no_shell and no_shell == set(pages) - {'index.html'}, 'index.html runs the shell; every other page is a declared noShell static page')
 
 HEAD_RE = re.compile(r'^<!DOCTYPE html>\s*<html lang="en">\s*<head>\s*<meta charset="UTF-8">\s*<meta http-equiv="Content-Security-Policy" content="([^"]*)">', re.I)
 for p in pages:
     h = read(os.path.join(SITE, p))
     m = HEAD_RE.match(h)
-    ok(m is not None and m.group(1) == CSP, '%s: meta CSP is the first element after charset, http-equiv exact, strict policy' % p)
+    want_csp = CSP_AUTH if p == 'index.html' else CSP
+    ok(m is not None and m.group(1) == want_csp, '%s: meta CSP is the first element after charset, http-equiv exact, %s policy' % (p, 'exact auth' if p == 'index.html' else 'strict'))
     if m:
         c = m.group(1)
-        ok(all(32 <= ord(ch) < 127 for ch in c) and ',' not in c and c.split(';')[0].split() == ['script-src', "'self'"], '%s: CSP is ASCII, no commas, script-src is self only' % p)
+        ok(all(32 <= ord(ch) < 127 for ch in c) and ',' not in c and (p == 'index.html' or c.split(';')[0].split() == ['script-src', "'self'"]), '%s: CSP is ASCII, no commas, script-src is self only on static pages' % p)
+        ok('*' not in c and ' https: ' not in c + ' ' and 'unsafe' not in c and "'nonce" not in c, '%s: CSP has no wildcard, scheme source, unsafe-* or nonce' % p)
     ok(h.count('Content-Security-Policy') == 1, '%s: exactly one CSP meta' % p)
     want_robots = 'index,follow' if p in PUBLIC_PAGES else 'noindex,nofollow'
     ok(re.findall(r'<meta name="robots" content="([^"]*)">', h) == [want_robots], '%s: exactly one robots meta, %s' % (p, want_robots))
@@ -210,19 +230,38 @@ for p in pages:
 rp = read(os.path.join(SITE, 'report.html'))
 RL = 'Use the Report link on the post in its room, or email <a data-takedown href="mailto:%s">%s</a>.' % (brand['takedownEmail'], brand['takedownEmail'])
 ok(rp.count(RL) == 2 and 'Report button' not in rp, 'report.html: both Report-button lines read "Use the Report link on the post in its room, or email takedown@subx.it."')
-# W3 (Key 2): the inert profile Sign in button is hidden while accountsOpen is false
-ok(re.search(r'\.acc-closed #profile-signin-prompt-btn \{ display: none !important; \}', read(os.path.join(SITE, 'hub.css'))) is not None and site['accountsOpen'] is False,
-   'hub.css: #profile-signin-prompt-btn hidden under html.acc-closed (accountsOpen false)')
-ok('Sign-in opens soon. Guest is browse-only.' in idx and 'Sign-in is closed while the hub is in preview' not in idx and '<span>Read-only</span>' in idx,
-   'index.html: launch wording (sign-in opens soon, read-only), no preview claim')
+# W3 (Key 2): the profile Sign in button is still hidden if accounts are ever closed again (html.acc-closed)
+_hcss = read(os.path.join(SITE, 'hub.css'))
+ok(re.search(r'\.acc-closed #profile-signin-prompt-btn \{ display: none !important; \}', _hcss) is not None,
+   'hub.css: #profile-signin-prompt-btn hidden under html.acc-closed (kill switch kept)')
+ok('Members sign in here. Guest is browse-only.' in idx and 'Sign-in opens soon' not in idx and 'Sign-in is closed while the hub is in preview' not in idx and '<span>Read-only</span>' not in idx,
+   'index.html: sign-in wording reuses the rooms ("Members sign in here. Guest is browse-only."), no "opens soon" or Read-only claim')
+# HUB SIGN-IN: a visible Sign in / Join entry on the home page (outside the drawer, so it shows at 390px), plus the shell's own
+# #sidebar-auth in the left nav / mobile drawer. The header button only clicks the shell's #auth-signin (one auth flow).
+ok(idx.count('id="hub-join-btn"') == 1 and re.search(r'<button type="button" class="hub-cta hub-join" id="hub-join-btn" aria-haspopup="dialog">Sign in / Join</button>', idx) is not None,
+   'index.html: one header Sign in / Join button (#hub-join-btn)')
+ok(idx.index('id="hub-join-btn"') > idx.index('<main class="main">') and idx.count('id="sidebar-auth"') == 1 and idx.index('id="sidebar-auth"') < idx.index('</aside>'),
+   'index.html: Sign in / Join sits in the page header (visible without the drawer); #sidebar-auth stays in the left nav / mobile drawer')
+ok(not re.search(r'#sidebar-auth|#cv-auth-overlay', re.sub(r'/\*.*?\*/', '', _hcss, flags=re.S)), 'hub.css: #sidebar-auth and the sign-in modal (#cv-auth-overlay) are no longer hidden')
+ok('.acc-closed .hub-join' in _hcss and '.hub-join[hidden]' in _hcss, 'hub.css: the header Sign in / Join hides when accounts close or once signed in')
+_hjs = read(os.path.join(SITE, 'hub.js'))
+ok("getElementById('auth-signin')" in _hjs and 'b.click()' in _hjs and 'MutationObserver' in _hjs and 'signInWith' not in _hjs and 'firebase' not in _hjs.lower().replace('no writes of', ''),
+   'hub.js: Sign in / Join clicks the shell #auth-signin, no auth code of its own')
+_sc = read(os.path.join(SITE, 'index.html'))
+_fb_tags = re.findall(r'<script src="https://www\.gstatic\.com/firebasejs/10\.12\.2/firebase-([a-z-]+)-compat\.js" integrity="(sha384-[A-Za-z0-9+/=]+)" crossorigin="anonymous"></script>', _sc)
+ok([t[0] for t in _fb_tags] == FB_SDK and _sc.index('firebase-storage-compat.js') < _sc.index('/shell/'),
+   'index.html: Firebase compat 10.12.2 app, app-check, auth, firestore, storage load before the shell, each with SRI')
 # launch copy: no preview / draft wording left in any rendered page (CSS class names like compose-image-preview excepted)
 for p in pages:
     vis = re.sub(r'<(script|style)\b.*?</\1>', '', read(os.path.join(SITE, p)), flags=re.S)
     vis = re.sub(r'(class|id)="[^"]*"', '', vis)
     ok(not re.search(r'\bpreview\b|\bdraft', vis, re.I), '%s: no preview/draft wording' % p)
+KICK1 = ('The hub takes sign-in but no posts: you can sign in with the same account the rooms use, and posts, replies, '
+         'stories, and messages stay in each room. The hub does not send the visit beacon. Highlights link to the original '
+         'post in its room, where that room\u2019s own terms apply.')
 for p in ('terms.html', 'privacy.html', 'guidelines.html', 'report.html'):
     lp = read(os.path.join(SITE, p))
-    ok('<p class="legal-kicker">Effective November 4, 2026. The hub is read-only:' in lp and 'Draft for review' not in lp, '%s: effective November 4, 2026' % p)
+    ok('<p class="legal-kicker">Effective November 4, 2026. ' + KICK1 + '</p>' in lp and 'Draft for review' not in lp and 'The hub is read-only' not in lp, '%s: effective November 4, 2026, hub sign-in kicker' % p)
 pv = read(os.path.join(SITE, 'privacy.html'))
 ok('The pages are hosted on Firebase Hosting (Google), and sign-in,' in pv and 'hosted on GitHub Pages' not in pv, 'privacy.html: hosting line names Firebase Hosting (Google)')
 # CLO edits 2026-11-04 (3)-(5): second kickers and the Processors bullet, exact
@@ -236,11 +275,41 @@ PROC = ("<li><strong>Processors</strong>: service providers that host, deliver, 
         "including Firebase Hosting; GoDaddy, for domain DNS) under contracts or terms that limit use of the data.</li>")
 ok(pv.count(PROC) == 1 and pv.count('<strong>Processors</strong>') == 1 and 'Cloudflare' not in pv and 'GitHub Pages' not in pv, 'privacy.html: Processors bullet is exactly the CLO text, jsDelivr clause removed (no GitHub Pages, no Cloudflare)')
 ok('jsDelivr' not in pv, 'privacy.html: jsDelivr is no longer named (B2 self-hosts the shell)')
-# CLO note (a): the sign-in modal on the hub is inert: hidden, accounts closed, no Firebase SDK can load
-ok(re.search(r'#cv-auth-overlay[^{]*\{ display: none !important; \}', read(os.path.join(SITE, 'hub.css'))) is not None, 'hub.css hides the sign-in modal (#cv-auth-overlay) and the sidebar auth entry')
-ok(site.get('accountsOpen') is False, 'site.json accountsOpen false: Register and Google are gated closed by the shell')
-ok(not [p for p in pages if re.search(r'<script[^>]+(gstatic|firebase|googleapis|apis\.google)', read(os.path.join(SITE, p)), re.I)], 'no page loads the Firebase / Google auth SDK')
-ok(not re.search(r'gstatic|googleapis|apis\.google|firebase', CSP.split('script-src', 1)[1].split(';')[0]), 'CSP script-src cannot load the Firebase / Google auth SDK')
+# HUB SIGN-IN: privacy discloses hub accounts (uid, display name, provider profile basics, follows and messages), same
+# retention as rooms, the rooms' age line (minAge 18) and handle sentence, reused word for word
+_bn = brand['name']
+for _need in ('<li><strong>Hub accounts</strong>: signing in on the hub uses the same %s account as the rooms.' % _bn,
+              'we store your account ID (<code>uid</code>), your display name,',
+              'the basic profile fields your sign-in provider shares with us (for Google: your name, email address, and profile photo link).',
+              'Follows and direct messages you make with that account in a room are stored with your account. Follows you make on the hub stay in your browser only (see Hub follows below).',
+              'password (our sign-in provider stores it only as a hash)',
+              'For abuse prevention, App Check uses Google reCAPTCHA, which runs on the pages where you can sign in',
+              '<p id="hub-account-delete"><strong>Deleting your hub account:</strong> there is no in-app delete button. Email <a data-takedown href="mailto:%s">' % brand['takedownEmail'],
+              'Hub account data, including follows and messages made with a hub account in a room, is kept the same way as room account data. Follows made on the hub stay in your browser (see Hub follows).',
+              'the 25-month visitor-ID limit above applies.',
+              'Your public handle is something you choose. We do not make it from your email address, and we do not show your email address to other users.',
+              '<p>You must be at least 18 to have an account on %s. The Service is not directed to children, and we do not knowingly collect personal information from anyone under 18, including children under 13. If we learn that we have, we close the account and delete the information, except what the law requires us to keep. If you believe we have information about someone under 18, contact us at <a data-takedown href="mailto:%s">%s</a>.</p>' % (_bn, brand['takedownEmail'], brand['takedownEmail'])):
+    ok(pv.count(_need) == 1, 'privacy.html (hub sign-in): %r' % _need[:70])
+ok('not directed to anyone under 18' not in pv and 'read-only index' not in pv, 'privacy.html: old age line and read-only claim gone')
+ok('the same way as in the rooms.' not in pv and 'auth provider' not in pv, 'privacy.html: old hub DM line and "auth provider" wording gone')
+ok('made with a hub account, is kept' not in pv, 'privacy.html: old retention line (no room/hub split) gone')
+_ix = read(os.path.join(SITE, 'index.html'))
+ok(('<meta name="description" content="%s is a home for small, single-topic %s. Highlights from live %s, each linking back to its %s. One %s account works on the hub and in every %s.">'
+    % (_bn, brand['roomNoun']['many'], brand['roomNoun']['many'], brand['roomNoun']['one'], _bn, brand['roomNoun']['one'])) in _ix and 'Read-only.' not in _ix,
+   'index.html: meta description names the one account, no "Read-only."')
+ok(('id="hub-compose-text" rows="2" maxlength="280" placeholder="Post in a %s."' % brand['roomNoun']['one']) in _ix, 'index.html: hub composer placeholder is "Post in a %s."' % brand['roomNoun']['one'])
+ok(not re.search('[\u2013\u2014]', re.sub(r'<[^>]+>', '', pv.split('Hub accounts', 1)[1].split('</li>', 1)[0])), 'privacy.html: no em or en dash in the hub accounts bullet')
+# HUB SIGN-IN (replaces CLO note (a)): only the shell page loads the Firebase SDK; static pages cannot
+ok(not [p for p in pages if p != 'index.html' and re.search(r'<script[^>]+(gstatic|firebase|googleapis|apis\.google)', read(os.path.join(SITE, p)), re.I)], 'no static page loads the Firebase / Google auth SDK')
+ok(not re.search(r'gstatic|googleapis|apis\.google|firebase', CSP.split('script-src', 1)[1].split(';')[0]), 'static CSP script-src cannot load the Firebase / Google auth SDK')
+_dirs = dict((d.split()[0], d.split()[1:]) for d in CSP_AUTH.split('; '))
+ok(list(_dirs) == ['script-src', 'connect-src', 'frame-src', 'object-src', 'base-uri', 'font-src'] and _dirs['object-src'] == ["'none'"] and _dirs['base-uri'] == ["'none'"]
+   and 'default-src' not in _dirs and 'worker-src' not in _dirs, 'CSP_AUTH: exact directive list, object-src and base-uri none')
+ok(all(x == "'self'" or (x.startswith('https://') and '*' not in x and re.fullmatch(r'https://[a-z0-9.-]+\.[a-z]+(/[A-Za-z0-9._/-]*)?', x)) for d in ('script-src', 'connect-src', 'frame-src') for x in _dirs[d]),
+   'CSP_AUTH: every source is self or an exact https origin / path (no wildcard, no scheme source)')
+ok(all(x == "'self'" or x.endswith('.js') or x.endswith('/') and x.count('/') >= 4 for x in _dirs['script-src']),
+   'CSP_AUTH script-src: exact files or exact path folders only (no bare Google host)')
+ok(BR.CSP_AUTH == CSP_AUTH and BR.CSP_STATIC == CSP, 'tools/brand_render.py CSP_AUTH / CSP_STATIC = the allowlist pinned in this test')
 for p in ('about.html', 'rooms.html', '404.html'):
     ok('<p class="legal-kicker">%s</p>' % brand['name'] in read(os.path.join(SITE, p)), '%s: kicker without Preview' % p)
 ok('<p class="legal-kicker">%s · Coming soon</p>' % brand['name'] in read(os.path.join(SITE, topic_index)), 'topic index: kicker without Preview')
@@ -413,7 +482,7 @@ with tempfile.TemporaryDirectory() as t:
     ok(hs['public'] == 'site' and not hs.get('redirects') and not hs.get('rewrites'), 'hub/firebase.json: public site, no redirects or rewrites')
     allh = {h['key']: h['value'] for e in hs['headers'] if e['source'] == '**' for h in e['headers']}
     jsonh = {h['key']: h['value'] for e in hs['headers'] if e['source'] == '**/*.json' for h in e['headers']}
-    ok('X-Robots-Tag' not in allh and allh.get('Content-Security-Policy') == CSP + "; frame-ancestors 'none'", 'hub/firebase.json: no site-wide X-Robots-Tag; header CSP = meta CSP + frame-ancestors')
+    ok('X-Robots-Tag' not in allh and allh.get('Content-Security-Policy') == CSP_AUTH + "; frame-ancestors 'none'", 'hub/firebase.json: no site-wide X-Robots-Tag; header CSP = CSP_AUTH + frame-ancestors (static pages stay strict through their own meta CSP: browsers enforce both)')
     ok(jsonh == {'X-Robots-Tag': 'noindex'}, 'hub/firebase.json: JSON data files stay noindex')
     rc = json.load(open(os.path.join(ROOT, 'hub', '.firebaserc')))
     ok(hs.get('target') == 'hub' and 'site' not in hs and rc['targets']['subx-skins']['hosting']['hub'] == ['subx-hub'],
