@@ -225,6 +225,10 @@ for f in ('about.html', os.path.join('t', 'index.html')):
     h = open(os.path.join(ROOT, 'hub', 'site', f), encoding='utf-8').read()
     ok(QUIET in h and 'rests: it stays readable, leaves search' not in h and 'One that goes 90 days without a counted post rests: it stays readable and reopens on its own' in h,
        'copy (%s): quiet leaves search; 90-day rest line no longer implies quiet topics stay in search' % f)
+GATE = 'until real conversation is happening (20 or more posts from at least 5 different people, all within 14 days) and it is approved for listing.'
+for f in ('about.html', os.path.join('t', 'index.html')):
+    h = open(os.path.join(ROOT, 'hub', 'site', f), encoding='utf-8').read()
+    ok(GATE in h and 'until real conversation is happening: 20 or more' not in h, 'copy (%s): search needs the activity bar and approval for listing' % f)
 tt = open(os.path.join(ROOT, 'hub', 'src', 'topic-template.html'), encoding='utf-8').read()
 ok('It can show up in search once 20 or more posts' in tt and 'It shows up in search once' not in tt, 'copy (topic template): meeting the bar no longer promises search (approval gate)')
 ok(not re.search(r'stays (indexed|in search|listed)', open(os.path.join(ROOT, 'hub', 'src', 'templates', 'topics.html'), encoding='utf-8').read() + tt),
