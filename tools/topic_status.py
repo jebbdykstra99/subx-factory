@@ -1,25 +1,38 @@
 #!/usr/bin/env python3
-"""Topic activity rule (TOPIC_ROOMS_PLAN / ACTIVITY_RULE copy). Pure functions, Python stdlib only, no I/O.
+"""Topic activity rule (TOPIC_ROOMS_PLAN / ACTIVITY_RULE copy) with the per-wave approval gate. Pure functions, Python
+stdlib only, no I/O: no runner calls this and nothing writes its output anywhere yet.
 
 Counted post: written by a verified human account that was at least 7 days old when it posted. Steward posts and AI
 posts never count, whatever the account says about itself.
 
-  hidden   -> active    20+ counted posts from 5+ distinct people inside 14 days (the "active rule")
-  active   -> quiet     fewer than 3 counted posts in 30 days (stays indexed, badge "Quiet lately. New posts welcome.")
-  quiet    -> active    3+ counted posts in 30 days again
+Approval: a topic row may carry an approval record (approvedWave, approvedBy, approvedAt). It is valid only when
+approvedWave is in the approved wave list (topics/approved_waves.json, one batch approval per wave), approvedBy is a
+non-empty string and approvedAt is a zoned timestamp not in the future. The list is empty tonight. Removing a wave from
+the list (or a row losing its record) fails closed: nothing in that wave can be active.
+
+  hidden   -> eligible  meets the active rule (20+ counted posts from 5+ distinct people inside 14 days), no valid approval
+  hidden   -> active    meets the active rule and has a valid approval (a wave approved ahead of time)
+  eligible -> active    once the row has a valid approval
+  eligible -> hidden    fewer than 3 counted posts in 30 days while still unapproved
+  active   -> quiet     fewer than 3 counted posts in 30 days: back out of search (noindex, out of the sitemap), still
+                        open to read and post, badge "Quiet lately. New posts welcome."
+  quiet    -> active    meets the active rule again; re-gated by the topic's EXISTING approval (no new wave approval)
   active/quiet -> archived   0 counted posts in 90 days (read-only, noindex, out of the sitemap; nothing is deleted)
-  archived -> active    meets the active rule again (auto-reopen)
+  archived -> active    meets the active rule again, same existing approval (auto-reopen)
+  no valid approval     an active topic drops to eligible; a quiet or archived topic that meets the active rule goes
+                        to eligible, not active. Nothing is indexed without a valid approval.
   hold     -> hold      manual only (never rendered, never changed by this rule)
 
-Hidden and archived (and hold) topics are noindex,nofollow. Only active and quiet topics are sitemap-eligible, and only
-when the hub itself is not under the hub-wide noindex (it is tonight, so the sitemap lists 0 topics).
+Only `active` is indexable and sitemap-eligible, and only when the hub itself is not under the hub-wide noindex (it is
+tonight, so the sitemap lists 0 topics). Every other status is noindex,nofollow.
 
-A doorway domain redirects 302 to the topic while the topic is not established, and 301 once the topic has been active
-(active or quiet) for 60 days since activatedAt.
+A doorway domain redirects 302 to the topic until the topic has been active for 60 days since activatedAt, then 301.
+activatedAt restarts on every (re)entry into active, so a quiet or archived topic that reopens starts a new 60-day clock.
 """
 from datetime import datetime, timedelta, timezone
 
-STATUSES = ('hidden', 'active', 'quiet', 'archived', 'hold')
+STATUSES = ('hidden', 'eligible', 'active', 'quiet', 'archived', 'hold')
+APPROVAL_FIELDS = ('approvedWave', 'approvedBy', 'approvedAt')
 ACTIVE_POSTS, ACTIVE_PEOPLE, ACTIVE_DAYS = 20, 5, 14
 QUIET_POSTS, QUIET_DAYS = 3, 30
 ARCHIVE_DAYS = 90
@@ -80,16 +93,40 @@ def meets_active(stats):
     return stats['posts14d'] >= ACTIVE_POSTS and stats['distinctPosters14d'] >= ACTIVE_PEOPLE
 
 
-def next_status(status, stats, now, last_counted=None):
-    """The status a topic should have now. stats: output of counts() (posts90d optional: derived from lastCountedPostAt)."""
+def approved(topic, approved_waves, now):
+    """True when the row's approval record is complete and its wave is on the approved wave list."""
+    wave, by, at = (topic.get(k) for k in APPROVAL_FIELDS)
+    if isinstance(wave, bool) or wave is None or wave not in set(approved_waves or ()):
+        return False
+    if not isinstance(by, str) or not by.strip():
+        return False
+    try:
+        at = parse_ts(at)
+    except (TypeError, ValueError):
+        return False
+    return at is not None and at <= parse_ts(now)
+
+
+def next_status(status, stats, now, is_approved=False, last_counted=None):
+    """The status a topic should have now. stats: output of counts() (posts90d optional: derived from lastCountedPostAt).
+    is_approved: approved(topic, approved_waves, now)."""
     if status not in STATUSES:
         raise ValueError('unknown status %r' % (status,))
     if status == 'hold':
         return 'hold'
-    if meets_active(stats):
-        return 'quiet' if status == 'quiet' and stats['posts30d'] < QUIET_POSTS else 'active'
-    if status in ('hidden', 'archived'):
+    rule = meets_active(stats)
+    if status in ('hidden', 'eligible'):
+        if is_approved and (rule or status == 'eligible'):
+            return 'active'
+        if rule:
+            return 'eligible'
+        if status == 'eligible' and stats['posts30d'] < QUIET_POSTS:
+            return 'hidden'
         return status
+    if status in ('quiet', 'archived') and rule:
+        return 'active' if is_approved else 'eligible'
+    if status == 'archived':
+        return 'archived'
     now = parse_ts(now)
     last = parse_ts(stats.get('lastCountedPostAt', last_counted))
     p90 = stats.get('posts90d')
@@ -97,32 +134,34 @@ def next_status(status, stats, now, last_counted=None):
         return 'archived'
     if stats['posts30d'] < QUIET_POSTS:
         return 'quiet'
-    return 'active'
+    if status == 'active' and not is_approved:
+        return 'eligible'
+    return 'active' if status == 'active' else 'quiet'
 
 
-def apply(topic, posts, now):
+def apply(topic, posts, now, approved_waves=()):
     """Return a NEW topic row (input untouched) with fresh stats, status, activatedAt and stewardOnly."""
     stats = counts(posts, now)
     out = dict(topic)
     old = topic['status']
-    new = next_status(old, stats, now)
+    new = next_status(old, stats, now, approved(topic, approved_waves, now))
     for k in ('posts14d', 'distinctPosters14d', 'posts30d', 'lastCountedPostAt'):
         out[k] = stats[k]
     out['status'] = new
-    if new in ('active', 'quiet') and old not in ('active', 'quiet'):
-        out['activatedAt'] = iso(parse_ts(now))  # a reopen starts a new 60-day clock
+    if new == 'active' and old != 'active':
+        out['activatedAt'] = iso(parse_ts(now))  # a (re)opening starts a new 60-day clock
     out['stewardOnly'] = new in ('archived', 'hold')
     return out
 
 
 def robots(status, hub_noindex=True):
-    if hub_noindex or status not in ('active', 'quiet'):
+    if hub_noindex or status != 'active':
         return NOINDEX
     return INDEX
 
 
 def sitemap_eligible(status, hub_noindex=True):
-    return (not hub_noindex) and status in ('active', 'quiet')
+    return (not hub_noindex) and status == 'active'
 
 
 def rendered(status):
@@ -139,7 +178,7 @@ def badge(status):
 
 def doorway_status(topic, now):
     """HTTP status a doorway domain should answer with: 302 until the topic has been active 60 days, then 301."""
-    if topic['status'] in ('active', 'quiet'):
+    if topic['status'] == 'active':
         since = parse_ts(topic.get('activatedAt'))
         if since is not None and parse_ts(now) - since >= timedelta(days=PERMANENT_AFTER_DAYS):
             return 301

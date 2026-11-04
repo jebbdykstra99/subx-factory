@@ -17,14 +17,15 @@ generated from data by `tools/brand_render.py`. Everything here is a preview: th
 
 `hub/site/t/<slug>/index.html`, one per seed row that is not on HOLD. The prefix comes from `brand.topicPathPrefix`,
 so a rename moves every page (the rename test covers it). Slugs (`tools/topic_slug.py`): lowercase `a-z`, `0-9` and
-single inner hyphens, 3-48 chars, no `r/` / `r-` / `u-` prefix and no Reddit text, and never a reserved word:
-the system paths and legal words in `reserved.json`, plus the brand name, short name, `brand.aliases` (optional),
+single inner hyphens, 3-48 chars (checked with `re.fullmatch` on the whole string, so a trailing `\n`/`\r` or a Unicode lookalike is refused), no `r/` / `r-` / `u-` prefix and no Reddit text, and never a reserved word:
+the system paths, legal words and platform names (`x`, `x-com`, `xcom`, `xcorp`, `x-corp`, `twitter`, `grok`) in `reserved.json`, plus the brand name, short name, `brand.aliases` (optional),
 legal-entity name, primary-domain labels and their `-official` forms, all generated from `brand/brand.json`.
 
 ## Row fields
 
-`slug, title, description, status (hidden|active|quiet|archived|hold), createdAt, activatedAt, posts14d,
-distinctPosters14d, posts30d, lastCountedPostAt, doorwayDomains[], stewardOnly`, optional `legalProfile`.
+`slug, title, description, status (hidden|eligible|active|quiet|archived|hold), createdAt, activatedAt, posts14d,
+distinctPosters14d, posts30d, lastCountedPostAt, doorwayDomains[], stewardOnly`, optional `legalProfile` and the
+optional approval record `approvedWave, approvedBy, approvedAt` (seed rows never carry one).
 Counters hold counted posts only. `stewardOnly` is true while members cannot post (archived, hold).
 
 Wave 1: 52 topics, all with zero stats; 51 `hidden`, 1 `hold` (grief, waiting on the steward plan: crisis resources
@@ -36,19 +37,29 @@ then this PR has no Firestore writer: applying the seed is a separate, reviewed 
 ## Activity rule (`tools/topic_status.py`, pure functions)
 
 - Counted post: a verified human account at least 7 days old when it posted. Steward and AI posts never count.
-- **active**: 20+ counted posts from 5+ distinct people within 14 days.
-- **quiet**: an active topic with fewer than 3 counted posts in 30 days. Stays indexed; badge "Quiet lately. New posts welcome."
+- **Active rule**: 20+ counted posts from 5+ distinct people within 14 days.
+- **Approval gate** (batch approval per wave): a topic that meets the active rule becomes **eligible**, not active. It
+  moves to **active** only when its row carries an approval record (`approvedWave`, `approvedBy`, `approvedAt`) whose
+  `approvedWave` is listed in `topics/approved_waves.json` (schema `approved_waves.schema.json`; empty tonight), with a
+  non-empty `approvedBy` and an `approvedAt` that is not in the future. A wave approved ahead of time lets its topics go
+  hidden -> active directly. An eligible topic that drops below 3 counted posts in 30 days while unapproved goes back to
+  hidden. Fails closed: an active topic whose record is missing or whose wave is not listed drops to eligible.
+- **quiet**: an active topic with fewer than 3 counted posts in 30 days. Back out of search (noindex, out of the
+  sitemap), still open to read and post, badge "Quiet lately. New posts welcome." It returns to active only by meeting
+  the active rule again, re-gated by its existing approval (no new wave approval).
 - **archived**: 0 counted posts in 90 days. Read-only, noindex, out of the sitemap; reopens on its own when it meets
-  the active rule again (new `activatedAt`). Nothing is ever deleted.
+  the active rule again, same existing approval (new `activatedAt`). Nothing is ever deleted.
 - **hold**: manual; never rendered, never changed by the rule.
-- Hidden, archived and hold are `noindex,nofollow`. Only active and quiet are sitemap-eligible, and only after the
-  hub-wide noindex is lifted (`hub/src/config.json` `topics.hubNoindex`). Tonight `sitemap.xml` lists 0 topics.
+- Only **active** is indexable and sitemap-eligible, and only after the hub-wide noindex is lifted
+  (`hub/src/config.json` `topics.hubNoindex`). Hidden, eligible, quiet, archived and hold are `noindex,nofollow`.
+  Tonight `sitemap.xml` lists 0 topics.
+- No runner and no writer: `tools/topic_status.py` is pure functions; nothing evaluates or stores statuses yet.
 
 ## Topic page
 
 `hub/src/topic-template.html` (HUB_COPY 4a-4e and the ACTIVITY_RULE copy, `{{brand.*}}` tokens only). Its
 `<!--if:NAME-->` blocks are resolved by the renderer, so a page carries only its own state and no comments. While
-`topics.open` is false a hidden topic shows the "Not live yet." state (nothing to read or post yet). The
+`topics.open` is false a hidden or eligible topic shows the "Not live yet." state (nothing to read or post yet). The
 "Also reachable at" line stays off (`topics.showDoorways` false). Optional copy (`longDescription`, `goodPosts`,
 `offTopic`, `rulesShort`) is not in the wave-1 CSV, so those blocks are left out and the rules line points to the
 community guidelines. Pages are noShell, strict CSP, and pass `tools/shell_drift.py --strict`.
@@ -63,7 +74,7 @@ A room's `site.json` may later carry (schema: `site_mode.schema.json`, validator
 
 - `mode` absent or `room`: the domain is its own room, exactly as today. Every domain a live room serves stays `room`.
 - `doorway`: `https://<domain>/*` redirects to `https://<hub><prefix><slug>/?via=<domain>`, **302** while the topic is
-  not established and **301** once it has been active (active or quiet) for 60 days. The status is computed by
+  not established and **301** once it has been `active` for 60 days (the clock restarts on every reopen). The status is computed by
   `topic_status.doorway_status()`, never stored.
 - `parked`: no room and no redirect (the HOLD topic's domain).
 - `brand`: which brand file names the hub (`default` = `brand/brand.json`), never a literal brand name.

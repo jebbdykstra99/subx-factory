@@ -358,6 +358,13 @@ with tempfile.TemporaryDirectory() as t:
     rr.cfg['topics']['hubNoindex'] = False
     ok('content="index,follow"' in rr.render_topic(dict(full, status='active')) and 'content="noindex,nofollow"' in rr.render_topic(dict(full, status='hidden')),
        'topic template: robots follow the status once the hub-wide noindex is lifted')
+    ok('content="noindex,nofollow"' in rr.render_topic(dict(full, status='quiet')) and 'Quiet lately. New posts welcome.' in rr.render_topic(dict(full, status='quiet'))
+       and 'content="noindex,nofollow"' in rr.render_topic(dict(full, status='eligible')), 'topic template: quiet and eligible stay noindex after the hub-wide noindex is lifted; quiet badge kept')
+    th = rr.render_topic(dict(full, status='eligible'))
+    ok('just getting started' in th and 'It can show up in search once 20 or more posts' in th and 'Quiet lately' not in th, 'topic template: eligible renders like hidden (open state)')
+    rr.cfg['topics']['open'] = False
+    ok('Not live yet.' in rr.render_topic(dict(full, status='eligible')), 'topic template: eligible + closed = not-live state')
+    rr.cfg['topics']['open'] = True
     th = rr.render_topic({'slug': 'tide-pools', 'title': 'Tide Pools', 'description': 'd', 'status': 'hidden'})
     ok('community guidelines' in th and 'About this' not in th and '21+ only.' not in th and 'not medical' not in th, 'topic template: seed row without long copy = default rules line, no about block, no profile lines')
     for bad_t, why in (({'slug': 'Bad Slug', 'name': 'x', 'description': 'x'}, 'a bad slug'), ({'slug': 'about', 'name': 'x', 'description': 'x'}, 'a reserved slug'),

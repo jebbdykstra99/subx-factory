@@ -1297,5 +1297,18 @@ m_ = re.search(r'content="([^"]+)"', csp_md)
 csp_ex = re.sub(r" 'sha256-<[^>]*>'", '', m_.group(1).replace('<FULL_MERGE_SHA>', '0' * 40)) if m_ else ''
 ok(m_ is not None and SD.csp_policies(csp_ex) and not SD.csp_weak(SD.csp_policies(csp_ex)[0], set(), True, {PIN_DIR}), 'shell/csp.md meta tag is strict (with the merge SHA filled in)')
 
+# ---- validators: $-anchored patterns are only ever used with fullmatch (Python's $ also matches before a trailing \n) ----
+good_pin = 'https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@' + '0' * 40 + '/shell/v1.2.6/factory.js'
+ok(SD.PIN_RE.fullmatch(good_pin) and not SD.PIN_RE.fullmatch(good_pin + '\n') and SD.EXACT_VER.fullmatch('1.2.6') and not SD.EXACT_VER.fullmatch('1.2.6\n'),
+   'shell_drift: pin URL / exact version with a trailing newline do not validate')
+anch = re.compile(r"^(\w+)\s*=\s*re\.compile\(\s*r?(['\"])(.*?)\2", re.M)
+bad_uses = []
+for rel in sorted([os.path.join('tools', f) for f in os.listdir(os.path.join(ROOT, 'tools')) if f.endswith('.py')] + [os.path.join('build', 'whomark.py')]):
+    src = open(os.path.join(ROOT, rel), encoding='utf-8').read()
+    for m in anch.finditer(src):
+        if m.group(3).endswith('$') and re.search(r'\b%s\.match\(' % re.escape(m.group(1)), src):
+            bad_uses.append('%s:%s' % (rel, m.group(1)))
+ok(not bad_uses, 'no $-anchored validator regex in tools/ or build/whomark.py is used with .match() (%s)' % bad_uses)
+
 print('\n%d failure(s)' % len(fails))
 sys.exit(1 if fails else 0)
