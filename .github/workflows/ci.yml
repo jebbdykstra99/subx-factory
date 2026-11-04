@@ -8,6 +8,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13.18' }
+      - name: Python version (the drift checker is tested on this exact version)
+        run: python3 --version
       - run: npm install --no-audit --no-fund
       - run: node --check factory/factory.js && node --check factory/factory-gp.js && node --check factory/factory-rail.js && node --check factory/factory-reports.js
       - run: npx eslint --no-eslintrc -c .eslintrc.json factory/factory.js factory/factory-gp.js factory/factory-rail.js factory/factory-reports.js
