@@ -86,7 +86,7 @@ the gh credential helper and open ONE draft PR in subx-factory for two-key CLEAR
 ```
 
 ## Stamping (SubX)
-1. **First publish Firestore rules step 1** (`RULES_PASTE_for_Jebb.txt`). The new factory.js writes `rateLimits` in the same batch as every post. On the old rules, posting breaks.
+1. **First publish Firestore rules step 1** (the v2 rules paste file). The new factory.js writes `rateLimits` in the same batch as every post. On the old rules, posting breaks.
 2. Add the Actions secret `ROOMS_TOKEN`: a fine-grained PAT with access to the room repos only, Contents: write + Pull requests: write.
 3. Actions > stamp > Run only after step 1 is published. The workflow refuses to run unless `rules_step1_live=YES`. First run: `rooms=ready`, `dry_run=true`. Then `dry_run=false`.
 4. Merge PRs in `rooms.json` order (T0 → L1a → L1b → L3 → L2). After each: `verify_nests.py --live` + `verify/public-check.sh`.

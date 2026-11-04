@@ -285,13 +285,14 @@ for _need in ('<li><strong>Hub accounts</strong>: signing in on the hub uses the
               'password (our sign-in provider stores it only as a hash)',
               'For abuse prevention, App Check uses Google reCAPTCHA, which runs on the pages where you can sign in',
               '<p id="hub-account-delete"><strong>Deleting your hub account:</strong> there is no in-app delete button. Email <a data-takedown href="mailto:%s">' % brand['takedownEmail'],
-              'Hub account data, including follows and messages made with a hub account, is kept the same way as room account data.',
+              'Hub account data, including follows and messages made with a hub account in a room, is kept the same way as room account data. Follows made on the hub stay in your browser (see Hub follows).',
               'the 25-month visitor-ID limit above applies.',
               'Your public handle is something you choose. We do not make it from your email address, and we do not show your email address to other users.',
               '<p>You must be at least 18 to have an account on %s. The Service is not directed to children, and we do not knowingly collect personal information from anyone under 18, including children under 13. If we learn that we have, we close the account and delete the information, except what the law requires us to keep. If you believe we have information about someone under 18, contact us at <a data-takedown href="mailto:%s">%s</a>.</p>' % (_bn, brand['takedownEmail'], brand['takedownEmail'])):
     ok(pv.count(_need) == 1, 'privacy.html (hub sign-in): %r' % _need[:70])
 ok('not directed to anyone under 18' not in pv and 'read-only index' not in pv, 'privacy.html: old age line and read-only claim gone')
 ok('the same way as in the rooms.' not in pv and 'auth provider' not in pv, 'privacy.html: old hub DM line and "auth provider" wording gone')
+ok('made with a hub account, is kept' not in pv, 'privacy.html: old retention line (no room/hub split) gone')
 _ix = read(os.path.join(SITE, 'index.html'))
 ok(('<meta name="description" content="%s is a home for small, single-topic %s. Highlights from live %s, each linking back to its %s. One %s account works on the hub and in every %s.">'
     % (_bn, brand['roomNoun']['many'], brand['roomNoun']['many'], brand['roomNoun']['one'], _bn, brand['roomNoun']['one'])) in _ix and 'Read-only.' not in _ix,
