@@ -135,6 +135,10 @@ class Renderer:
         if not re.fullmatch(r'^/[a-z0-9][a-z0-9-]*/$', prefix):
             raise RenderError('brand.topicPathPrefix must look like /t/ (got %r)' % prefix)
         self.topic_dir = prefix.strip('/')
+        # footer: "Topics (soon)" until at least one rendered topic is active or quiet (topic_status: only those are live
+        # pages); today approved_waves.json is empty, so every topic is hidden and the label keeps "(soon)"
+        live = [t for t in self.topics() if t.get('status') in ('active', 'quiet')]
+        self.ctx['topicsNav'] = {'soon': '' if live else ' (soon)'}
         self.assets = {}
         self.written = set()
 
