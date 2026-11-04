@@ -30,7 +30,7 @@
         "dojchat.com"
       ],
       "stewardOnly": false,
-      "legalProfile": "standard-18",
+      "legalProfile": "sensitive-18",
       "govNonAffiliation": true
     },
     {
@@ -84,7 +84,7 @@
         "cfpbchat.com"
       ],
       "stewardOnly": false,
-      "legalProfile": "standard-18",
+      "legalProfile": "sensitive-18",
       "govNonAffiliation": true
     },
     {
@@ -139,7 +139,7 @@
         "svrchat.com"
       ],
       "stewardOnly": false,
-      "legalProfile": "standard-18",
+      "legalProfile": "sensitive-18",
       "govNonAffiliation": true
     },
     {
@@ -157,7 +157,7 @@
         "ftpchat.com"
       ],
       "stewardOnly": false,
-      "legalProfile": "standard-18"
+      "legalProfile": "sensitive-18"
     }
   ]
 }

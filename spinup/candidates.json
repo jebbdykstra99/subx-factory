@@ -1,5 +1,5 @@
 {
-  "notes": "CONFIG ONLY: the spin-up candidate domains (step 3 prep). tools/spinup_render.py renders one site.json per candidate into a dry-run dir that is never served; nothing here touches DNS, a registrar, a room repo or hub/. Source: the owned-domain inventory in the 2026-11-03 topic-rooms plan (151 names; live rooms and personal names were already left out). Names held for legal or trademark review are NOT listed here in any form; the reviewed list is kept off-repo, and only the count by reason is recorded below. Doorways named after a government agency carry govAgency: true (owner go, 2026-11-03); their topics are in topics/seed_wave2_agency.json with govNonAffiliation true.",
+  "notes": "CONFIG ONLY: the spin-up candidate domains (step 3 prep). tools/spinup_render.py renders one site.json per candidate into a dry-run dir that is never served; nothing here touches DNS, a registrar, a room repo or hub/. Source: the owned-domain inventory in the 2026-11-03 topic-rooms plan (151 names; live rooms and personal names were already left out). Names held for legal or trademark review are NOT listed here in any form; the reviewed list is kept off-repo, and only the count by reason is recorded below. Doorways named after a government agency carry govAgency: true (owner go, 2026-11-03); their topics are in topics/seed_wave2_agency.json with govNonAffiliation true. Six names released from the PR #37 hold (Juno, 2026-11-03) are doorways to topics in topics/seed_wave2_released.json.",
   "source": {
     "plan": "topic-rooms plan 2026-11-03, section 12-13 domain map",
     "inventory": 151
@@ -8,8 +8,8 @@
     "brand reserve (mark not cleared)": 2,
     "doorway topic on HOLD": 1,
     "personal name or real person": 14,
-    "sensitive term (profanity, drugs, other)": 15,
-    "third-party mark (trademark review)": 22
+    "sensitive term (profanity, drugs, other)": 10,
+    "third-party mark (trademark review)": 21
   },
   "defaults": {
     "mode": "parked",
@@ -293,10 +293,24 @@
       "topic": "cheese"
     },
     {
+      "domain": "byobchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "byob-dining",
+      "note": "released by Juno from the PR #37 hold (2026-11-03); topic in topics/seed_wave2_released.json"
+    },
+    {
       "domain": "cancelchat.com",
       "group": "topic",
       "mode": "doorway",
       "topic": "culture-debates"
+    },
+    {
+      "domain": "carnavalchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "carnival-celebrations",
+      "note": "released by Juno from the PR #37 hold (2026-11-03); topic in topics/seed_wave2_released.json"
     },
     {
       "domain": "cfpbchat.com",
@@ -316,6 +330,13 @@
       "group": "topic",
       "mode": "doorway",
       "topic": "home-tours"
+    },
+    {
+      "domain": "crunkchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "crunk-music",
+      "note": "released by Juno from the PR #37 hold (2026-11-03); topic in topics/seed_wave2_released.json"
     },
     {
       "domain": "dibschat.com",
@@ -508,10 +529,24 @@
       "topic": "orchids"
     },
     {
+      "domain": "praychat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "prayer",
+      "note": "released by Juno from the PR #37 hold (2026-11-03); topic in topics/seed_wave2_released.json"
+    },
+    {
       "domain": "recallchat.com",
       "group": "topic",
       "mode": "doorway",
       "topic": "product-recalls"
+    },
+    {
+      "domain": "repentchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "repentance-and-reflection",
+      "note": "released by Juno from the PR #37 hold (2026-11-03); topic in topics/seed_wave2_released.json"
     },
     {
       "domain": "retirechat.com",
@@ -603,6 +638,13 @@
       "group": "topic",
       "mode": "doorway",
       "topic": "voting"
+    },
+    {
+      "domain": "wokechat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "woke-culture-and-politics",
+      "note": "released by Juno from the PR #37 hold (2026-11-03); topic in topics/seed_wave2_released.json"
     }
   ]
 }

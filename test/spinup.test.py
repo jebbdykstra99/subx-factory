@@ -31,9 +31,9 @@ inv = cfg['source']['inventory']
 ebr = cfg['excludedByReason']
 ok(inv == 151, 'inventory is the 151 names in the plan')
 ok(len(cfg['candidates']) + sum(ebr.values()) == inv, 'candidates + excludedByReason = inventory (%d + %d)' % (len(cfg['candidates']), sum(ebr.values())))
-ok(len(entries) == 97 and sum(ebr.values()) == 54, 'rendered 97, excluded 54')
+ok(len(entries) == 103 and sum(ebr.values()) == 48, 'rendered 103, excluded 48')
 modes = {m: sum(1 for e in entries if e['mode'] == m) for m in SR.MODES}
-ok(modes == {'room': 0, 'doorway': 88, 'parked': 9}, 'by mode: %s' % modes)
+ok(modes == {'room': 0, 'doorway': 94, 'parked': 9}, 'by mode: %s' % modes)
 ok(len({c['domain'] for c in cfg['candidates']}) == len(cfg['candidates']), 'no candidate listed twice')
 ok('excluded' not in cfg, 'candidates.json has no excluded list')
 hexre = re.compile(r'[0-9a-fA-F]{64}')
@@ -124,6 +124,16 @@ ok(len(ftp) == 1 and ftp[0]['title'] == 'Fight the Power' and ftp[0]['descriptio
    and 'govNonAffiliation' not in ftp[0] and ftp[0]['status'] == 'hidden', 'fight-the-power: exact title and description, hidden, no gov flag, doorway ftpchat')
 ok(s2.get('extraSources') == [{'file': 'FTP_TOPIC_DRAFT_2026-11-03.md', 'md5': '7a8f20c18faf03b3b20c6a1c7e6ffd0a', 'rows': 1}], 'fight-the-power row built from the FTP draft md5 7a8f20c1')
 ok(len(s2['topics']) == 8, 'wave-2 seed holds 8 topics (7 agency + fight-the-power)')
+PROF2 = {'russia-watch': 'sensitive-18', 'fight-the-power': 'sensitive-18', 'justice-system': 'sensitive-18', 'consumer-finance': 'sensitive-18',
+         'environment-policy': 'standard-18', 'aviation-safety': 'standard-18', 'public-lands-policy': 'standard-18', 'public-finance': 'standard-18'}
+ok({t['slug']: t['legalProfile'] for t in s2['topics']} == PROF2, 'Key 1 E1: wave-2 legal profiles (4 sensitive-18, 4 standard-18)')
+ok({k: v for k, v in json.load(open(os.path.join(ROOT, 'topics', 'wave2_profiles.json')))['legalProfile'].items() if k in PROF2} == PROF2, 'topics/wave2_profiles.json holds the E1 profiles')
+w1p = {t['slug']: t.get('legalProfile') for t in json.load(open(os.path.join(ROOT, 'topics', 'seed_wave1.json')))['topics']}
+ok(w1p.get('foia-and-intelligence') == 'sensitive-18' and w1p.get('taxes') == 'sensitive-18', 'wave-1 precedent: foia-and-intelligence and taxes are sensitive-18')
+b2 = copy.deepcopy(s2); [t.update(legalProfile='standard-18') for t in b2['topics'] if t['slug'] == 'russia-watch']
+ok(any('legalProfile must be sensitive-18' in x for x in topics_seed.check_agency(b2)), 'agency seed check refuses russia-watch at standard-18')
+b2 = copy.deepcopy(s2); [t.update(legalProfile='sensitive-18') for t in b2['topics'] if t['slug'] == 'public-finance']
+ok(any('legalProfile must be standard-18' in x for x in topics_seed.check_agency(b2)), 'agency seed check refuses public-finance at sensitive-18')
 b2 = copy.deepcopy(s2); b2['topics'][-1]['govNonAffiliation'] = True
 ok(topics_seed.check_agency(b2), 'agency seed check refuses a gov flag on a non-agency row')
 b2 = copy.deepcopy(s2); b2['extraSources'][0]['rows'] = 2
@@ -147,6 +157,40 @@ ok(any('govNonAffiliation true' in x for x in SR.resolve(bad)[1]), 'govAgency on
 nob = dict(brand); nob.pop('nonAffiliationGov')
 ok(any('needs brand.nonAffiliationGov' in x for x in SR.resolve(cfg, brand=nob)[1]), 'govAgency without the brand key is refused')
 ok(SR.plan(entries, cfg)['govAgency'] == sorted(AGENCY), 'plan.json lists the 8 agency doorways')
+# ---- released doorways (Juno, 2026-11-03): six names back from the #37 hold, hidden wave-2 rows, trademark-check gate ----
+import topic_status  # noqa: E402
+REL = {'byobchat.com': 'byob-dining', 'carnavalchat.com': 'carnival-celebrations', 'crunkchat.com': 'crunk-music',
+       'praychat.com': 'prayer', 'repentchat.com': 'repentance-and-reflection', 'wokechat.com': 'woke-culture-and-politics'}
+ok(all(byd[d]['mode'] == 'doorway' and byd[d]['topic'] == t and not byd[d].get('govAgency') for d, t in REL.items()), 'the six released names are doorways to their topics')
+ok(ebr.get('sensitive term (profanity, drugs, other)') == 10 and ebr.get('third-party mark (trademark review)') == 21, 'excludedByReason drops by the six released names')
+s3 = json.load(open(topics_seed.RELEASED_SEED))
+ok(not topics_seed.check_released(s3), 'released seed passes its check: %s' % topics_seed.check_released(s3)[:2])
+ok({d: t['slug'] for t in s3['topics'] for d in t['doorwayDomains']} == REL, 'released seed doorwayDomains match the six doorways')
+ok(all(t['status'] == 'hidden' and 'govNonAffiliation' not in t and not any(t.get(k) for k in topic_status.APPROVAL_FIELDS) for t in s3['topics']),
+   'released topics are hidden, not agency topics, with no approval record')
+ok({t['slug']: t['legalProfile'] for t in s3['topics']} == {'prayer': 'sensitive-18', 'repentance-and-reflection': 'sensitive-18',
+   'woke-culture-and-politics': 'sensitive-18', 'carnival-celebrations': 'standard-18', 'crunk-music': 'standard-18', 'byob-dining': 'standard-18'},
+   'released legal profiles: faith and politics sensitive-18, the rest standard-18')
+ok({t['slug'] for t in s3['topics'] if t.get('approvalPrereq') == 'trademark-check'} == {'carnival-celebrations', 'crunk-music'}, 'trademark-check gate on carnival and crunk only')
+allslugs = [t['slug'] for t in topics_seed.all_topics_seed()['topics']]
+ok(len(allslugs) == len(set(allslugs)) == 66, 'no slug collides across wave 1, agency and released seeds (66 slugs)')
+for mut, why in ((lambda t: t.pop('approvalPrereq', None), 'a gated topic without its gate'), (lambda t: t.update(slug='prayer'), 'a duplicate slug'),
+                 (lambda t: t.update(legalProfile='sensitive-18'), 'a wrong profile'), (lambda t: t.update(doorwayDomains=['dojchat.com']), 'an agency doorway')):
+    b3 = copy.deepcopy(s3); mut([t for t in b3['topics'] if t['slug'] == 'carnival-celebrations'][0])
+    ok(topics_seed.check_released(b3), 'released seed check refuses %s' % why)
+b3 = copy.deepcopy(s3); [t.update(approvalPrereq='trademark-check') for t in b3['topics'] if t['slug'] == 'byob-dining']
+ok(topics_seed.check_released(b3), 'released seed check refuses a gate on an ungated topic')
+NOW = '2026-11-04T05:00:00Z'
+rec = {'approvedWave': 2, 'approvedBy': 'owner', 'approvedAt': '2026-11-04T04:00:00Z'}
+for t in s3['topics']:
+    tt = dict(t, **rec)
+    ok(topic_status.approved(tt, [2], NOW) is (t.get('approvalPrereq') is None), 'approval with a valid wave-2 record: %s -> %s' % (t['slug'], t.get('approvalPrereq') is None))
+g = dict([t for t in s3['topics'] if t['slug'] == 'crunk-music'][0], **rec)
+st = dict(posts14d=25, distinctPosters14d=6, posts30d=25)
+ok(topic_status.next_status('hidden', st, NOW, topic_status.approved(g, [2], NOW)) == 'eligible', 'a gated topic that meets the bar stays eligible (never active)')
+g.pop('approvalPrereq')
+ok(topic_status.approved(g, [2], NOW) is True, 'removing approvalPrereq (after the trademark check) lets the approval count')
+ok(topic_status.approved(dict(g, approvalPrereq=''), [2], NOW) is False, 'any non-null approvalPrereq still blocks')
 # topic page rendering: the agency topic shows the line under the title and in the footer; wave-1 pages do not
 import brand_render  # noqa: E402
 with tempfile.TemporaryDirectory() as tr:
@@ -161,6 +205,10 @@ with tempfile.TemporaryDirectory() as tr:
                'topic page %s shows nonAffiliationGov under the title and in the footer' % t['slug'])
         hf = R.render_topic(ftp[0])
         ok(brand_render.html_attr(GOV) not in hf and 'topic-gov' not in hf and 'Fight the Power' in hf, 'fight-the-power page renders with no government line')
+        for t in s2['topics']:
+            ht = R.render_topic(t)
+            ok((R.ctx['brand']['notAdvice'] in ht) == (PROF2[t['slug']] == 'sensitive-18') and '21+ only.' not in ht,
+               'topic page %s legal-profile lines match %s' % (t['slug'], PROF2[t['slug']]))
         w1 = json.load(open(os.path.join(ROOT, 'topics', 'seed_wave1.json')))['topics']
         hw = R.render_topic([t for t in w1 if t['slug'] == 'interior-design'][0])
         ok(brand_render.html_attr(GOV) not in hw and 'topic-gov' not in hw, 'a wave-1 page (interior-design) has no government line')
@@ -203,7 +251,7 @@ ok(any('HOLD topic' in x for x in SR.resolve(bad)[1]), 'a doorway to a HOLD topi
 # ---- rendered site.json ----
 with tempfile.TemporaryDirectory() as tmp:
     dirs, e = SR.render(entries, tmp, cfg)
-    ok(not e and len(dirs) == 97, 'render writes 97 site.json files with no errors')
+    ok(not e and len(dirs) == 103, 'render writes 103 site.json files with no errors')
     files = sorted(os.listdir(tmp))
     ok(files == sorted(byd), 'one dir per rendered domain, nothing else')
     sj = [json.load(open(os.path.join(d, 'site.json'))) for d in dirs]
@@ -314,7 +362,7 @@ ok(SR.output_errors('f', 'Visit ' + brand['name'], brand), 'guard catches a lite
 # ---- redirects: config only, 302 while hidden or unseeded, 301 after 60 days active ----
 lines = SR.redirects(entries, '2026-11-03T00:00:00Z')
 dl = [l for l in lines if not l.startswith('#')]
-ok(len(dl) == 88 and all(l.endswith(' 302') for l in dl), 'every doorway plans 302 today (no topic active 60 days)')
+ok(len(dl) == 94 and all(l.endswith(' 302') for l in dl), 'every doorway plans 302 today (no topic active 60 days)')
 ok(all('{{brand.primaryDomain}}{{brand.topicPathPrefix}}' in l for l in dl), 'redirect targets use brand placeholders')
 seed = {'topics': [{'slug': 'seattle', 'status': 'active', 'activatedAt': '2026-08-01T00:00:00Z', 'doorwayDomains': []}]}
 one = [e for e in entries if e['domain'] == '206chat.com']
@@ -342,7 +390,7 @@ else:
 p = SR.plan(entries, cfg)
 ok(open(SR.PLAN).read() == SR.dump(p), 'spinup/plan.json is current')
 ok(all(set(r) <= {'domain', 'mode', 'topic', 'topicSeeded', 'ownership', 'govAgency'} for r in p['domains']), 'plan rows carry no hash')
-ok(p['byMode'] == modes and p['rendered'] == 97 and p['excluded'] == 54 and p['excludedByReason'] == ebr, 'plan counts match')
+ok(p['byMode'] == modes and p['rendered'] == 103 and p['excluded'] == 48 and p['excludedByReason'] == ebr, 'plan counts match')
 before = subprocess.run(['git', 'status', '--porcelain', '--ignored'], cwd=ROOT, capture_output=True, text=True).stdout
 r = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'spinup_render.py'), '--check'], capture_output=True, text=True)
 after = subprocess.run(['git', 'status', '--porcelain', '--ignored'], cwd=ROOT, capture_output=True, text=True).stdout

@@ -20,6 +20,11 @@ carry no flag; owner go 2026-11-03 for fight-the-power): the topic
 page then shows {{brand.nonAffiliationGov}} under the title and in the footer (hub/src/topic-template.html if:gov).
 Its slugs and doorway domains may not repeat wave 1. It is not in hub/src/config.json "topics.seed", so nothing in
 hub/site renders from it yet.
+
+Wave-2 released seed (topics/seed_wave2_released.json): doorways Juno released from her PR #37 hold (2026-11-03).
+Same row invariants, no gov flag, profiles from topics/wave2_profiles.json. carnival-celebrations and crunk-music
+carry approvalPrereq "trademark-check": tools/topic_status.approved() returns false while it is present, so the
+topic can never go active until a one-line Trademark Agent check clears and the field is removed in a reviewed commit.
 """
 import argparse, csv, hashlib, json, os, re, sys
 
@@ -29,10 +34,13 @@ import topic_schema, topic_slug  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SEED = os.path.join(ROOT, 'topics', 'seed_wave1.json')
 AGENCY_SEED = os.path.join(ROOT, 'topics', 'seed_wave2_agency.json')
+RELEASED_SEED = os.path.join(ROOT, 'topics', 'seed_wave2_released.json')
+TM_GATED = ('carnival-celebrations', 'crunk-music')  # Juno release 2026-11-03: Trademark Agent check before wave approval
 SCHEMA = os.path.join(ROOT, 'topics', 'schema.json')
 APPROVED = os.path.join(ROOT, 'topics', 'approved_waves.json')
 APPROVED_SCHEMA = os.path.join(ROOT, 'topics', 'approved_waves.schema.json')
 PROFILES = os.path.join(ROOT, 'topics', 'wave1_profiles.json')
+PROFILES2 = os.path.join(ROOT, 'topics', 'wave2_profiles.json')
 CREATED_AT = '2026-11-03T07:00:00Z'  # 2026-11-03 00:00 MT: fixed so the seed is reproducible
 APPLY_ENV = 'SUBX_TOPICS_APPLY_GO'
 
@@ -62,6 +70,12 @@ def build(csv_path, created_at=CREATED_AT):
             'generatedBy': 'tools/topics_seed.py --from-csv', 'topics': topics}
 
 
+def wave2_profile(slug):
+    """Legal profile for a wave-2 topic: topics/wave2_profiles.json, else standard-18."""
+    prof = load(PROFILES2)['legalProfile'] if os.path.exists(PROFILES2) else {}
+    return prof.get(slug, 'standard-18')
+
+
 def _md_rows(md_path, gov, created_at):
     """Rows from a draft's CSV block (the one that starts with its slug,title,... header), plus the file's md5."""
     raw = open(md_path, 'rb').read()
@@ -78,7 +92,7 @@ def _md_rows(md_path, gov, created_at):
         topics.append({'slug': r['slug'].strip(), 'title': r['title'].strip(), 'description': r['description'].strip(),
                        'status': 'hidden', 'createdAt': created_at, 'activatedAt': None,
                        'posts14d': 0, 'distinctPosters14d': 0, 'posts30d': 0, 'lastCountedPostAt': None,
-                       'doorwayDomains': doors, 'stewardOnly': False, 'legalProfile': 'standard-18'})
+                       'doorwayDomains': doors, 'stewardOnly': False, 'legalProfile': wave2_profile(r['slug'].strip())})
         if gov:
             topics[-1]['govNonAffiliation'] = True
     return topics, {'file': os.path.basename(md_path), 'md5': hashlib.md5(raw).hexdigest(), 'rows': len(topics)}
@@ -134,6 +148,8 @@ def check_agency(seed2, seed1=None, brand=None):
             e.append('%s: govNonAffiliation is true or absent (true: page shows brand.nonAffiliationGov)' % w)
         if re.search('[\u2013\u2014]', t.get('title', '') + t.get('description', '')):
             e.append('%s: no dashes in title or description' % w)
+        if t.get('legalProfile') != wave2_profile(t.get('slug')):
+            e.append('%s: legalProfile must be %s (topics/wave2_profiles.json)' % (w, wave2_profile(t.get('slug'))))
     tops = seed2.get('topics', [])
     ngov = sum(1 for t in tops if t.get('govNonAffiliation') is True)
     if seed2.get('source', {}).get('rows') != ngov:
@@ -143,11 +159,59 @@ def check_agency(seed2, seed1=None, brand=None):
     return e
 
 
+def check_released(seed3, seed1=None, seed2=None, brand=None):
+    """Wave-2 released-doorway seed: same row rules as the agency seed, no gov flag, profiles from wave2_profiles.json,
+    approvalPrereq "trademark-check" on exactly the TM_GATED topics, and no slug or doorway shared with wave 1 or the agency seed."""
+    seed1 = seed1 if seed1 is not None else load(SEED)
+    seed2 = seed2 if seed2 is not None else (load(AGENCY_SEED) if os.path.exists(AGENCY_SEED) else {'topics': []})
+    sch = load(SCHEMA)
+    words = topic_slug.reserved(brand)
+    e = []
+    if seed3.get('collection') != 'topics' or seed3.get('wave') != 2:
+        e.append('released seed must be collection "topics", wave 2')
+    prev = seed1['topics'] + seed2['topics']
+    s0 = {t['slug'] for t in prev}
+    d0 = {d for t in prev for d in t['doorwayDomains']}
+    seen, doors = set(), set()
+    for t in seed3.get('topics', []):
+        w = 'released topic %s' % t.get('slug')
+        e += ['%s: %s' % (w, x) for x in topic_schema.validate(t, sch)]
+        e += ['%s: %s' % (w, x) for x in topic_slug.errors(t.get('slug'), words=words)]
+        if t.get('slug') in seen or t.get('slug') in s0:
+            e.append('%s: duplicate slug (or already seeded)' % w)
+        seen.add(t.get('slug'))
+        for d in t.get('doorwayDomains', []):
+            if d in doors or d in d0:
+                e.append('%s: doorway %s already belongs to another topic' % (w, d))
+            doors.add(d)
+        if len(t.get('doorwayDomains', [])) != 1:
+            e.append('%s: a released topic is reached by exactly one doorway' % w)
+        if t.get('status') != 'hidden' or t.get('stewardOnly') is not False:
+            e.append('%s: a released seed row starts hidden with stewardOnly false' % w)
+        if any(t.get(k) for k in ('posts14d', 'distinctPosters14d', 'posts30d')) or t.get('activatedAt') or t.get('lastCountedPostAt'):
+            e.append('%s: a seed row must start with zero stats' % w)
+        if any(t.get(k) is not None for k in ('approvedWave', 'approvedBy', 'approvedAt')):
+            e.append('%s: a seed row must not carry an approval record' % w)
+        if 'govNonAffiliation' in t:
+            e.append('%s: a released topic is not an agency topic (no govNonAffiliation)' % w)
+        if t.get('legalProfile') != wave2_profile(t.get('slug')):
+            e.append('%s: legalProfile must be %s (topics/wave2_profiles.json)' % (w, wave2_profile(t.get('slug'))))
+        want = 'trademark-check' if t.get('slug') in TM_GATED else None
+        if t.get('approvalPrereq') != want:
+            e.append('%s: approvalPrereq must be %r' % (w, want))
+        if re.search('[\u2013\u2014]', t.get('title', '') + t.get('description', '')):
+            e.append('%s: no dashes in title or description' % w)
+    if seed3.get('source', {}).get('rows') != len(seed3.get('topics', [])):
+        e.append('released seed row count does not match source rows')
+    return e
+
+
 def all_topics_seed():
-    """Wave 1 plus the wave-2 agency rows (if the file exists), as one seed dict for lookups."""
+    """Wave 1 plus the wave-2 agency and released rows (if the files exist), as one seed dict for lookups."""
     s = load(SEED)
-    if os.path.exists(AGENCY_SEED):
-        s = dict(s, topics=s['topics'] + load(AGENCY_SEED)['topics'])
+    for p in (AGENCY_SEED, RELEASED_SEED):
+        if os.path.exists(p):
+            s = dict(s, topics=s['topics'] + load(p)['topics'])
     return s
 
 
@@ -245,6 +309,12 @@ def main(argv=None):
         errs += check_agency(s2, seed)
         if not errs:
             print('agency seed OK: %d topics %s, source md5 %s' % (len(s2['topics']), summary(s2), s2['source']['md5']))
+    if os.path.exists(RELEASED_SEED):
+        s3 = load(RELEASED_SEED)
+        r3 = check_released(s3, seed, load(AGENCY_SEED) if os.path.exists(AGENCY_SEED) else None)
+        errs += r3
+        if not r3:
+            print('released seed OK: %d topics %s, trademark-check gate on %s' % (len(s3['topics']), summary(s3), ', '.join(TM_GATED)))
     if errs:
         print('\n'.join('FAIL ' + x for x in errs), file=sys.stderr)
         return 1

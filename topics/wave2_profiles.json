@@ -1,0 +1,19 @@
+{
+ "notes": "Per-topic legal profile for the wave-2 seed (topics/seed_wave2_agency.json), Iris Key 1 E1 on PR #38: sensitive-18 for russia-watch, fight-the-power, justice-system and consumer-finance, following the wave-1 precedent (foia-and-intelligence, taxes). Any wave-2 topic not listed is standard-18. Input to tools/topics_seed.py. Released doorway topics (Juno, 2026-11-03): prayer, repentance-and-reflection and woke-culture-and-politics are sensitive-18; carnival-celebrations, crunk-music and byob-dining are standard-18.",
+ "legalProfile": {
+  "justice-system": "sensitive-18",
+  "environment-policy": "standard-18",
+  "aviation-safety": "standard-18",
+  "consumer-finance": "sensitive-18",
+  "public-lands-policy": "standard-18",
+  "public-finance": "standard-18",
+  "russia-watch": "sensitive-18",
+  "fight-the-power": "sensitive-18",
+  "prayer": "sensitive-18",
+  "repentance-and-reflection": "sensitive-18",
+  "woke-culture-and-politics": "sensitive-18",
+  "carnival-celebrations": "standard-18",
+  "crunk-music": "standard-18",
+  "byob-dining": "standard-18"
+ }
+}

@@ -44,3 +44,13 @@ key. shell_drift allows `govAgency` only as `true` on a doorway. The agency seed
 fight-the-power (owner go, 2026-11-03 10:02 PM MT): ftpchat.com is a doorway to the hidden topic fight-the-power, appended to
 the same wave-2 seed with `--from-topic-md` (listed under `extraSources`). It is not an agency topic, so it carries no
 govAgency or govNonAffiliation flag. awolchat.com stays parked.
+
+Legal profiles (Iris Key 1 E1 on PR #38): topics/wave2_profiles.json sets sensitive-18 (the not-advice line) for russia-watch,
+fight-the-power, justice-system and consumer-finance, like wave-1 foia-and-intelligence and taxes. The other wave-2 topics
+are standard-18. `topics_seed.py --check` refuses a wave-2 row whose profile differs from that file.
+
+Released doorways (Juno, 2026-11-03): six names came back from the PR #37 hold as doorways to hidden wave-2 topics in
+`topics/seed_wave2_released.json` (checked by `topics_seed.py --check`, profiles in topics/wave2_profiles.json). The
+carnival-celebrations and crunk-music rows carry `approvalPrereq: "trademark-check"`. While that field is present,
+`tools/topic_status.approved()` returns false, so the topic can reach eligible but never active, until a one-line
+Trademark Agent check clears it and the field is removed in a reviewed commit.
