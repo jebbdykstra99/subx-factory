@@ -169,8 +169,8 @@ ok({d: t['slug'] for t in s3['topics'] for d in t['doorwayDomains']} == REL, 're
 ok(all(t['status'] == 'hidden' and 'govNonAffiliation' not in t and not any(t.get(k) for k in topic_status.APPROVAL_FIELDS) for t in s3['topics']),
    'released topics are hidden, not agency topics, with no approval record')
 ok({t['slug']: t['legalProfile'] for t in s3['topics']} == {'prayer': 'sensitive-18', 'repentance-and-reflection': 'sensitive-18',
-   'woke-culture-and-politics': 'sensitive-18', 'carnival-celebrations': 'standard-18', 'crunk-music': 'standard-18', 'byob-dining': 'standard-18'},
-   'released legal profiles: faith and politics sensitive-18, the rest standard-18')
+   'woke-culture-and-politics': 'sensitive-18', 'carnival-celebrations': 'standard-18', 'crunk-music': 'standard-18', 'byob-dining': 'alcohol-21'},
+   'released legal profiles: faith and politics sensitive-18, byob alcohol-21 (like cocktails-and-spirits), the rest standard-18')
 ok({t['slug'] for t in s3['topics'] if t.get('approvalPrereq') == 'trademark-check'} == {'carnival-celebrations', 'crunk-music'}, 'trademark-check gate on carnival and crunk only')
 allslugs = [t['slug'] for t in topics_seed.all_topics_seed()['topics']]
 ok(len(allslugs) == len(set(allslugs)) == 66, 'no slug collides across wave 1, agency and released seeds (66 slugs)')
@@ -209,6 +209,12 @@ with tempfile.TemporaryDirectory() as tr:
             ht = R.render_topic(t)
             ok((R.ctx['brand']['notAdvice'] in ht) == (PROF2[t['slug']] == 'sensitive-18') and '21+ only.' not in ht,
                'topic page %s legal-profile lines match %s' % (t['slug'], PROF2[t['slug']]))
+        w1p0 = json.load(open(os.path.join(ROOT, 'topics', 'seed_wave1.json')))['topics']
+        ok([t['legalProfile'] for t in w1p0 if t['slug'] == 'cocktails-and-spirits'] == ['alcohol-21'], 'wave-1 precedent: cocktails-and-spirits is alcohol-21')
+        for t in s3['topics']:
+            hr = R.render_topic(t)
+            ok(('21+ only.' in hr) == (t['legalProfile'] == 'alcohol-21') and (R.ctx['brand']['notAdvice'] in hr) == (t['legalProfile'] != 'standard-18')
+               and brand_render.html_attr(GOV) not in hr, 'released topic page %s legal-profile lines match %s' % (t['slug'], t['legalProfile']))
         w1 = json.load(open(os.path.join(ROOT, 'topics', 'seed_wave1.json')))['topics']
         hw = R.render_topic([t for t in w1 if t['slug'] == 'interior-design'][0])
         ok(brand_render.html_attr(GOV) not in hw and 'topic-gov' not in hw, 'a wave-1 page (interior-design) has no government line')

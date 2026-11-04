@@ -1,5 +1,5 @@
 {
- "notes": "Per-topic legal profile for the wave-2 seed (topics/seed_wave2_agency.json), Iris Key 1 E1 on PR #38: sensitive-18 for russia-watch, fight-the-power, justice-system and consumer-finance, following the wave-1 precedent (foia-and-intelligence, taxes). Any wave-2 topic not listed is standard-18. Input to tools/topics_seed.py. Released doorway topics (Juno, 2026-11-03): prayer, repentance-and-reflection and woke-culture-and-politics are sensitive-18; carnival-celebrations, crunk-music and byob-dining are standard-18.",
+ "notes": "Per-topic legal profile for the wave-2 seed (topics/seed_wave2_agency.json), Iris Key 1 E1 on PR #38: sensitive-18 for russia-watch, fight-the-power, justice-system and consumer-finance, following the wave-1 precedent (foia-and-intelligence, taxes). Any wave-2 topic not listed is standard-18. Input to tools/topics_seed.py. Released doorway topics (Juno, 2026-11-03): prayer, repentance-and-reflection and woke-culture-and-politics are sensitive-18; carnival-celebrations and crunk-music are standard-18; byob-dining is alcohol-21 (Iris Key 1 E1 on 48cc5db, matching wave-1 cocktails-and-spirits).",
  "legalProfile": {
   "justice-system": "sensitive-18",
   "environment-policy": "standard-18",
@@ -14,6 +14,6 @@
   "woke-culture-and-politics": "sensitive-18",
   "carnival-celebrations": "standard-18",
   "crunk-music": "standard-18",
-  "byob-dining": "standard-18"
+  "byob-dining": "alcohol-21"
  }
 }

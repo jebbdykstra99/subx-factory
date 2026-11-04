@@ -47,7 +47,8 @@ govAgency or govNonAffiliation flag. awolchat.com stays parked.
 
 Legal profiles (Iris Key 1 E1 on PR #38): topics/wave2_profiles.json sets sensitive-18 (the not-advice line) for russia-watch,
 fight-the-power, justice-system and consumer-finance, like wave-1 foia-and-intelligence and taxes. The other wave-2 topics
-are standard-18. `topics_seed.py --check` refuses a wave-2 row whose profile differs from that file.
+are standard-18. Released byob-dining is alcohol-21 (21+ and not-advice lines), like wave-1 cocktails-and-spirits.
+`topics_seed.py --check` refuses a wave-2 row whose profile differs from that file.
 
 Released doorways (Juno, 2026-11-03): six names came back from the PR #37 hold as doorways to hidden wave-2 topics in
 `topics/seed_wave2_released.json` (checked by `topics_seed.py --check`, profiles in topics/wave2_profiles.json). The
