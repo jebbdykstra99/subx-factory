@@ -6,13 +6,15 @@ Counted post: written by a verified human account that was at least 7 days old w
 posts never count, whatever the account says about itself.
 
 Approval: a topic row may carry an approval record (approvedWave, approvedBy, approvedAt). It is valid only when
-approvedWave is in the approved wave list (topics/approved_waves.json, one batch approval per wave), approvedBy is a
+approvedWave is a strict integer (not bool, float, string, list, dict or None) that is in the approved wave list
+(topics/approved_waves.json, one batch approval per wave; only strict-integer entries count), approvedBy is a
 non-empty string and approvedAt is a zoned timestamp not in the future. The list is empty tonight. Removing a wave from
 the list (or a row losing its record) fails closed: nothing in that wave can be active.
 
   hidden   -> eligible  meets the active rule (20+ counted posts from 5+ distinct people inside 14 days), no valid approval
   hidden   -> active    meets the active rule and has a valid approval (a wave approved ahead of time)
-  eligible -> active    once the row has a valid approval
+  eligible -> active    has a valid approval AND still meets the active rule at that moment (a stale approved topic
+                        stays eligible, or drops to hidden under the 30-day rule, and is never indexed)
   eligible -> hidden    fewer than 3 counted posts in 30 days while still unapproved
   active   -> quiet     fewer than 3 counted posts in 30 days: back out of search (noindex, out of the sitemap), still
                         open to read and post, badge "Quiet lately. New posts welcome."
@@ -96,7 +98,8 @@ def meets_active(stats):
 def approved(topic, approved_waves, now):
     """True when the row's approval record is complete and its wave is on the approved wave list."""
     wave, by, at = (topic.get(k) for k in APPROVAL_FIELDS)
-    if isinstance(wave, bool) or wave is None or wave not in set(approved_waves or ()):
+    # strict int only: bool is an int subclass, 1.0 == 1, and a list/dict wave must not raise
+    if type(wave) is not int or not any(type(w) is int and w == wave for w in (approved_waves or ())):
         return False
     if not isinstance(by, str) or not by.strip():
         return False
@@ -116,7 +119,7 @@ def next_status(status, stats, now, is_approved=False, last_counted=None):
         return 'hold'
     rule = meets_active(stats)
     if status in ('hidden', 'eligible'):
-        if is_approved and (rule or status == 'eligible'):
+        if is_approved and rule:  # the bar is re-checked at the moment of activation, approval alone is not enough
             return 'active'
         if rule:
             return 'eligible'

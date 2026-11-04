@@ -39,9 +39,10 @@ then this PR has no Firestore writer: applying the seed is a separate, reviewed 
 - Counted post: a verified human account at least 7 days old when it posted. Steward and AI posts never count.
 - **Active rule**: 20+ counted posts from 5+ distinct people within 14 days.
 - **Approval gate** (batch approval per wave): a topic that meets the active rule becomes **eligible**, not active. It
-  moves to **active** only when its row carries an approval record (`approvedWave`, `approvedBy`, `approvedAt`) whose
-  `approvedWave` is listed in `topics/approved_waves.json` (schema `approved_waves.schema.json`; empty tonight), with a
-  non-empty `approvedBy` and an `approvedAt` that is not in the future. A wave approved ahead of time lets its topics go
+  moves to **active** only when it still meets the active rule at that moment and its row carries an approval record (`approvedWave`, `approvedBy`, `approvedAt`) whose
+  `approvedWave` is a strict integer (bool, float, string, list, dict or null never match) listed in `topics/approved_waves.json` (schema `approved_waves.schema.json`; empty tonight), with a
+  non-empty `approvedBy` and an `approvedAt` that is not in the future. An approved topic that has gone stale
+  (below the active rule) stays eligible, or drops to hidden under the 30-day rule, and is never indexed. A wave approved ahead of time lets its topics go
   hidden -> active directly. An eligible topic that drops below 3 counted posts in 30 days while unapproved goes back to
   hidden. Fails closed: an active topic whose record is missing or whose wave is not listed drops to eligible.
 - **quiet**: an active topic with fewer than 3 counted posts in 30 days. Back out of search (noindex, out of the
