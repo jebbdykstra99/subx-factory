@@ -1,0 +1,1 @@
+{"siteId": "b2_noshell_inline_injects_declared", "shell": {"base": "v1.2.6", "fork": false, "noShell": ["terms.html"], "overrides": {"inline": [{"page": "terms.html", "sha256": "e33881812a4fa578a2970ef964e4b189b1fbb941309794583c367840aa4d24a4", "reason": "t", "injects": "loader"}]}}}

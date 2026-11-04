@@ -1,0 +1,1 @@
+{"siteId": "n31_ns_docwrite_inj", "shell": {"base": "v1.2.6", "fork": false, "keep": [{"file": "app.js", "sha256": "d28e04adc26219d4230b51965748adb7289f0a6dea0e9f2791be5883abd3eaaf", "reason": "r", "injects": "r"}], "noShell": ["terms.html"]}}

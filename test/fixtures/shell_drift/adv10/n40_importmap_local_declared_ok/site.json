@@ -1,0 +1,1 @@
+{"siteId": "n40_importmap_local_declared_ok", "shell": {"base": "v1.2.6", "fork": false, "importmap": true, "overrides": {"inline": [{"page": "index.html", "sha256": "bd5b0b263c4b3ee2b97d22d350a0e6c044d8c327204dfa0902bd4f9de314c449", "reason": "r"}]}}}

@@ -1,0 +1,1 @@
+{"siteId": "n1_src_tab_entity_keep", "shell": {"base": "v1.2.6", "fork": false, "keep": [{"file": "\t/evil.example/x.js", "sha256": "6014b99f9254eab391ee8c67a771a0acb28943b4ac88bd462ec33e73ba916a98", "reason": "t"}]}}

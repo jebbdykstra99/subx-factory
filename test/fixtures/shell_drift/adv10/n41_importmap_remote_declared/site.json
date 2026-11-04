@@ -1,0 +1,1 @@
+{"siteId": "n41_importmap_remote_declared", "shell": {"base": "v1.2.6", "fork": false, "importmap": true, "overrides": {"inline": [{"page": "index.html", "sha256": "bddbb93174ff5980ee69a8b08a6d3736733a0c17189f7f989bdbff51d7e3fdf5", "reason": "r"}]}}}

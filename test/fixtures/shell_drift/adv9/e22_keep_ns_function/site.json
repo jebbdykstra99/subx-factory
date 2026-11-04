@@ -1,0 +1,1 @@
+{"siteId": "e22_keep_ns_function", "shell": {"base": "v1.2.6", "fork": false, "keep": [{"file": "app.js", "sha256": "8a6fa3a5d7315f2faa54e26e1dc17dd851e29a834bc531c1c4c6d80429e78e7a", "reason": "r"}], "noShell": ["terms.html"]}}

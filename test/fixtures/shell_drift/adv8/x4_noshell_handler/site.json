@@ -1,0 +1,1 @@
+{"siteId": "x4_noshell_handler", "shell": {"base": "v1.2.6", "fork": false, "noShell": ["terms.html"], "keep": [{"file": "takedown.js", "sha256": "d9bf509c5ad6fbea8b869f3f103b9c8f0b7d0a46c53c660a997da0c3bfe2c018", "reason": "r"}], "overrides": {"inline": [{"page": "terms.html", "sha256": "2bfd0d9dc3a47f7f77bf9322aefd22df2ccbddabf484181cacd90a56d2b1027f", "reason": "r"}]}}}

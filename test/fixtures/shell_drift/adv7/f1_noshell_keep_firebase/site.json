@@ -1,0 +1,1 @@
+{"siteId": "f1_noshell_keep_firebase", "shell": {"base": "v1.2.6", "fork": false, "noShell": ["terms.html"], "keep": [{"file": "takedown.js", "sha256": "af1c9f80e0538bc6bb7ec4666d279e016b1dd3961b7bdb2d3a545f8b62034481", "reason": "t", "injects": "loader"}]}}

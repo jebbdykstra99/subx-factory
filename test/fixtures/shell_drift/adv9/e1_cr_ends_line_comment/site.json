@@ -1,0 +1,1 @@
+{"siteId": "e1_cr_ends_line_comment", "shell": {"base": "v1.2.6", "fork": false, "overrides": {"inline": [{"page": "index.html", "sha256": "3da02f582cd2665462eba493c9bdc8d22df34245f0120cec53cbc702b5fe4527", "reason": "r"}]}}}

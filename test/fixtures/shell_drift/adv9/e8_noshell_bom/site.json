@@ -1,0 +1,1 @@
+{"siteId": "e8_noshell_bom", "shell": {"base": "v1.2.6", "fork": false, "overrides": {"inline": [{"page": "terms.html", "sha256": "3d5c1a3e18577a4e9eb2e72783e069d45c13ee746ad9f50c9c4e79a9c2501f30", "reason": "r"}]}, "noShell": ["terms.html"]}}

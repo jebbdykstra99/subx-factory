@@ -1,0 +1,1 @@
+{"siteId": "f1_base_noshell_keep", "shell": {"base": "v1.2.6", "fork": false, "noShell": ["terms.html"], "keep": [{"file": "app.js", "sha256": "97a18ae8e28c3a8e24dc4a46fbb47a8106f7ca3e9e7a2015212caa44bf64db43", "reason": "r"}]}}

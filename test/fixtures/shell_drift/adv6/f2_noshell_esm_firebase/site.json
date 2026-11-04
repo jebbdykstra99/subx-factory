@@ -1,0 +1,1 @@
+{"siteId": "f2_noshell_esm_firebase", "shell": {"base": "v1.2.6", "fork": false, "noShell": ["terms.html"], "overrides": {"inline": [{"page": "terms.html", "sha256": "a4c0136ccd9e66d230b5d1812c6c448993aa277da6eb69383f5868f08f343da1", "reason": "t", "imports": ["https://esm.sh/firebase@10.12.2/app"]}]}}}

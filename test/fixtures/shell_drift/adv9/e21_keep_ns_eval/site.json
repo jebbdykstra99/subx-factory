@@ -1,0 +1,1 @@
+{"siteId": "e21_keep_ns_eval", "shell": {"base": "v1.2.6", "fork": false, "keep": [{"file": "app.js", "sha256": "65c624a7e62bec008865adf4fe5e692a47eadb47b457280662fc488231c2b114", "reason": "r"}], "noShell": ["terms.html"]}}

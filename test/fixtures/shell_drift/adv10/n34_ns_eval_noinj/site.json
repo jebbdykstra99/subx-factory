@@ -1,0 +1,1 @@
+{"siteId": "n34_ns_eval_noinj", "shell": {"base": "v1.2.6", "fork": false, "keep": [{"file": "app.js", "sha256": "a6124c3165d45c48ef13bd96aba0eb0351b5435ee424c8b4063e3a0a939e21bb", "reason": "r"}], "noShell": ["terms.html"]}}

