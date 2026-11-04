@@ -28,6 +28,9 @@ layer. Besides <script>:
     overrides.inline, and map only to local paths
   - CSP rule: every HTML page needs a strict CSP (meta or hosting header; see csp_weak and shell/csp.md). Rooms on
     tools/csp_legacy_rooms.json get WARN until their migration PR; elsewhere it is DRIFT (cspRequired defaults true)
+    A meta CSP counts only as the first element in <head> with an exact http-equiv and no comma (D1-D3); subx-factory
+    sources must be the page's own pin folder (C1); reCAPTCHA only exact files with shell.recaptcha (C2); a hosting
+    redirect/rewrite to another origin is DRIFT (C3); worker-src/child-src must not be open
   - a pin counts only if it will run: classic type (empty/JS; type=module is DRIFT since currentScript is null), no
     nomodule, no query/fragment on the URL, not inside <template>, <noscript>, raw-text or foreign (svg/math, so
     also <foreignObject>) elements, no duplicated attributes, and not blocked by a CSP (meta tag, or a header rule in
@@ -392,10 +395,11 @@ PIN_HOST, PIN_PATH = 'cdn.jsdelivr.net', '/gh/jebbdykstra99/subx-factory@'
 HOST_SRC_RE = re.compile(r'^(?:([a-z][a-z0-9+.-]*)://)?(\*|\*\.[^/:]+|[^/:*]+)(?::(\d+|\*))?(/.*)?$', re.I)
 
 
-def csp_policies(text):
-    """A Content-Security-Policy value -> list of policies, each {directive: [sources]} (comma = several policies)."""
+def csp_policies(text, single=False):
+    """A Content-Security-Policy value -> list of policies, each {directive: [sources]}. In a header value a comma
+    separates several policies; a <meta> delivers ONE policy (single=True), where a comma is just part of a value."""
     out = []
-    for pol in (text or '').split(','):
+    for pol in ([text or ''] if single else (text or '').split(',')):
         d = {}
         for part in pol.split(';'):
             toks = part.split()
@@ -449,7 +453,11 @@ CSP_LEGACY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'csp_
 PIN_SRC_RE = re.compile(r'^https://cdn\.jsdelivr\.net/gh/jebbdykstra99/subx-factory@[0-9a-f]{40}/\S*$')
 FIREBASE_SRC_RE = re.compile(r'^https://www\.gstatic\.com/firebasejs/\d+\.\d+\.\d+/\S*$')
 EMOJI_SRC_RE = re.compile(r'^https://cdn\.jsdelivr\.net/npm/emoji-picker-element@(\d+\.\d+\.\d+)/\S*$')
-RECAPTCHA_SRC_RE = re.compile(r'^https://www\.(?:google\.com|gstatic\.com)/recaptcha/\S*$')  # Firebase App Check
+# reCAPTCHA (Firebase App Check), only with shell.recaptcha: true. Exact files on www.google.com and the releases/
+# folder on gstatic: the rest of /recaptcha/ on both hosts serves a public AngularJS gadget (a CSP bypass)
+RECAPTCHA_SRCS = ('https://www.google.com/recaptcha/api.js', 'https://www.google.com/recaptcha/enterprise.js',
+                  'https://www.gstatic.com/recaptcha/releases/')
+SUBX_SRC_RE = re.compile(r'^(?:https?://)?cdn\.jsdelivr\.net/gh/jebbdykstra99/subx-factory', re.I)
 CSP_WEAK_KEYWORDS = ("'unsafe-inline'", "'unsafe-eval'", "'unsafe-hashes'", "'wasm-unsafe-eval'", "'strict-dynamic'",
                      "'unsafe-allow-redirects'", "'inline-speculation-rules'")
 
@@ -470,11 +478,28 @@ def script_hash_sources(text):
     return {"'%s-%s'" % (alg, base64.b64encode(getattr(hashlib, alg)(b).digest()).decode()) for alg in ('sha256', 'sha384', 'sha512')}
 
 
-def csp_weak(policy, room_hashes, has_pin):
+def pin_dirs_of(pg):
+    """C1: the script-src folders a page's own pin allows: .../subx-factory@<pin sha>/shell/<version>/ (or the
+    pre-merge .../@<sourceCommit>/factory/)."""
+    out = set()
+    for s_ in pg.out:
+        if s_.get('inert'):
+            continue
+        u = norm_url(s_['attrs'].get('src'))
+        m, pre = PIN_RE.match(u), PRE_RE.match(u)
+        if m:
+            out.add('https://%s%s%s/shell/%s/' % (PIN_HOST, PIN_PATH, m.group(1), m.group(2)))
+        elif pre:
+            out.add('https://%s%s%s/factory/' % (PIN_HOST, PIN_PATH, pre.group(1)))
+    return out
+
+
+def csp_weak(policy, room_hashes, has_pin, pin_dirs=(), recaptcha=False):
     """Why one CSP policy is not strict ([] = strict). Strict: script-src (or default-src) lists only 'self', 'none',
-    hashes of the room's redirect-stub / 404.html inline scripts, the pinned shell path with its full 40-char commit SHA, and
-    exact-version Firebase / emoji-picker-element / reCAPTCHA paths; no unsafe-*, nonce, strict-dynamic, wildcard or
-    scheme source; object-src 'none'; base-uri 'none'."""
+    hashes of the room's redirect-stub / 404.html inline scripts, the page's own pin folder (pin_dirs: its 40-char
+    commit SHA and exact /shell/v<base>/ path, C1; no other subx-factory source), and exact-version Firebase /
+    emoji-picker-element paths (reCAPTCHA's exact files only with shell.recaptcha, C2); no unsafe-*, nonce,
+    strict-dynamic, wildcard or scheme source; worker-src / child-src not open; object-src 'none'; base-uri 'none'."""
     why = []
     srcs = policy.get('script-src', policy.get('default-src'))
     if srcs is None:
@@ -497,10 +522,17 @@ def csp_weak(policy, room_hashes, has_pin):
                                'inline scripts a strict CSP may allow)' % (dname, x[:20]))
             elif x.startswith("'"):
                 why.append('%s has unknown keyword %s' % (dname, x))
-            elif PIN_SRC_RE.match(x):
+            elif SUBX_SRC_RE.match(x) and (x in pin_dirs or any(x == d_ + f_ for d_ in pin_dirs for f_ in SHELL_FILES)):
                 pin_listed = True
-            elif EMOJI_SRC_RE.match(x) or FIREBASE_SRC_RE.match(x) or RECAPTCHA_SRC_RE.match(x):
+            elif PIN_SRC_RE.match(x):
+                why.append("%s source %s is not this page's pin folder (%s): every subx-factory source must use the "
+                           "pin's commit SHA and its exact /shell/v<base>/ folder" % (dname, x[:110], ', '.join(sorted(pin_dirs)) or 'no pin'))
+            elif EMOJI_SRC_RE.match(x) or FIREBASE_SRC_RE.match(x):
                 continue
+            elif lx in RECAPTCHA_SRCS:
+                if not recaptcha:
+                    why.append('%s source %s is a reCAPTCHA source: allowed only when the room sets shell.recaptcha: '
+                               'true' % (dname, x))
             elif 'jsdelivr' in lx and 'subx-factory' in lx or lx.rstrip('/') in ('https://cdn.jsdelivr.net', 'cdn.jsdelivr.net'):
                 why.append('%s source %s is not the full pinned path with the 40-char commit SHA (bare host, repo path, '
                            'tag or branch)' % (dname, x[:80]))
@@ -508,8 +540,13 @@ def csp_weak(policy, room_hashes, has_pin):
                 why.append('%s source %s is not allowed in a strict CSP (wildcard, scheme, or a host path that is not '
                            'pinned to an exact version)' % (dname, x[:80]))
     if has_pin and not pin_listed:
-        why.append('script-src does not list the pinned shell path (https://cdn.jsdelivr.net/gh/jebbdykstra99/'
-                   'subx-factory@<40-char sha>/...)')
+        why.append("script-src does not list this page's pin folder (https://cdn.jsdelivr.net/gh/jebbdykstra99/"
+                   'subx-factory@<pin sha>/shell/v<base>/)')
+    for dname in ('worker-src', 'child-src'):
+        for x in policy.get(dname) or []:
+            lx = x.lower()
+            if lx in ('*', 'https:', 'http:', 'data:') or lx.startswith('*') or re.match(r'^(?:https?://)?\*', lx):
+                why.append('%s has %s (a worker may load from anywhere)' % (dname, x))
     obj = policy.get('object-src', policy.get('default-src'))
     if obj is None or [x.lower() for x in obj] != ["'none'"]:
         why.append("object-src is not 'none'")
@@ -519,26 +556,51 @@ def csp_weak(policy, room_hashes, has_pin):
 
 
 def meta_csps(pg):
-    """[(line, content, placement problem or None)] for every <meta http-equiv=Content-Security-Policy>, as a browser
-    tokenizes the page. A meta CSP counts only inside <head> and only for content after it."""
-    toks = pg.toks
+    """[(line, [policy], placement problem or None)] for every <meta http-equiv=Content-Security-Policy>, as a browser
+    tokenizes the page. A meta CSP counts only as the first element in <head> (D1): before it only <!DOCTYPE>,
+    <html>, <head>, </head>, <meta charset>, other CSP metas, comments and whitespace. Anything else can make the
+    tree builder close <head> (a <div>, text, an <img>), so the meta lands in <body> where browsers ignore it, or
+    leaves earlier content uncovered. http-equiv is matched exactly, case-insensitively, with no trimming (D3), and
+    a meta delivers one policy, so a comma in it is DRIFT (D2)."""
+    toks, raw = pg.toks, pg.raw
     ctx, _ = tree_ctx(toks)
     first_script = next((i for i, t in enumerate(toks) if t['kind'] == 'start' and t['name'] == 'script'), None)
-    out = []
+    out, prefix_ok, prev = [], True, 0
     for i, t in enumerate(toks):
-        if t['kind'] != 'start' or t['name'] != 'meta':
-            continue
+        if raw[prev:t['pos']].strip('\t\n\f\r '):
+            prefix_ok = False  # non-whitespace text
+        prev = t.get('stop', t['pos'])
         a = {}
-        for k, v in t['attrs']:
+        for k, v in t.get('attrs') or []:
             a.setdefault(k, html_unescape(v or ''))
-        if a.get('http-equiv', '').strip().lower() != 'content-security-policy':
+        equiv = a.get('http-equiv', '') if t['kind'] == 'start' and t['name'] == 'meta' else ''
+        if equiv.strip('\t\n\f\r ').lower() == 'content-security-policy':
+            content = a.get('content', '')
+            bad = None
+            if equiv.lower() != 'content-security-policy':
+                bad = ('http-equiv=%r has surrounding whitespace: browsers match it exactly and ignore this policy'
+                       % equiv)
+            elif not prefix_ok:
+                bad = ('the meta CSP is not the first element in <head> (only <meta charset>, comments and whitespace '
+                       'may come before it; other content can move it into <body>, where browsers ignore it)')
+            elif not set(ctx.get(i, ())) <= {'html', 'head'}:
+                bad = 'the meta CSP is not inside <head> (browsers ignore it there)'
+            elif first_script is not None and first_script < i:
+                bad = 'the meta CSP comes after a <script> (it does not cover scripts before it)'
+            elif ',' in content:
+                bad = ('the meta CSP contains a comma: a <meta> delivers one policy, so a browser reads the comma and '
+                       'what follows as more sources of the same directive')
+            out.append((_ln(raw, t['pos']), csp_policies(content, single=True), bad))
             continue
-        bad = None
-        if not set(ctx.get(i, ())) <= {'html', 'head'}:
-            bad = 'the meta CSP is not inside <head> (browsers ignore it there)'
-        elif first_script is not None and first_script < i:
-            bad = 'the meta CSP comes after a <script> (it does not cover scripts before it)'
-        out.append((_ln(pg.raw, t['pos']), a.get('content', ''), bad))
+        if not prefix_ok:
+            continue
+        if t['kind'] == 'comment' or (t['kind'] == 'decl' and t['text'].strip().lower().startswith('doctype')):
+            continue
+        if t['kind'] == 'start' and t['name'] in ('html', 'head') or t['kind'] == 'end' and t['name'] == 'head':
+            continue
+        if t['kind'] == 'start' and t['name'] == 'meta' and 'charset' in a and not equiv:
+            continue
+        prefix_ok = False
     return out
 
 
@@ -636,6 +698,66 @@ def header_csps(room):
     return rules, warns
 
 
+def hosting_redirects(room):
+    """C3: hosting redirects or rewrites to another origin are DRIFT. After a redirect CSP no longer checks the path,
+    so a 'self' URL redirected to an allowed host (cdn.jsdelivr.net) could load any file on it."""
+    out = []
+
+    def ext(fn_, src, dest):
+        d = norm_url(str(dest or ''))
+        if REMOTE_RE.match(d):
+            out.append('%s sends %s to an outside origin (%s): hosting redirects and rewrites must stay on the room '
+                       "origin (after a redirect CSP ignores the path)" % (fn_, src or '?', d[:100]))
+    p = os.path.join(room, '_redirects')
+    if os.path.isfile(p):
+        for line in open(p, encoding='utf-8', errors='replace').read().splitlines():
+            parts = line.split('#', 1)[0].split()
+            if len(parts) >= 2:
+                ext('_redirects', parts[0], parts[1])
+    p = os.path.join(room, '_headers')
+    if os.path.isfile(p):
+        pat = None
+        for line in open(p, encoding='utf-8', errors='replace').read().splitlines():
+            if not line.strip() or line.lstrip().startswith('#'):
+                continue
+            if not line[:1].isspace():
+                pat = line.strip()
+                continue
+            k, _, v = line.strip().partition(':')
+            k = k.strip().lower()
+            if k == 'location':
+                ext('_headers Location', pat, v.strip())
+            elif k == 'refresh':
+                m = re.search(r'url\s*=\s*(\S+)', v, re.I)
+                if m:
+                    ext('_headers Refresh', pat, m.group(1).strip('\'"'))
+    for fn_ in ('firebase.json', 'vercel.json'):
+        p = os.path.join(room, fn_)
+        if not os.path.isfile(p):
+            continue
+        try:
+            j = json.load(open(p))
+        except Exception:
+            continue  # header_csps already warns
+        sites = j.get('hosting') or [] if fn_ == 'firebase.json' else j
+        for site in (sites if isinstance(sites, list) else [sites]):
+            if not isinstance(site, dict):
+                continue
+            for key in ('redirects', 'rewrites'):
+                for e in site.get(key) or []:
+                    if isinstance(e, dict):
+                        ext('%s %s' % (fn_, key), e.get('source') or e.get('regex'), e.get('destination'))
+    p = os.path.join(room, 'netlify.toml')
+    if os.path.isfile(p):
+        try:
+            import tomllib
+            for e in tomllib.load(open(p, 'rb')).get('redirects') or []:
+                ext('netlify.toml redirects', e.get('from'), e.get('to'))
+        except Exception:
+            pass
+    return out
+
+
 def page_urls(page):
     """URL paths a page is served at (for header rule matching): /a.html, /a, and / or /dir/ for index.html."""
     u = ['/' + page]
@@ -696,17 +818,18 @@ def browser_tokens(raw):
         if raw.startswith('<!--', i):
             if raw.startswith('<!-->', i) or raw.startswith('<!--->', i):
                 k = raw.find('>', i + 4)
-                out.append({'kind': 'comment', 'text': raw[i + 4:k], 'pos': i})
+                out.append({'kind': 'comment', 'text': raw[i + 4:k], 'pos': i, 'stop': k + 1})
                 i = k + 1
                 continue
             m = _CEND_RE.search(raw, i + 4)
-            out.append({'kind': 'comment', 'text': raw[i + 4:m.start() if m else n], 'pos': i})
+            out.append({'kind': 'comment', 'text': raw[i + 4:m.start() if m else n], 'pos': i, 'stop': m.end() if m else n})
             i = m.end() if m else n
             continue
         if nx in ('!', '?') or (nx == '/' and raw[i + 2:i + 3] and raw[i + 2] != '>'
                                 and not (raw[i + 2].isascii() and raw[i + 2].isalpha())):
             k = raw.find('>', i + 2)  # doctype, bogus comment (<!x, <?x, </1): all end at the first >
-            out.append({'kind': 'decl' if nx == '!' else 'bogus', 'text': raw[i + 2:k if k >= 0 else n], 'pos': i})
+            out.append({'kind': 'decl' if nx == '!' else 'bogus', 'text': raw[i + 2:k if k >= 0 else n], 'pos': i,
+                        'stop': k + 1 if k >= 0 else n})
             i = k + 1 if k >= 0 else n
             continue
         if nx == '/' and raw[i + 2:i + 3] in ('>', ''):
@@ -749,17 +872,17 @@ def browser_tokens(raw):
                 attrs.append((an.lower(), val))
         if not done:
             break  # EOF in a tag: the browser drops the tag
-        out.append({'kind': 'end' if end else 'start', 'name': name, 'attrs': attrs, 'closed': closed, 'pos': i})
+        out.append({'kind': 'end' if end else 'start', 'name': name, 'attrs': attrs, 'closed': closed, 'pos': i, 'stop': k})
         i = k
         if end:
             continue
         if name == 'plaintext':
-            out.append({'kind': 'raw', 'name': name, 'text': raw[k:], 'pos': k})
+            out.append({'kind': 'raw', 'name': name, 'text': raw[k:], 'pos': k, 'stop': n})
             break
         if name in RAW_ALL:  # a self-closing flag is ignored on these: the content still runs to </name
             m = re.compile(r'</%s[\t\n\f\r />]' % re.escape(name), re.I).search(raw, k)
             e = m.start() if m else n
-            out.append({'kind': 'raw', 'name': name, 'text': raw[k:e], 'pos': k, 'attrs': attrs})
+            out.append({'kind': 'raw', 'name': name, 'text': raw[k:e], 'pos': k, 'attrs': attrs, 'stop': e})
             i = e
     return out
 
@@ -1025,6 +1148,10 @@ def check(room, mans, legacy=None):
     layers['csp'] = 'legacy (WARN)' if csp_soft else 'required'
     if sh.get('importmap') is not None and not isinstance(sh.get('importmap'), bool):
         f.append('shell.importmap must be true or false')
+    if sh.get('recaptcha') is not None and not isinstance(sh.get('recaptcha'), bool):
+        f.append('CSP rule: shell.recaptcha must be true or false')
+    recaptcha = sh.get('recaptcha') is True
+    f.extend(hosting_redirects(room))  # C3
     fork = bool(sh.get('fork'))
     fork_file = posixpath.normpath(sh.get('file', 'factory.js')) if fork else None
     ov = sh.get('overrides') or {}
@@ -1529,11 +1656,13 @@ def check(room, mans, legacy=None):
                 room_hashes |= script_hash_sources(s_['text'])
     pin_pages = {p_ for p_, pg_ in page_objs.items()
                  if any(PIN_RE.match(norm_url(s_['attrs'].get('src'))) for s_ in pg_.out)}
+    room_pin_dirs = pin_dirs_of(page_objs['index.html']) if 'index.html' in page_objs else set()
     missing, weak, strict_pols = [], {}, {}
     csp_pages = [p_ for p_ in all_pages if p_.lower().endswith(CSP_PAGE_EXTS)]
     for page in csp_pages:
         pg = page_objs[page]
-        pols = [(pol, bad) for ln_, content, bad in meta_csps(pg) for pol in csp_policies(content)]
+        pols = [(pol, bad) for ln_, mp, bad in meta_csps(pg) for pol in (mp or [{}])]
+        dirs = pin_dirs_of(pg) or room_pin_dirs
         for fn_, pat, rx, val in hdr_rules:
             if rx is None or any(rx.match(u) for u in page_urls(page)):
                 pols += [(pol, None) for pol in csp_policies(val)]
@@ -1542,7 +1671,7 @@ def check(room, mans, legacy=None):
             continue
         good, reasons = [], []
         for pol, bad in pols:
-            why = [bad] if bad else csp_weak(pol, room_hashes, page in pin_pages)
+            why = [bad] if bad else csp_weak(pol, room_hashes, page in pin_pages, dirs, recaptcha)
             (reasons.extend(why) if why else good.append(pol))
         if good:
             strict_pols[page] = good
