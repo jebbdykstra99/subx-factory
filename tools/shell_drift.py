@@ -430,7 +430,7 @@ def csp_syntax_bad(text):
     for pol in (text or '').split(','):
         for part in pol.split(';'):
             toks = [x for x in CSP_WS_RE.split(part) if x]
-            if toks and not re.match(r'^[a-z0-9-]+$', _ascii_lower(toks[0])):
+            if toks and not re.fullmatch(r'^[a-z0-9-]+$', _ascii_lower(toks[0])):
                 return 'the CSP has an invalid directive name %r (browsers drop it)' % toks[0][:40]
     return None
 
@@ -456,7 +456,7 @@ def csp_allows_pin(policy, url, integrity, nonce):
             return True
         if x.startswith("'"):
             continue
-        m = HOST_SRC_RE.match(x)
+        m = HOST_SRC_RE.fullmatch(x)
         if not m:
             continue
         scheme, host, port, p = m.groups()
@@ -511,7 +511,7 @@ def pin_dirs_of(pg):
         if s_.get('inert'):
             continue
         u = norm_url(s_['attrs'].get('src'))
-        m, pre = PIN_RE.match(u), PRE_RE.match(u)
+        m, pre = PIN_RE.fullmatch(u), PRE_RE.fullmatch(u)
         if m:
             out.add('https://%s%s%s/shell/%s/' % (PIN_HOST, PIN_PATH, m.group(1), m.group(2)))
         elif pre:
@@ -549,10 +549,10 @@ def csp_weak(policy, room_hashes, has_pin, pin_dirs=(), recaptcha=False):
                 why.append('%s has unknown keyword %s' % (dname, x))
             elif SUBX_SRC_RE.match(x) and (x in pin_dirs or any(x == d_ + f_ for d_ in pin_dirs for f_ in SHELL_FILES)):
                 pin_listed = True
-            elif PIN_SRC_RE.match(x):
+            elif PIN_SRC_RE.fullmatch(x):
                 why.append("%s source %s is not this page's pin folder (%s): every subx-factory source must use the "
                            "pin's commit SHA and its exact /shell/v<base>/ folder" % (dname, x[:110], ', '.join(sorted(pin_dirs)) or 'no pin'))
-            elif EMOJI_SRC_RE.match(x) or FIREBASE_SRC_RE.match(x):
+            elif EMOJI_SRC_RE.fullmatch(x) or FIREBASE_SRC_RE.fullmatch(x):
                 continue
             elif lx in RECAPTCHA_SRCS:
                 if not recaptcha:
@@ -814,7 +814,7 @@ def page_urls(page):
 
 
 def refresh_url(content):
-    m = re.match(r'^\s*[\d.]*\s*[;,]?\s*(?:url\s*=\s*)?(.*)$', content or '', re.I | re.S)
+    m = re.fullmatch(r'^\s*[\d.]*\s*[;,]?\s*(?:url\s*=\s*)?(.*)$', content or '', re.I | re.S)
     u = (m.group(1) if m else '').strip()
     if u[:1] in '\'"' and u:
         u = u[1:].split(u[0], 1)[0]
@@ -1038,7 +1038,7 @@ def prescan(raw, toks, pg):
         f.append('%d has <![ (CDATA or marked section): browsers end it at the first > outside svg/math, the checker '
                  'at ]]>' % _ln(raw, m.start()))
     for t in toks:
-        if t['kind'] == 'decl' and not re.match(r'(?i)^doctype[\t\n\f\r ]+html[\t\n\f\r ]*$', t['text']):
+        if t['kind'] == 'decl' and not re.fullmatch(r'(?i)^doctype[\t\n\f\r ]+html[\t\n\f\r ]*$', t['text']):
             f.append('%d has <!%s>: only <!DOCTYPE html> is allowed (browsers end a declaration at the first >)'
                      % (_ln(raw, t['pos']), t['text'][:30]))
     # differential: every start tag the browser sees must be one the checker saw, with the same attributes, and
@@ -1085,7 +1085,7 @@ def strict_grammar(pg, kind):
             if t['text'] != NEST_COMMENT:
                 v.append('%d: a comment <!--%s-->' % (ln, t['text'][:40]))
         elif k == 'decl':
-            if not re.match(r'(?i)^doctype[\t\n\f\r ]+html[\t\n\f\r ]*$', t['text']):
+            if not re.fullmatch(r'(?i)^doctype[\t\n\f\r ]+html[\t\n\f\r ]*$', t['text']):
                 v.append('%d: <!%s>' % (ln, t['text'][:40]))
         elif k == 'bogus':
             v.append('%d: a bogus comment <%s%s>' % (ln, raw[t['pos'] + 1], t['text'][:40]))
@@ -1104,7 +1104,7 @@ def strict_grammar(pg, kind):
             typ = html_unescape(dict(reversed(t['attrs'])).get('type') or '').strip().lower()
             text = t['text'].replace('\r\n', '\n')
             if typ in CLASSIC_TYPES:
-                if not (NEST_RE.match(text) or BARE_RE.match(text) or (kind == 'noShell' and text == NOTFOUND_TEMPLATE)):
+                if not (NEST_RE.fullmatch(text) or BARE_RE.fullmatch(text) or (kind == 'noShell' and text == NOTFOUND_TEMPLATE)):
                     v.append('%d: an inline <script> that is not the %s template' % (ln, 'stub' if kind == 'stub' else 'stub or 404'))
             elif typ == 'module' and kind == 'noShell':
                 if re.search(r'\\|/\*|//', text):
@@ -1145,12 +1145,12 @@ def redirect_stub(pg):
     if (s['attrs'].get('type') or '').strip().lower() not in ('', 'text/javascript') or s['inert'] or s['dup']:
         return False, 'its script is not a plain classic inline script'
     text = s['text'].replace('\r\n', '\n')
-    if not (NEST_RE.match(text) or BARE_RE.match(text)):
+    if not (NEST_RE.fullmatch(text) or BARE_RE.fullmatch(text)):
         return False, 'its inline script is neither the nest_stubs.py template (slug only) nor a bare same-origin location.replace'
     gv = strict_grammar(pg, 'stub')  # C14 allowlist: the whole page, as a browser tokenizes it
     if gv:
         return False, 'it is outside the redirect-stub grammar (line %s)' % gv[0]
-    return (True, 'nest stub') if NEST_RE.match(text) else (True, 'bare same-origin location.replace')
+    return (True, 'nest stub') if NEST_RE.fullmatch(text) else (True, 'bare same-origin location.replace')
 
 
 def check(room, mans, legacy=None):
@@ -1461,21 +1461,21 @@ def check(room, mans, legacy=None):
                 continue
             src = norm_url(src)
             runs = typ in JS_TYPES and 'nomodule' not in a and not s['inert'] and not s['dup']
-            if FIREBASE_RE.match(src):
+            if FIREBASE_RE.fullmatch(src):
                 needs.setdefault(page, 'Firebase SDK')  # C12
                 ns_add(page, where, 'Firebase SDK', False)
                 continue
-            em = EMOJI_RE.match(src)
+            em = EMOJI_RE.fullmatch(src)
             if em:
                 ns_add(page, where, 'remote script %s' % src, False)
                 emoji_tags.append((page, where, em.group(1), bool(a.get('integrity'))))  # decided after the CSP rule
                 continue
             bare = re.split(r'[?#]', src, maxsplit=1)[0]
-            if bare != src and (PIN_RE.match(bare) or PRE_RE.match(bare)):
+            if bare != src and (PIN_RE.fullmatch(bare) or PRE_RE.fullmatch(bare)):
                 f.append('%s pin URL carries a query or fragment (%s): pins must be the bare pinned URL, no ?v=' % (where, src[len(bare):][:40]))
                 continue
-            m = PIN_RE.match(src)
-            pre = PRE_RE.match(src)
+            m = PIN_RE.fullmatch(src)
+            pre = PRE_RE.fullmatch(src)
             if m or (pre and man and pre.group(1) == man.get('sourceCommit')):
                 ver, fn = (m.group(2), m.group(3)) if m else (base, pre.group(2))
                 if typ == 'module':
@@ -1699,7 +1699,7 @@ def check(room, mans, legacy=None):
             if s_['attrs'].get('src') is None and s_['text'].strip():
                 room_hashes |= script_hash_sources(s_['text'])
     pin_pages = {p_ for p_, pg_ in page_objs.items()
-                 if any(PIN_RE.match(norm_url(s_['attrs'].get('src'))) for s_ in pg_.out)}
+                 if any(PIN_RE.fullmatch(norm_url(s_['attrs'].get('src'))) for s_ in pg_.out)}
     room_pin_dirs = pin_dirs_of(page_objs['index.html']) if 'index.html' in page_objs else set()
     missing, weak, strict_pols, hdr_bad = [], {}, {}, {}
     csp_pages = [p_ for p_ in all_pages if p_.lower().endswith(CSP_PAGE_EXTS)]
@@ -1753,8 +1753,8 @@ def check(room, mans, legacy=None):
     # (index.js imports ./picker.js and ./database.js, which SRI on the tag cannot cover); the other accepted form is
     # a self-hosted 'self' copy with integrity (checked where local scripts are read)
     for page, where, ver, has_sri in emoji_tags:
-        pinned_by_csp = EXACT_VER.match(ver) and any(
-            EMOJI_SRC_RE.match(x) and EMOJI_SRC_RE.match(x).group(1) == ver and x.endswith('@%s/' % ver)
+        pinned_by_csp = EXACT_VER.fullmatch(ver) and any(
+            EMOJI_SRC_RE.fullmatch(x) and EMOJI_SRC_RE.fullmatch(x).group(1) == ver and x.endswith('@%s/' % ver)
             for pol in strict_pols.get(page, []) for d_ in ('script-src', 'default-src', 'script-src-elem') for x in pol.get(d_) or [])
         if not pinned_by_csp:
             w.append('%s emoji-picker-element@%s has no SRI pin: load it from an exact-version folder listed in a strict '
@@ -1773,10 +1773,10 @@ def suggest(room):
     for page, pg in pages(room):
         if page != 'index.html' and redirect_stub(pg)[0]:
             continue  # C14: redirect stubs need neither noShell nor an inline hash
-        pinned = any(PIN_RE.match(norm_url((s.get('attrs') or {}).get('src'))) for s in pg.out)
+        pinned = any(PIN_RE.fullmatch(norm_url((s.get('attrs') or {}).get('src'))) for s in pg.out)
         if page != 'index.html' and not pinned and (pg.code or any(
                 (s['attrs'].get('src') and (not REMOTE_RE.match(norm_url(s['attrs']['src']))
-                                            or FIREBASE_RE.match(norm_url(s['attrs']['src']))))
+                                            or FIREBASE_RE.fullmatch(norm_url(s['attrs']['src']))))
                 or (s['attrs'].get('src') is None and (s['attrs'].get('type') or '').lower() not in DATA_TYPES
                     and s['text'].strip()) for s in pg.out)):
             out['noShell'].append(page)

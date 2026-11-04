@@ -1,0 +1,4 @@
+{
+  "_doc": "Waves approved to go active (batch approval per wave). Empty tonight: no topic can be active. Adding a wave here is an owner decision in its own reviewed change; see topics/README.md.",
+  "approvedWaves": []
+}

@@ -70,7 +70,7 @@ def expand(text, ctx, depth=0):
         raise RenderError('token nesting too deep in %r' % text[:60])
     def rep(m):
         k = m.group(1)
-        if not KEY_RE.match(k):
+        if not KEY_RE.fullmatch(k):
             raise RenderError('bad token inside a brand value: {{%s}}' % k)
         return expand(lookup(ctx, k), ctx, depth + 1)
     return TOKEN_RE.sub(rep, text)
@@ -108,7 +108,7 @@ class Renderer:
         brand = json.load(open(brand_path, encoding='utf-8'))
         hl = json.load(open(os.path.join(src, 'data', 'highlights.json'), encoding='utf-8'))
         year = str(hl.get('generated', ''))[:4]
-        if not re.match(r'^\d{4}$', year):
+        if not re.fullmatch(r'^\d{4}$', year):
             raise RenderError('hub/src/data/highlights.json has no "generated" year')
         sh = self.cfg['shell']
         pin = 'https://cdn.jsdelivr.net/gh/%s@%s/shell/%s/factory.js' % (sh['repo'], sh['sha'], sh['base'])
@@ -118,7 +118,7 @@ class Renderer:
         self.ctx = {'brand': brand, 'year': year,
                     'shell': {'pinUrl': pin, 'integrity': sh['integrity'], 'csp': csp, 'base': sh['base']}}
         prefix = brand.get('topicPathPrefix', '')
-        if not re.match(r'^/[a-z0-9][a-z0-9-]*/$', prefix):
+        if not re.fullmatch(r'^/[a-z0-9][a-z0-9-]*/$', prefix):
             raise RenderError('brand.topicPathPrefix must look like /t/ (got %r)' % prefix)
         self.topic_dir = prefix.strip('/')
         self.assets = {}
@@ -130,7 +130,7 @@ class Renderer:
         def partial(m):
             name = m.group(1)
             p = os.path.join(self.src, 'partials', name + '.html')
-            if not re.match(r'^[a-z0-9-]+$', name) or not os.path.isfile(p):
+            if not re.fullmatch(r'^[a-z0-9-]+$', name) or not os.path.isfile(p):
                 raise RenderError('%s: unknown partial {{> %s}}' % (where, name))
             return open(p, encoding='utf-8').read().rstrip('\n')
         for _ in range(3):
@@ -147,10 +147,10 @@ class Renderer:
             if k == 'footer:links':
                 return footer_links(ctx)
             if k.startswith('url:'):
-                if not KEY_RE.match(k[4:]):
+                if not KEY_RE.fullmatch(k[4:]):
                     raise RenderError('%s: bad token {{%s}}' % (where, k))
                 return urllib.parse.quote(expand(lookup(ctx, k[4:]), ctx), safe='')
-            if not KEY_RE.match(k):
+            if not KEY_RE.fullmatch(k):
                 raise RenderError('%s: bad token {{%s}}' % (where, k))
             if k.startswith('topic.'):
                 # topic data is content: escaped, never token-expanded; braces become entities so text such as
@@ -303,8 +303,8 @@ class Renderer:
         topic.setdefault('legacyDomain', doors[0] if doors else '')
         has = lambda k: bool(str(topic.get(k) or '').strip())
         cond = {'doorway': tc['showDoorways'] and has('legacyDomain'),
-                'not-live': st == 'hidden' and not tc['open'],
-                'state-hidden': st == 'hidden' and tc['open'],
+                'not-live': st in ('hidden', 'eligible') and not tc['open'],
+                'state-hidden': st in ('hidden', 'eligible') and tc['open'],
                 'state-archived': st == 'archived', 'state-quiet': st == 'quiet',
                 'state-active-new': st == 'active' and bool(topic.get('justActivated')),
                 'about': has('longDescription'), 'goodPosts': has('goodPosts'), 'offTopic': has('offTopic'),

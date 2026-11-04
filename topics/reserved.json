@@ -1,5 +1,6 @@
 {
-  "notes": "Slugs a topic may never take. The brand list is generated at check time from brand/brand.json (name, shortName, primaryDomain labels) plus the words below; see tools/topic_slug.py.",
+  "notes": "Slugs a topic may never take. The brand list is generated at check time from brand/brand.json (name, shortName, primaryDomain labels) plus the words below (system paths, legal/trust words, and platform names a topic must never look like); see tools/topic_slug.py.",
   "system": ["t", "c", "u", "p", "n", "api", "admin", "auth", "login", "signup", "settings", "search", "explore", "home", "feed", "new", "hot", "top", "following", "notifications", "chat", "profile", "news", "watchlist", "stories", "thoughts", "static", "assets", "shell", "cdn", "sitemap", "robots", "llms", "status", "console"],
-  "legal": ["about", "terms", "privacy", "legal", "takedown", "report", "abuse", "security", "support", "official", "verified", "staff", "mod", "moderator", "steward"]
+  "legal": ["about", "terms", "privacy", "legal", "takedown", "report", "abuse", "security", "support", "official", "verified", "staff", "mod", "moderator", "steward"],
+  "platform": ["x", "x-com", "xcom", "xcorp", "x-corp", "twitter", "grok"]
 }

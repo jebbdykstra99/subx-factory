@@ -68,7 +68,7 @@ def classify(h):
         return 'human', 'browser UA'
     if 'ua' in h:   # pixel had the UA field but request sent none
         return 'bot', 'empty UA'
-    if vid and not FACTORY_VID.match(vid):
+    if vid and not FACTORY_VID.fullmatch(vid):
         return 'bot', 'non-factory vid'
     return 'unverified', 'no UA stored (pre-UA pixel)'
 

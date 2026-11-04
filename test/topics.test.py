@@ -29,6 +29,21 @@ SYSTEM = ['t', 'c', 'u', 'p', 'n', 'api', 'admin', 'auth', 'login', 'signup', 's
           'robots', 'llms', 'status', 'console']
 LEGAL = ['about', 'terms', 'privacy', 'legal', 'takedown', 'report', 'abuse', 'security', 'support', 'official', 'verified', 'staff', 'mod',
          'moderator', 'steward']
+for s, why in (('los-angeles\n', 'trailing newline'), ('los-angeles\r', 'trailing CR'), ('los-angeles\r\n', 'trailing CRLF'),
+               ('\nlos-angeles', 'leading newline'), ('los-angeles ', 'trailing space'), ('l\u043es-angeles', 'Cyrillic o lookalike'),
+               ('los\u2010angeles', 'Unicode hyphen lookalike'), ('\uff4c\uff4f\uff53-angeles', 'fullwidth letters'), ('los-angele\u0455', 'Cyrillic s lookalike'),
+               ('abc\x00', 'NUL'), ('r\n', 'r + newline')):
+    ok(topic_slug.errors(s, words=words), 'slug refused (%s): %r' % (why, s))
+ok(topic_slug.SLUG_RE.match('los-angeles\n') is not None and topic_slug.SLUG_RE.fullmatch('los-angeles\n') is None and '$' not in topic_slug.SLUG_RE.pattern,
+   'slug regex is used with fullmatch and carries no $ anchor')
+r_ = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'topic_slug.py'), 'los-angeles\n'], capture_output=True, text=True)
+ok(r_.returncode == 1, 'topic_slug.py CLI refuses a slug with a trailing newline')
+PLATFORM = ['x', 'x-com', 'xcom', 'xcorp', 'x-corp', 'twitter', 'grok']
+ok(set(PLATFORM) <= words and set(PLATFORM) <= topic_slug.reserved(dict(brand, name='Quillnest', shortName='Quill', primaryDomain='quillnest.example')),
+   'reserved: platform names (x, x-com, xcom, xcorp, x-corp, twitter, grok), whatever the brand')
+for s in [x for x in PLATFORM if len(x) >= 3]:
+    ok(any('reserved' in e for e in topic_slug.errors(s, words=words)), 'reserved platform slug refused: %s' % s)
+ok(topic_slug.errors('x', words=words), 'slug refused: x')
 ok(set(SYSTEM) <= words and set(LEGAL) <= words, 'reserved: every system path and brand/legal word from the brief')
 for s in [x for x in SYSTEM + LEGAL if len(x) >= 3]:
     ok(any('reserved' in e for e in topic_slug.errors(s, words=words)), 'reserved slug refused: %s' % s)
@@ -52,49 +67,79 @@ def topic(status='hidden', **kw):
     return t
 busy = [post('u%d' % (i % 5), i * 0.5) for i in range(20)]  # 20 posts, 5 people, inside 10 days
 ok(TS.counts(busy, NOW)['posts14d'] == 20 and TS.counts(busy, NOW)['distinctPosters14d'] == 5, 'counts: 20 posts by 5 people in 14 days')
-ok(TS.apply(topic(), busy, NOW)['status'] == 'active', 'hidden -> active at 20 posts / 5 people / 14 days')
-ok(TS.apply(topic(), busy, NOW)['activatedAt'] == NOW, 'activatedAt is set on activation')
-ok(TS.apply(topic(), busy[:19], NOW)['status'] == 'hidden', '19 posts stays hidden')
+W = [1]  # approved wave list for these tests (topics/approved_waves.json is empty tonight)
+APPR = {'approvedWave': 1, 'approvedBy': 'owner', 'approvedAt': TS.iso(now - timedelta(days=1))}
+def atopic(status='hidden', **kw):
+    return topic(status, **dict(APPR, **kw))
+el = TS.apply(topic(), busy, NOW, W)
+ok(el['status'] == 'eligible' and el['activatedAt'] is None, 'hidden -> eligible (not active) at 20 posts / 5 people / 14 days with no approval record')
+ok(TS.apply(topic(), busy, NOW)['status'] == 'eligible', 'hidden -> eligible with no approved wave list at all')
+ok(TS.apply(atopic(), busy, NOW)['status'] == 'eligible', 'approval record whose wave is not on the approved list -> eligible')
+ok(TS.apply(atopic(), busy, NOW, W)['status'] == 'active', 'hidden -> active when the wave was approved ahead of time')
+ok(TS.apply(atopic(), busy, NOW, W)['activatedAt'] == NOW, 'activatedAt is set on activation')
+ok(TS.apply(atopic('eligible'), busy, NOW, W)['status'] == 'active', 'eligible -> active once the row has a valid approval')
+ok(TS.apply(atopic('eligible'), [post('a', 1), post('b', 2), post('c', 3)], NOW, W)['status'] == 'active', 'an approved eligible topic goes active even below the rule (it met it)')
+ok(TS.apply(topic('eligible'), busy, NOW, W)['status'] == 'eligible', 'eligible stays eligible while waiting on approval')
+ok(TS.apply(topic('eligible'), [post('a', 1), post('b', 2), post('c', 3)], NOW, W)['status'] == 'eligible', 'unapproved eligible with 3 posts in 30 days stays eligible')
+ok(TS.apply(topic('eligible'), [post('a', 1), post('b', 2)], NOW, W)['status'] == 'hidden', 'unapproved eligible with < 3 posts in 30 days -> back to hidden')
+for k, v, why in (('approvedBy', '', 'empty approvedBy'), ('approvedBy', None, 'no approvedBy'), ('approvedAt', None, 'no approvedAt'),
+                  ('approvedAt', TS.iso(now + timedelta(days=1)), 'future approvedAt'), ('approvedAt', '2026-11-03T07:00:00', 'naive approvedAt'),
+                  ('approvedAt', 'soon', 'garbage approvedAt'), ('approvedWave', None, 'no approvedWave'), ('approvedWave', True, 'boolean approvedWave'),
+                  ('approvedWave', 2, 'wave not on the list')):
+    ok(not TS.approved(atopic(**{k: v}), W, NOW) and TS.apply(atopic(**{k: v}), busy, NOW, W)['status'] == 'eligible', 'incomplete approval (%s) is refused: eligible' % why)
+ok(TS.approved(atopic(), W, NOW) and not TS.approved(atopic(), [], NOW) and not TS.approved(topic(), W, NOW), 'approved(): needs the full record and a listed wave')
+ok(TS.apply(atopic(), busy[:19], NOW, W)['status'] == 'hidden', '19 posts stays hidden')
 four = [post('u%d' % (i % 4), i * 0.5) for i in range(25)]
-ok(TS.apply(topic(), four, NOW)['status'] == 'hidden', '25 posts by only 4 people stays hidden')
+ok(TS.apply(atopic(), four, NOW, W)['status'] == 'hidden', '25 posts by only 4 people stays hidden')
 old = [post('u%d' % (i % 5), 14 + i * 0.1) for i in range(20)]
-ok(TS.apply(topic(), old, NOW)['status'] == 'hidden', 'posts older than 14 days do not activate')
+ok(TS.apply(atopic(), old, NOW, W)['status'] == 'hidden', 'posts older than 14 days do not activate')
 def mark(**kw):
     return [dict(p, **kw) for p in busy]
-ok(TS.apply(topic(), mark(steward=True), NOW)['status'] == 'hidden', 'steward posts never count')
-ok(TS.apply(topic(), mark(ai=True), NOW)['status'] == 'hidden', 'AI posts never count')
-ok(TS.apply(topic(), mark(authorVerifiedHuman=False), NOW)['status'] == 'hidden', 'unverified accounts never count')
+ok(TS.apply(atopic(), mark(steward=True), NOW, W)['status'] == 'hidden', 'steward posts never count')
+ok(TS.apply(atopic(), mark(ai=True), NOW, W)['status'] == 'hidden', 'AI posts never count')
+ok(TS.apply(atopic(), mark(authorVerifiedHuman=False), NOW, W)['status'] == 'hidden', 'unverified accounts never count')
 young = [dict(p, authorCreatedAt=TS.iso(TS.parse_ts(p['createdAt']) - timedelta(days=6))) for p in busy]
-ok(TS.apply(topic(), young, NOW)['status'] == 'hidden', 'accounts under 7 days old do not count')
+ok(TS.apply(atopic(), young, NOW, W)['status'] == 'hidden', 'accounts under 7 days old do not count')
 aged = [dict(p, authorCreatedAt=TS.iso(TS.parse_ts(p['createdAt']) - timedelta(days=7))) for p in busy]
-ok(TS.apply(topic(), aged, NOW)['status'] == 'active', 'accounts exactly 7 days old count')
+ok(TS.apply(atopic(), aged, NOW, W)['status'] == 'active', 'accounts exactly 7 days old count')
 ok(TS.counts([post('u1', -1)], NOW)['posts14d'] == 0, 'future-dated posts are ignored')
-act = topic('active', activatedAt=TS.iso(now - timedelta(days=40)))
-ok(TS.apply(act, [post('a', 1), post('b', 10), post('c', 20)], NOW)['status'] == 'active', 'active with 3 posts in 30 days stays active')
-ok(TS.apply(act, [post('a', 1), post('b', 10)], NOW)['status'] == 'quiet', 'active with < 3 posts in 30 days -> quiet')
-q = TS.apply(act, [post('a', 40)], NOW)
-ok(q['status'] == 'quiet' and TS.robots('quiet', hub_noindex=False) == 'index,follow' and TS.sitemap_eligible('quiet', hub_noindex=False),
-   'quiet stays indexed and in the sitemap (once the hub-wide noindex is lifted)')
-ok(TS.badge('quiet') == 'Quiet lately. New posts welcome.' and TS.badge('active') is None, 'quiet badge text')
-ok(TS.apply(topic('quiet', activatedAt=act['activatedAt']), [post('a', 1), post('b', 2), post('c', 3)], NOW)['status'] == 'active', 'quiet -> active at 3 posts in 30 days')
-ar = TS.apply(act, [post('a', 91)], NOW)
+act = atopic('active', activatedAt=TS.iso(now - timedelta(days=40)))
+ok(TS.apply(act, [post('a', 1), post('b', 10), post('c', 20)], NOW, W)['status'] == 'active', 'active with 3 posts in 30 days stays active')
+ok(TS.apply(act, [post('a', 1), post('b', 10), post('c', 20)], NOW, [])['status'] == 'eligible', 'fails closed: an active topic whose wave is not listed drops to eligible')
+ok(TS.apply(act, [post('a', 1), post('b', 10)], NOW, W)['status'] == 'quiet', 'active with < 3 posts in 30 days -> quiet')
+q = TS.apply(act, [post('a', 40)], NOW, W)
+ok(q['status'] == 'quiet' and TS.robots('quiet', hub_noindex=False) == 'noindex,nofollow' and not TS.sitemap_eligible('quiet', hub_noindex=False),
+   'quiet is noindex and out of the sitemap (even once the hub-wide noindex is lifted)')
+ok(TS.rendered('quiet') and not TS.read_only('quiet') and q['stewardOnly'] is False, 'quiet stays rendered and open to post')
+ok(TS.badge('quiet') == 'Quiet lately. New posts welcome.' and TS.badge('active') is None, 'quiet badge text kept')
+qt = atopic('quiet', activatedAt=act['activatedAt'])
+ok(TS.apply(qt, [post('a', 1), post('b', 2), post('c', 3)], NOW, W)['status'] == 'quiet', 'quiet does NOT reopen at 3 posts in 30 days (needs the active rule)')
+rq = TS.apply(qt, busy, NOW, W)
+ok(rq['status'] == 'active' and rq['activatedAt'] == NOW, 'quiet -> active on the active rule, re-gated by the existing approval (new 60-day clock)')
+ok(TS.apply(dict(qt, approvedAt=TS.iso(now - timedelta(days=300))), busy, NOW, W)['status'] == 'active', 'reopening needs no new wave approval (old approval still valid)')
+ok(TS.apply(topic('quiet', activatedAt=act['activatedAt']), busy, NOW, W)['status'] == 'eligible', 'quiet with no approval record reopens only as eligible')
+ar = TS.apply(act, [post('a', 91)], NOW, W)
 ok(ar['status'] == 'archived' and ar['stewardOnly'] is True and TS.read_only('archived'), 'active with 0 posts in 90 days -> archived, read-only')
-ok(TS.apply(topic('quiet', activatedAt=act['activatedAt']), [], NOW)['status'] == 'archived', 'quiet with no counted posts ever -> archived')
-ok(TS.apply(act, [post('a', 89)], NOW)['status'] == 'quiet', 'a post 89 days ago keeps it out of archive')
+ok(TS.apply(qt, [], NOW, W)['status'] == 'archived', 'quiet with no counted posts ever -> archived')
+ok(TS.apply(act, [post('a', 89)], NOW, W)['status'] == 'quiet', 'a post 89 days ago keeps it out of archive')
 ok(TS.robots('archived', hub_noindex=False) == 'noindex,nofollow' and not TS.sitemap_eligible('archived', hub_noindex=False), 'archived: noindex, out of the sitemap')
-re_ = TS.apply(topic('archived', activatedAt=act['activatedAt'], stewardOnly=True), busy, NOW)
-ok(re_['status'] == 'active' and re_['stewardOnly'] is False and re_['activatedAt'] == NOW, 'archived auto-reopens on the active rule (new activatedAt)')
-ok(TS.apply(topic('archived', stewardOnly=True), [post('a', 1)], NOW)['status'] == 'archived', 'archived stays archived below the active rule')
-ok(TS.apply(topic('hold', stewardOnly=True), busy, NOW)['status'] == 'hold', 'hold is manual: the rule never changes it')
-ok(TS.apply(topic(), [], NOW)['status'] == 'hidden', 'hidden with nothing stays hidden (never archived)')
-src = topic(); TS.apply(src, busy, NOW)
-ok(src == topic(), 'apply() is pure: input row untouched')
-ok(TS.robots('hidden', hub_noindex=False) == 'noindex,nofollow' and all(TS.robots(s) == 'noindex,nofollow' for s in TS.STATUSES), 'hidden noindex,nofollow; hub-wide noindex covers every status')
+re_ = TS.apply(atopic('archived', activatedAt=act['activatedAt'], stewardOnly=True), busy, NOW, W)
+ok(re_['status'] == 'active' and re_['stewardOnly'] is False and re_['activatedAt'] == NOW, 'archived auto-reopens on the active rule with its existing approval (new activatedAt)')
+ok(TS.apply(topic('archived', activatedAt=act['activatedAt'], stewardOnly=True), busy, NOW, W)['status'] == 'eligible', 'archived without approval reopens only as eligible')
+ok(TS.apply(atopic('archived', stewardOnly=True), [post('a', 1)], NOW, W)['status'] == 'archived', 'archived stays archived below the active rule')
+ok(TS.apply(atopic('hold', stewardOnly=True), busy, NOW, W)['status'] == 'hold', 'hold is manual: the rule never changes it')
+ok(TS.apply(topic(), [], NOW, W)['status'] == 'hidden', 'hidden with nothing stays hidden (never archived)')
+src = atopic(); TS.apply(src, busy, NOW, W)
+ok(src == atopic(), 'apply() is pure: input row untouched')
+ok([s for s in TS.STATUSES if TS.robots(s, hub_noindex=False) == 'index,follow'] == ['active'], 'only active is indexable once the hub-wide noindex is lifted')
+ok([s for s in TS.STATUSES if TS.sitemap_eligible(s, hub_noindex=False)] == ['active'], 'only active is sitemap-eligible once the hub-wide noindex is lifted')
+ok(all(TS.robots(s) == 'noindex,nofollow' for s in TS.STATUSES), 'hub-wide noindex covers every status')
 ok(not any(TS.sitemap_eligible(s) for s in TS.STATUSES), 'hub-wide noindex: no topic is sitemap-eligible tonight')
-ok(not TS.rendered('hold') and all(TS.rendered(s) for s in ('hidden', 'active', 'quiet', 'archived')), 'only hold is never rendered')
-ok(TS.doorway_status(topic(), NOW) == 302, 'doorway: 302 while hidden')
+ok(not TS.rendered('hold') and all(TS.rendered(s) for s in ('hidden', 'eligible', 'active', 'quiet', 'archived')), 'only hold is never rendered')
+ok(TS.doorway_status(topic(), NOW) == 302 and TS.doorway_status(topic('eligible'), NOW) == 302, 'doorway: 302 while hidden or eligible')
 ok(TS.doorway_status(topic('active', activatedAt=TS.iso(now - timedelta(days=59))), NOW) == 302, 'doorway: 302 at 59 days active')
 ok(TS.doorway_status(topic('active', activatedAt=TS.iso(now - timedelta(days=60))), NOW) == 301, 'doorway: 301 after 60 days active')
+ok(TS.doorway_status(topic('quiet', activatedAt=TS.iso(now - timedelta(days=200))), NOW) == 302, 'doorway: quiet falls back to 302')
 ok(TS.doorway_status(topic('archived', activatedAt=TS.iso(now - timedelta(days=200))), NOW) == 302, 'doorway: archived falls back to 302')
 try:
     TS.parse_ts('2026-11-04T04:00:00'); ok(False, 'naive timestamps are refused')
@@ -113,6 +158,25 @@ ok(by['air-travel']['status'] == 'hidden' and by['cash-and-atms']['status'] == '
 ok(set(sch['required']) == {'slug', 'title', 'description', 'status', 'createdAt', 'activatedAt', 'posts14d', 'distinctPosters14d', 'posts30d',
                              'lastCountedPostAt', 'doorwayDomains', 'stewardOnly'} and sch['properties']['status']['enum'] == list(TS.STATUSES),
    'schema: the briefed fields and statuses')
+ok(list(TS.STATUSES) == ['hidden', 'eligible', 'active', 'quiet', 'archived', 'hold'], 'statuses include eligible')
+ok(not topic_schema.validate(dict(by['dogs'], **APPR), sch) and not topic_schema.validate(dict(by['dogs'], approvedWave=None, approvedBy=None, approvedAt=None), sch),
+   'schema: optional approval record (approvedWave, approvedBy, approvedAt), null allowed')
+ok(topic_schema.validate(dict(by['dogs'], approvedWave=0), sch) and topic_schema.validate(dict(by['dogs'], approvedWave='1'), sch)
+   and topic_schema.validate(dict(by['dogs'], approvedBy=''), sch) and topic_schema.validate(dict(by['dogs'], approvedAt='later'), sch),
+   'schema rejects a bad approval record')
+ok(not any(k in t for t in seed['topics'] for k in TS.APPROVAL_FIELDS), 'seed rows carry no approval record')
+bad = json.loads(json.dumps(seed)); bad['topics'][0].update(APPR)
+ok(topics_seed.check(bad), 'seed check refuses a seed row with an approval record')
+aw = json.load(open(os.path.join(ROOT, 'topics', 'approved_waves.json')))
+aws = json.load(open(os.path.join(ROOT, 'topics', 'approved_waves.schema.json')))
+ok(aw['approvedWaves'] == [] and not topic_schema.validate(aw, aws), 'approved_waves.json: valid and empty tonight (no wave approved)')
+ok(topic_schema.validate({'approvedWaves': ['1']}, aws) and topic_schema.validate({'approvedWaves': [1, 1]}, aws) and topic_schema.validate({}, aws),
+   'approved_waves schema rejects non-integer, duplicate or missing waves')
+ok(not any(TS.approved(dict(t, **APPR), aw['approvedWaves'], NOW) for t in seed['topics']), 'tonight no seed topic could pass the approval gate')
+ok(topic_schema.validate('dogs\n', {'type': 'string', 'pattern': '^[a-z]+$'}) and not topic_schema.validate('dogs', {'type': 'string', 'pattern': '^[a-z]+$'}),
+   'schema pattern: $ means end of string (ECMA), so a trailing newline is refused')
+ok(topic_schema.validate(dict(by['dogs'], slug='dogs\n'), sch) and topic_schema.validate(dict(by['dogs'], createdAt='2026-11-03T07:00:00Z\n'), sch),
+   'schema refuses a slug or date-time with a trailing newline')
 ok(topic_schema.validate(dict(by['dogs'], status='live'), sch) and topic_schema.validate(dict(by['dogs'], posts14d=-1), sch)
    and topic_schema.validate(dict(by['dogs'], extra=1), sch) and topic_schema.validate(dict(by['dogs'], createdAt='yesterday'), sch),
    'schema validator rejects bad status, negative counts, unknown fields, bad dates')
@@ -154,6 +218,21 @@ ok(topic_domains.validate_fields({'mode': 'doorway'}, 'x') and topic_domains.val
    and not topic_domains.validate_fields({'name': 'Room', 'shell': {}}, 'x'), 'site.json hybrid fields: optional, validated, status never stored')
 ok(not os.path.exists(os.path.join(ROOT, 'hub', 'site', '_redirects')) and '"redirects"' not in open(os.path.join(ROOT, 'hub', 'firebase.json')).read(),
    'no live redirect files or hosting redirects')
+
+# ---- activity copy matches the quiet rule (Key 2 follow-up) ----
+QUIET = 'A topic with fewer than 3 counted posts in 30 days goes quiet: it stays open, leaves search, and returns once it clears the bar again.'
+for f in ('about.html', os.path.join('t', 'index.html')):
+    h = open(os.path.join(ROOT, 'hub', 'site', f), encoding='utf-8').read()
+    ok(QUIET in h and 'rests: it stays readable, leaves search' not in h and 'One that goes 90 days without a counted post rests: it stays readable and reopens on its own' in h,
+       'copy (%s): quiet leaves search; 90-day rest line no longer implies quiet topics stay in search' % f)
+GATE = 'until real conversation is happening (20 or more posts from at least 5 different people, all within 14 days) and it is approved for listing.'
+for f in ('about.html', os.path.join('t', 'index.html')):
+    h = open(os.path.join(ROOT, 'hub', 'site', f), encoding='utf-8').read()
+    ok(GATE in h and 'until real conversation is happening: 20 or more' not in h, 'copy (%s): search needs the activity bar and approval for listing' % f)
+tt = open(os.path.join(ROOT, 'hub', 'src', 'topic-template.html'), encoding='utf-8').read()
+ok('It can show up in search once 20 or more posts' in tt and 'It shows up in search once' not in tt, 'copy (topic template): meeting the bar no longer promises search (approval gate)')
+ok(not re.search(r'stays (indexed|in search|listed)', open(os.path.join(ROOT, 'hub', 'src', 'templates', 'topics.html'), encoding='utf-8').read() + tt),
+   'copy: nothing says a quiet topic stays in search')
 
 print('\n%d failure(s)' % len(fails))
 sys.exit(1 if fails else 0)

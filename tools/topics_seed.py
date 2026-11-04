@@ -18,6 +18,8 @@ import topic_schema, topic_slug  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SEED = os.path.join(ROOT, 'topics', 'seed_wave1.json')
 SCHEMA = os.path.join(ROOT, 'topics', 'schema.json')
+APPROVED = os.path.join(ROOT, 'topics', 'approved_waves.json')
+APPROVED_SCHEMA = os.path.join(ROOT, 'topics', 'approved_waves.schema.json')
 PROFILES = os.path.join(ROOT, 'topics', 'wave1_profiles.json')
 CREATED_AT = '2026-11-03T07:00:00Z'  # 2026-11-03 00:00 MT: fixed so the seed is reproducible
 APPLY_ENV = 'SUBX_TOPICS_APPLY_GO'
@@ -76,11 +78,15 @@ def check(seed, brand=None):
             e.append('%s: a wave-1 seed row must start %s (got %s)' % (w, want, t.get('status')))
         if any(t.get(k) for k in ('posts14d', 'distinctPosters14d', 'posts30d')) or t.get('activatedAt') or t.get('lastCountedPostAt'):
             e.append('%s: a seed row must start with zero stats' % w)
+        if any(t.get(k) is not None for k in ('approvedWave', 'approvedBy', 'approvedAt')):
+            e.append('%s: a seed row must not carry an approval record' % w)
         if t.get('stewardOnly') is not (want == 'hold'):
             e.append('%s: stewardOnly must be %s' % (w, want == 'hold'))
     for h in prof['hold']:
         if h not in seen:
             e.append('HOLD topic %s is not in the seed' % h)
+    aw = load(APPROVED)
+    e += ['approved_waves.json: %s' % x for x in topic_schema.validate(aw, load(APPROVED_SCHEMA))]
     if seed.get('source', {}).get('rows') != len(seed.get('topics', [])):
         e.append('seed row count does not match source rows')
     return e

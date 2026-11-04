@@ -15,13 +15,31 @@ def _is(v, t):
 
 
 def _dt(s):
-    if not re.match(r'^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(Z|[+-]\d\d:\d\d)$', s):
+    if not re.fullmatch(r'^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(Z|[+-]\d\d:\d\d)$', s):
         return False
     try:
         datetime.fromisoformat(s[:-1] + '+00:00' if s.endswith('Z') else s)
         return True
     except ValueError:
         return False
+
+
+def _pattern(p):
+    """JSON Schema patterns are ECMA-262: '$' (no m flag) means end of string. Python's '$' also matches before a
+    trailing newline, so rewrite every unescaped '$' outside a character class to '\\Z'."""
+    out, i, cls = [], 0, False
+    while i < len(p):
+        c = p[i]
+        if c == '\\':
+            out.append(p[i:i + 2]); i += 2; continue
+        if cls:
+            cls = c != ']'
+        elif c == '[':
+            cls = True
+        elif c == '$':
+            c = '\\Z'
+        out.append(c); i += 1
+    return re.compile(''.join(out))
 
 
 def validate(v, sch, where='$'):
@@ -33,7 +51,7 @@ def validate(v, sch, where='$'):
         if not any(_is(v, t) for t in ts):
             return ['%s: expected %s' % (where, '/'.join(ts))]
     if isinstance(v, str):
-        if 'pattern' in sch and not re.search(sch['pattern'], v):
+        if 'pattern' in sch and not _pattern(sch['pattern']).search(v):
             e.append('%s: %r does not match %s' % (where, v, sch['pattern']))
         if len(v) < sch.get('minLength', 0) or len(v) > sch.get('maxLength', 10 ** 9):
             e.append('%s: length %d out of range' % (where, len(v)))

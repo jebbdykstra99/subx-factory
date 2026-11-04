@@ -77,7 +77,7 @@ def validate(d):
             if tc.get(f) and tc[f] not in syms: errs.append('tiers.%s.%s %r is not a <symbol> in sprite.svg' % (t, f, tc[f]))
         if tc.get('textLabel') != LABELS[t]: errs.append('tiers.%s.textLabel %r != policy label %r' % (t, tc.get('textLabel'), LABELS[t]))
         for f in ('ogBadge', 'cornerBadge'):
-            if tc.get(f) and not re.match(r'^/assets/whomark/[a-z0-9-]+\.png$', tc[f]): errs.append('tiers.%s.%s must be /assets/whomark/<name>.png' % (t, f))
+            if tc.get(f) and not re.fullmatch(r'^/assets/whomark/[a-z0-9-]+\.png$', tc[f]): errs.append('tiers.%s.%s must be /assets/whomark/<name>.png' % (t, f))
     if '{names}' not in cfg['tiers'].get('hybrid', {}).get('title', ''): errs.append('tiers.hybrid.title must contain {names} ("Human + AI: {names}")')
     fj = os.path.join(ROOT, 'factory', 'factory.js')
     if os.path.getsize(fj) > CORE_BUDGET: errs.append('factory/factory.js %d B > %d B' % (os.path.getsize(fj), CORE_BUDGET))

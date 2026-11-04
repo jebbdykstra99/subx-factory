@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "topics/approved_waves.schema.json",
+  "title": "Approved topic waves (one batch approval per wave)",
+  "description": "A topic can become active only when its row carries an approval record (approvedWave, approvedBy, approvedAt) whose approvedWave is listed here. Nothing reads this file at run time yet: no runner and no writer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approvedWaves"
+  ],
+  "properties": {
+    "_doc": {
+      "type": "string"
+    },
+    "approvedWaves": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    }
+  }
+}
