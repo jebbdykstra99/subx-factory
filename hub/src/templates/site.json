@@ -9,6 +9,7 @@
   "minAge": 18,
   "dms": false,
   "imageUploads": false,
+  "stories": { "enabled": false },
   "earlyWelcome": false,
   "composePlaceholder": "The hub is read-only. Post in a {{brand.roomNoun.one}}.",
   "emptyState": "The hub is read-only. Pick a {{brand.roomNoun.one}} to read or post.",

@@ -858,7 +858,9 @@ for css_fn in ['ensureRailCss', 'ensurePreviewLiftCss', 'ensureDmCss', 'ensureEa
     blk = m.group(0)
     blk2 = re.sub(r"' \+\n\s+'", "", blk)
     src = src.replace(blk, blk2, 1)
-for ind_fn in ['wireEvents', 'wireComposeToolbar', 'sendDm', 'ensureShareSheet', 'ensureStoriesComposer', 'paintStoryViewer']:
+for ind_fn in ['wireEvents', 'wireComposeToolbar', 'sendDm', 'ensureShareSheet', 'ensureStoriesComposer', 'paintStoryViewer',
+               # v1.2.7: pays for the Stories module bytes (whitespace only)
+               'submitStory', 'maybePost', 'applyRoute', 'syncChatChrome', 'renderFeed', 'renderTrends', 'renderFollowingFeed', 'nestRailCards']:
     m = re.search(r'  (?:async )?function ' + ind_fn + r'\([^)]*\) \{[\s\S]*?\n  \}\n', src)
     assert m, ind_fn
     blk = m.group(0)
@@ -886,5 +888,30 @@ for _a, _b in [("<strong>Following \u2014 Soon.</strong>", "<strong>Following: S
                ("'Direct messages are not live in this preview.", "'Direct messages are not live yet.")]:
     assert src.count(_a) == 1, ('copy sweep', _a)
     src = src.replace(_a, _b)
+# ---- Stories in the shared shell (v1.2.7, 2026-11-04, draft). See shell/STORIES.md.
+# 1) Stories are a default module: on unless site.json stories.enabled === false (per-room off switch).
+#    Every room repo today sets stories.enabled explicitly (true, or false for gaichat/gpchat), so no live room changes.
+# 2) Photo and clip stories obey site.json imageUploads:false (text-only stories). Storage rules stay the real gate.
+# 3) Hand-off from the subx.it hub: #compose=<text> prefills the Home composer (never posts), #story opens the story
+#    composer (sign-in first). Fragment, not query: the draft never reaches request logs. Hash is reset to #home.
+src = ed(src, "    return !!(storiesCfg().enabled);\n", "    return storiesCfg().enabled !== false;\n")
+src = ed(src, "    storyType = type === 'image' || type === 'video' ? type : 'text';\n",
+  "    storyType = (type === 'image' || type === 'video') && site.imageUploads !== false ? type : 'text';\n")
+# imageUploads:false -> the story composer is built text-only: no type buttons, no file inputs, no preview or caption,
+# and its copy promises no photo or clip (Key 1 E2, Key 2 F1). Every lookup of those elements is already null-guarded.
+src = ed(src, "   ov.innerHTML =\n     '<div class=\"stories-composer\" role",
+  "   var nu = site.imageUploads === false;\n   ov.innerHTML =\n     '<div class=\"stories-composer\" role")
+src = ed(src, "Lives 24 hours on this room only. Text, a photo, or a short clip.</p><div class=\"stories-composer-types\">",
+  "Lives 24 hours on this room only. Text' + (nu ? ' only in this room.</p>' : ', a photo, or a short clip.</p><div class=\"stories-composer-types\">")
+src = ed(src, "data-story-type=\"video\">Clip</button></div><textarea", "data-story-type=\"video\">Clip</button></div>') + '<textarea")
+src = ed(src, "'\"></textarea><input class=\"stories-composer-file\"", "'\"></textarea>' + (nu ? '' : '<input class=\"stories-composer-file\"")
+src = ed(src, "placeholder=\"Caption (optional)\" hidden><div class=\"stories-composer-err\"", "placeholder=\"Caption (optional)\" hidden>') + '<div class=\"stories-composer-err\"")
+src = ed(src, "storiesErr('Write a short card, or switch to photo / clip.');", "storiesErr(site.imageUploads === false ? 'Write a short card.' : 'Write a short card, or switch to photo / clip.');")
+src = ed(src, "    if (!fbStorage || !storiesOn()) return Promise.reject(new Error('Storage not ready'));\n",
+  "    if (!fbStorage || !storiesOn() || site.imageUploads === false) return Promise.reject(new Error('Storage not ready'));\n")
+src = ed(src, "    try { deepPostId = new URLSearchParams(location.search).get('p') || ''; } catch (e) { deepPostId = ''; }\n    if (!location.hash || location.hash === '#') {\n",
+  "    try { deepPostId = new URLSearchParams(location.search).get('p') || ''; } catch (e) { deepPostId = ''; }\n    var hand = /^#(compose|story)(?:=(.*))?$/.exec(location.hash) || [];\n    if (!location.hash || location.hash === '#' || hand[1]) {\n")
+src = ed(src, "    syncHamburgerAria();\n    try { if (!sessionStorage.getItem('subx.hit.'+SITE_ID))",
+  "    if (hand[1] === 'story') openStoriesComposer();\n    if (hand[1] === 'compose') { try { restoreCompose(decodeURIComponent(hand[2] || '').slice(0, 280)); } catch (e) {} }\n    syncHamburgerAria();\n    try { if (!sessionStorage.getItem('subx.hit.'+SITE_ID))")
 src = banner + src
 open('factory.js', 'w').write(src)

@@ -35,9 +35,12 @@ for v in sorted(os.listdir(SHELL)):
         for fn in m['files']:
             ok(b(os.path.join(SHELL, v, fn)) == b(os.path.join(ROOT, 'factory', fn)), '%s/%s == factory/%s (current release)' % (v, fn, fn))
 
-# drift checker on synthetic rooms
-m = json.load(open(os.path.join(SHELL, rel['version'], 'SHELL.json')))
-V, SHA = rel['version'], '0' * 40
+# drift checker on synthetic rooms. The fixtures (test/fixtures/shell_drift, shell/csp.md) are written against the
+# immutable v1.2.6 folder, so they stay pinned to it when a newer release (v1.2.7+) is cut.
+FIXTURE_SHELL = 'v1.2.6'
+ok(os.path.isfile(os.path.join(SHELL, rel['version'], 'SHELL.json')), 'current release %s has a shell/ folder' % rel['version'])
+m = json.load(open(os.path.join(SHELL, FIXTURE_SHELL, 'SHELL.json')))
+V, SHA = FIXTURE_SHELL, '0' * 40
 URL = 'https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@%s/shell/%s/factory.js' % (SHA, V)
 INTEG = m['files']['factory.js']['integrity']
 FB = '<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>'
@@ -101,7 +104,7 @@ with tempfile.TemporaryDirectory() as t:
     r = run(room(t, 'floating', '<script src="https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@main/shell/%s/factory.js"></script>' % V, {'base': V}))
     ok(r['status'] == 'DRIFT', '@main (not a full SHA) = DRIFT')
 
-    shell_bytes = b(os.path.join(ROOT, 'factory', 'factory.js'))
+    shell_bytes = b(os.path.join(SHELL, V, 'factory.js'))
     forked = shell_bytes + b'// room fork\n'
     fsha = hashlib.sha256(forked).hexdigest()
     r = run(room(t, 'forkok', '<script src="factory.js?v=1"></script>',
