@@ -162,8 +162,62 @@ ok(ar['status'] == 'archived' and ar['stewardOnly'] is True and TS.read_only('ar
 ok(TS.apply(qt, [], NOW, W)['status'] == 'archived', 'quiet with no counted posts ever -> archived')
 ok(TS.apply(act, [post('a', 89)], NOW, W)['status'] == 'quiet', 'a post 89 days ago keeps it out of archive')
 ok(TS.robots('archived', hub_noindex=False) == 'noindex,nofollow' and not TS.sitemap_eligible('archived', hub_noindex=False), 'archived: noindex, out of the sitemap')
-re_ = TS.apply(atopic('archived', activatedAt=act['activatedAt'], stewardOnly=True), busy, NOW, W)
-ok(re_['status'] == 'active' and re_['stewardOnly'] is False and re_['activatedAt'] == NOW, 'archived auto-reopens on the active rule with its existing approval (new activatedAt)')
+# ---- rested topics need a fresh approval; quiet unchanged (owner decision 2026-11-04) ----
+OLD_APPR_AT = TS.iso(now - timedelta(days=200))
+ARCH_AT = TS.iso(now - timedelta(days=30))
+def rested(**kw):
+    return atopic('archived', **dict({'activatedAt': act['activatedAt'], 'stewardOnly': True, 'approvedAt': OLD_APPR_AT, 'archivedAt': ARCH_AT}, **kw))
+qo = TS.apply(dict(qt, approvedAt=OLD_APPR_AT), busy, NOW, W)
+ok(qo['status'] == 'active' and 'archivedAt' not in qo, 'quiet + bar met + old approval -> active (existing approval, no archivedAt)')
+re_ = TS.apply(rested(), busy, NOW, W)
+ok(re_['status'] == 'eligible' and re_['archivedAt'] == ARCH_AT and re_['approvedAt'] == OLD_APPR_AT and re_['approvedWave'] == 1,
+   'archived + bar met + old approval -> eligible (old approval kept on the row, archivedAt unchanged)')
+ok(not TS.approved(rested(), W, NOW), 'approved(): an approval given before archivedAt is stale')
+ok(not TS.approved(rested(approvedAt=ARCH_AT), W, NOW), 'approved(): approvedAt equal to archivedAt is not fresh (strictly later only)')
+re2 = TS.apply(re_, busy, NOW, W)
+ok(re2['status'] == 'eligible' and not TS.approved(re_, W, NOW), 'archived -> eligible, then the next run with the same old approval -> still eligible')
+re3 = TS.apply(TS.apply(re2, busy, TS.iso(now + timedelta(days=1)), W), busy, TS.iso(now + timedelta(days=2)), W)
+ok(re3['status'] == 'eligible', 'old approval never sneaks through on later runs from eligible')
+FRESH_AT = TS.iso(now - timedelta(days=1))
+fr = TS.apply(rested(approvedAt=FRESH_AT), busy, NOW, W)
+ok(TS.approved(rested(approvedAt=FRESH_AT), W, NOW) and fr['status'] == 'active' and fr['stewardOnly'] is False,
+   'archived + approval with approvedAt after archivedAt (wave listed) -> active')
+ok(fr['activatedAt'] == NOW and fr['activatedAt'] != act['activatedAt'], 'activatedAt restarts on reopen (new 60-day clock)')
+ok(TS.apply(rested(approvedAt=FRESH_AT), busy, NOW, [])['status'] == 'eligible', 'fresh approval whose wave is not listed -> eligible')
+ok(TS.apply(dict(re_, approvedAt=FRESH_AT), busy, NOW, W)['status'] == 'active', 'eligible (after rest) -> active once a fresh approval arrives')
+ok(TS.apply(dict(fr, status='quiet'), busy, NOW, W)['status'] == 'active', 'after a fresh-approval reopen, later quiet -> active still works on that approval')
+for bad_at, why in (('yesterday', 'not a date'), ('2026-10-05T04:00:00', 'no zone'), ('', 'empty'), (5, 'number'), ([ARCH_AT], 'list')):
+    ok(not TS.approved(rested(archivedAt=bad_at, approvedAt=FRESH_AT), W, NOW)
+       and TS.apply(rested(archivedAt=bad_at, approvedAt=FRESH_AT), busy, NOW, W)['status'] == 'eligible',
+       'archivedAt malformed (%s) -> not approved, fails closed' % why)
+    ok(not TS.approved(dict(rested(archivedAt=bad_at, approvedAt=FRESH_AT), status='quiet'), W, NOW), 'archivedAt malformed (%s) fails closed in any status' % why)
+ok(not TS.approved(rested(archivedAt=TS.iso(now + timedelta(days=1)), approvedAt=FRESH_AT), W, NOW), 'archivedAt in the future -> no approval can be fresh')
+leg = atopic('archived', activatedAt=act['activatedAt'], stewardOnly=True)
+lg = TS.apply(leg, busy, NOW, W)
+ok(not TS.approved(leg, W, NOW) and lg['status'] == 'eligible' and lg['archivedAt'] == NOW and TS.apply(lg, busy, NOW, W)['status'] == 'eligible',
+   'legacy archived row without archivedAt fails closed and gets stamped (old approval stays stale next run)')
+# apply() sets archivedAt on entering archived and leaves it unchanged otherwise
+for st_from, row in (('active', act), ('quiet', qt)):
+    a_ = TS.apply(row, [], NOW, W)
+    ok(a_['status'] == 'archived' and a_['archivedAt'] == NOW and a_['approvedAt'] == row['approvedAt'] and a_['approvedWave'] == row['approvedWave'],
+       'apply(): %s -> archived sets archivedAt = now and keeps the approval fields' % st_from)
+qa = TS.apply(TS.apply(act, [post('a', 40)], NOW, W), [], TS.iso(now + timedelta(days=60)), W)
+ok(qa['status'] == 'archived' and qa['archivedAt'] == TS.iso(now + timedelta(days=60)) and TS.apply(qa, [post('u%d' % (i % 5), i * 0.5 - 61) for i in range(20)], TS.iso(now + timedelta(days=61)), W)['status'] == 'eligible'
+   and TS.apply(dict(qa, approvedAt=TS.iso(now + timedelta(days=60, hours=1))), [post('u%d' % (i % 5), i * 0.5 - 61) for i in range(20)], TS.iso(now + timedelta(days=61)), W)['status'] == 'active',
+   'quiet, then archived, then returns: treated as rested (needs a fresh approval)')
+ok(TS.apply(rested(), [post('a', 1)], NOW, W)['archivedAt'] == ARCH_AT, 'apply(): archived -> archived leaves archivedAt unchanged')
+ok(TS.apply(re_, [], NOW, W).get('archivedAt') == ARCH_AT, 'apply(): eligible (after rest) -> hidden leaves archivedAt unchanged')
+ok(all('archivedAt' not in TS.apply(r0, ps, NOW, W) for r0, ps in ((atopic(), busy), (act, busy), (qt, busy), (act, [post('a', 1), post('b', 10)]), (topic('eligible'), busy))),
+   'apply(): no archivedAt on rows that never rest')
+fa = TS.apply(fr, [], TS.iso(now + timedelta(days=100)), W)
+ok(fa['archivedAt'] == TS.iso(now + timedelta(days=100)) and not TS.approved(fa, W, TS.iso(now + timedelta(days=101))),
+   'resting again moves archivedAt forward: the earlier fresh approval is stale again')
+src_r = rested(); TS.apply(src_r, [], NOW, W)
+ok(src_r == rested(), 'apply() is pure on rested rows too')
+ok(not topic_schema.validate(dict(topic(), archivedAt=None), json.load(open(os.path.join(ROOT, 'topics', 'schema.json'))))
+   and not topic_schema.validate(dict(topic(), archivedAt=ARCH_AT), json.load(open(os.path.join(ROOT, 'topics', 'schema.json'))))
+   and topic_schema.validate(dict(topic(), archivedAt='later'), json.load(open(os.path.join(ROOT, 'topics', 'schema.json')))),
+   'schema: archivedAt is an optional nullable date-time')
 ok(TS.apply(topic('archived', activatedAt=act['activatedAt'], stewardOnly=True), busy, NOW, W)['status'] == 'eligible', 'archived without approval reopens only as eligible')
 ok(TS.apply(atopic('archived', stewardOnly=True), [post('a', 1)], NOW, W)['status'] == 'archived', 'archived stays archived below the active rule')
 ok(TS.apply(atopic('hold', stewardOnly=True), busy, NOW, W)['status'] == 'hold', 'hold is manual: the rule never changes it')
@@ -260,16 +314,22 @@ ok(not os.path.exists(os.path.join(ROOT, 'hub', 'site', '_redirects')) and '"red
 
 # ---- activity copy matches the quiet rule (Key 2 follow-up) ----
 QUIET = 'A topic with fewer than 3 counted posts in 30 days goes quiet: it stays open, leaves search, and returns once it clears the bar again.'
+REST = 'One that goes 90 days without a counted post rests: it stays readable, and when people return it goes back into search only after a fresh approval.'
 for f in ('about.html', os.path.join('t', 'index.html')):
     h = open(os.path.join(ROOT, 'hub', 'site', f), encoding='utf-8').read()
-    ok(QUIET in h and 'rests: it stays readable, leaves search' not in h and 'One that goes 90 days without a counted post rests: it stays readable and reopens on its own' in h,
-       'copy (%s): quiet leaves search; 90-day rest line no longer implies quiet topics stay in search' % f)
+    ok(QUIET in h and 'rests: it stays readable, leaves search' not in h and REST in h and 'reopens on its own' not in h,
+       'copy (%s): quiet leaves search; rested topics return to search only after a fresh approval' % f)
 GATE = 'until real conversation is happening (20 or more posts from at least 5 different people, all within 14 days) and it is approved for listing.'
 for f in ('about.html', os.path.join('t', 'index.html')):
     h = open(os.path.join(ROOT, 'hub', 'site', f), encoding='utf-8').read()
     ok(GATE in h and 'until real conversation is happening: 20 or more' not in h, 'copy (%s): search needs the activity bar and approval for listing' % f)
 tt = open(os.path.join(ROOT, 'hub', 'src', 'topic-template.html'), encoding='utf-8').read()
 ok('It can show up in search once 20 or more posts' in tt and 'It shows up in search once' not in tt, 'copy (topic template): meeting the bar no longer promises search (approval gate)')
+ok('It is out of search for now and can come back once people are posting again and it is approved for listing again.' in tt and 'reopens on its own' not in tt,
+   'copy (topic template): a resting topic comes back only once approved for listing again')
+ok(not any('reopens on its own' in open(os.path.join(dp, fn), encoding='utf-8', errors='replace').read()
+           for base in ('hub', 'topics') for dp, _, fns in os.walk(os.path.join(ROOT, base)) for fn in fns if fn.endswith(('.html', '.md', '.json'))),
+   'copy: no "reopens on its own" left in hub/ or topics/')
 ok(not re.search(r'stays (indexed|in search|listed)', open(os.path.join(ROOT, 'hub', 'src', 'templates', 'topics.html'), encoding='utf-8').read() + tt),
    'copy: nothing says a quiet topic stays in search')
 

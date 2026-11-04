@@ -21,9 +21,17 @@ the list (or a row losing its record) fails closed: nothing in that wave can be 
                         open to read and post, badge "Quiet lately. New posts welcome."
   quiet    -> active    meets the active rule again; re-gated by the topic's EXISTING approval (no new wave approval)
   active/quiet -> archived   0 counted posts in 90 days (read-only, noindex, out of the sitemap; nothing is deleted)
-  archived -> active    meets the active rule again, same existing approval (auto-reopen)
+  archived -> active    meets the active rule again AND has a FRESH wave approval: approvedAt strictly later than
+                        the row's archivedAt (stamped by apply() on entry into archived; nothing else is cleared)
+  archived -> eligible  meets the active rule again on the old (pre-archive) approval or none: waits for a fresh
+                        wave approval. A row that carries archivedAt keeps needing that fresh approval on every later
+                        run (eligible -> active too), so a stale approval never sneaks through one run later.
   no valid approval     an active topic drops to eligible; a quiet or archived topic that meets the active rule goes
                         to eligible, not active. Nothing is indexed without a valid approval.
+
+Quiet vs rested (owner decision, 2026-11-04): a quiet topic returns on its EXISTING approval; a rested (archived) topic
+needs a fresh wave approval given after it was archived. Quiet rows never get archivedAt. A topic that went quiet and
+then archived is a rested topic. A malformed archivedAt, or an archived row without one (legacy), fails closed.
   hold     -> hold      manual only (never rendered, never changed by this rule)
 
 Only `active` is indexable and sitemap-eligible, and only when the hub itself is not under the hub-wide noindex (lifted
@@ -32,6 +40,8 @@ noindex,nofollow.
 
 A doorway domain redirects 302 to the topic until the topic has been active for 60 days since activatedAt, then 301.
 activatedAt restarts on every (re)entry into active, so a quiet or archived topic that reopens starts a new 60-day clock.
+archivedAt is set on every entry into archived (a later re-archive moves it forward, so an approval from before the new
+rest is stale again) and is otherwise left as it is.
 """
 from datetime import datetime, timedelta, timezone
 
@@ -98,7 +108,8 @@ def meets_active(stats):
 
 
 def approved(topic, approved_waves, now):
-    """True when the row's approval record is complete and its wave is on the approved wave list."""
+    """True when the row's approval record is complete, its wave is on the approved wave list and, for a row that has
+    rested (archivedAt set, or status archived), approvedAt is strictly later than archivedAt."""
     if topic.get('approvalPrereq') is not None:  # an open prerequisite (e.g. trademark-check) blocks approval outright
         return False
     wave, by, at = (topic.get(k) for k in APPROVAL_FIELDS)
@@ -111,7 +122,18 @@ def approved(topic, approved_waves, now):
         at = parse_ts(at)
     except (TypeError, ValueError):
         return False
-    return at is not None and at <= parse_ts(now)
+    if at is None or at > parse_ts(now):
+        return False
+    # Rested topics need a fresh approval: once a row has been archived, only an approval given strictly after
+    # archivedAt counts. A malformed archivedAt, or an archived row that lacks one, fails closed.
+    if topic.get('archivedAt') is not None or topic.get('status') == 'archived':
+        try:
+            rested = parse_ts(topic.get('archivedAt'))
+        except (TypeError, ValueError):
+            return False
+        if rested is None or at <= rested:
+            return False
+    return True
 
 
 def next_status(status, stats, now, is_approved=False, last_counted=None):
@@ -147,7 +169,7 @@ def next_status(status, stats, now, is_approved=False, last_counted=None):
 
 
 def apply(topic, posts, now, approved_waves=()):
-    """Return a NEW topic row (input untouched) with fresh stats, status, activatedAt and stewardOnly."""
+    """Return a NEW topic row (input untouched) with fresh stats, status, activatedAt, archivedAt and stewardOnly."""
     stats = counts(posts, now)
     out = dict(topic)
     old = topic['status']
@@ -157,6 +179,10 @@ def apply(topic, posts, now, approved_waves=()):
     out['status'] = new
     if new == 'active' and old != 'active':
         out['activatedAt'] = iso(parse_ts(now))  # a (re)opening starts a new 60-day clock
+    if new == 'archived' and old != 'archived':
+        out['archivedAt'] = iso(parse_ts(now))  # rest starts: only an approval given after this counts again
+    elif old == 'archived' and topic.get('archivedAt') is None:
+        out['archivedAt'] = iso(parse_ts(now))  # legacy archived row with no stamp: stamp it so the old approval stays stale
     out['stewardOnly'] = new in ('archived', 'hold')
     return out
 
