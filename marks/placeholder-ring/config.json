@@ -1,7 +1,6 @@
 {
   "family": "placeholder-ring",
   "placeholder": true,
-  "note": "Temporary art. The mark family vote is pending; replace with ./swap-marks.sh <family-dir>.",
   "sprite": "/assets/whomark/sprite.svg",
   "accentVar": "--wm-accent",
   "accentDefault": "#8a5cf6",

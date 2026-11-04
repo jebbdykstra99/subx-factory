@@ -191,6 +191,11 @@ for t in LIVE_TOPICS:
        '%s: legal-profile lines match %s' % (pg, t.get('legalProfile')))
     ok('<title>%s · %s</title>' % (BR.html_attr(t['title']), brand['name']) in h and BR.html_attr(t['description']) in h, '%s: title and description from the seed' % pg)
     ok(pg in site['shell']['noShell'], '%s is listed in shell.noShell' % pg)
+    wh = re.search(r'<p class="topic-where">([^<]*)', h)
+    ok(wh is not None and wh.group(1).startswith('A %s %s ' % (brand['name'], brand['topicNoun']['one'])) and brand['roomNoun']['one'] not in wh.group(1).lower(),
+       '%s: header calls it a %s, not a %s' % (pg, brand['topicNoun']['one'], brand['roomNoun']['one']))
+    ok(('About this %s' % brand['roomNoun']['one']) not in h, '%s: no "About this %s"' % (pg, brand['roomNoun']['one']))
+    ok(('Browse %s' % brand['roomNoun']['many']) in h, '%s: live-rooms link keeps %s' % (pg, brand['roomNoun']['many']))
 sm = read(os.path.join(SITE, 'sitemap.xml'))
 ok('<urlset' in sm and '<url>' not in sm, 'sitemap.xml lists 0 topics while the hub-wide noindex is on')
 ok(all('<meta name="robots" content="noindex,nofollow">' in read(os.path.join(SITE, f)) for f in pages), 'hub-wide noindex,nofollow on every page')
@@ -341,6 +346,8 @@ with tempfile.TemporaryDirectory() as t:
     ok('<h1>Tide &lt;Pools&gt;</h1>' in th and '&#123;&#123;brand.name&#125;&#125;' in th and '{{' not in th and '<!--' not in th, 'topic template: escaped, no token expansion, no leftovers or comments')
     ok(HEAD_RE.match(th) is not None and 'quillnest.example/z/tide-pools/' in th and 'Quillnest Labs, Inc.' in th and 'href="/z/"' in th, 'topic template: strict CSP first, topic URL under the renamed prefix, footer')
     ok('Not live yet.' in th and 'All about pools.' in th and 'Be kind.' in th and 'community guidelines' not in th and '21+ only.' in th, 'topic template: hidden + closed = not-live state; optional copy shows when present')
+    ok('A Quillnest theme ·' in th and '<h2>About this theme</h2>' in th and 'A Quillnest table' not in th and 'About this table' not in th and 'Browse tables' in th,
+       'topic template: header and About heading use topicNoun (theme); the live-rooms link keeps roomNoun (tables)')
     rr.cfg['topics'] = dict(rr.cfg.get('topics', {}), open=True, showDoorways=True)
     th = rr.render_topic(dict(full, legacyDomain='tidepoolchat.example'))
     ok('just getting started' in th and 'Not live yet.' not in th and 'Also reachable at tidepoolchat.example.' in th, 'topic template: open hidden state and gated doorway line')

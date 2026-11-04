@@ -9,7 +9,7 @@
     <header class="topic-header">
       <h1>{{topic.name}}</h1>
       <p class="topic-desc">{{topic.description}}</p>
-      <p class="topic-where">A {{brand.name}} {{brand.roomNoun.one}} · <code>{{brand.primaryDomain}}{{brand.topicPathPrefix}}{{topic.slug}}/</code></p>
+      <p class="topic-where">A {{brand.name}} {{brand.topicNoun.one}} · <code>{{brand.primaryDomain}}{{brand.topicPathPrefix}}{{topic.slug}}/</code></p>
 <!--if:doorway-->
       <p class="topic-doorway">Also reachable at {{topic.legacyDomain}}.</p>
 <!--/if:doorway-->
@@ -42,7 +42,7 @@
 
 <!--if:about-->
     <section class="topic-about">
-      <h2>About this {{brand.roomNoun.one}}</h2>
+      <h2>About this {{brand.topicNoun.one}}</h2>
       <p>{{topic.longDescription}}</p>
 <!--if:goodPosts-->
       <p><strong>Good posts here:</strong> {{topic.goodPosts}}</p>
