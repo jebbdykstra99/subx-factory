@@ -44,3 +44,7 @@ the public read-only room data; then re-render. It writes nothing else.
     cd hub && firebase hosting:channel:deploy hub-shell --expires 7d --project subx-skins
 
 The preview banner and `noindex,nofollow` stay on every page; topics are not seeded.
+
+### WHOMARK spec §7 deviation
+
+The hub is light-only, so it ships no dark (`color-dark`) or mono files, and it ships 9 of the 36 final-v4.1 SVGs (only those referenced: `whomark-{human,ai,hybrid}-{s14,s16,lg}-color.svg`) plus the referenced og/corner PNGs.

@@ -151,7 +151,16 @@ hl = json.load(open(os.path.join(SITE, 'highlights.json')))
 ok(all(it.get('tier') in TIERS for it in hl.get('items', [])), 'every highlight has a known tier (so every card shows a mark)')
 
 # ---- banned names: PEEKAI (any case), VokaDots, private details ----
-BANNED = re.compile(r'peek\s*-?\s*ai|voka\s*-?\s*dots|denver', re.I)
+BANNED = re.compile(r'peek\s*-?\s*ai|voka\s*-?\s*dots', re.I)
+# Denver is a legitimate topic slug (/t/denver/); only a Denver street
+# address (registered-agent form: number + street, Denver, CO / 802xx) is private.
+DENVER_ADDR = re.compile(
+    r'\b\d{1,6}\s+(?:[NSEW]\.?\s+)?[A-Za-z0-9.\' ]{1,40}?\b'
+    r'(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Way|Pl|Place|Ct|Court|Ln|Lane|Pkwy|Parkway)\b'
+    r'[^\n]{0,60}?\bDenver\b,?\s*(?:CO|Colo\.?|Colorado)\b(?:\s*802\d\d)?'
+    r'|\bDenver,?\s*(?:CO|Colorado)\s+802\d\d\b', re.I)
+def banned(t):
+    return BANNED.search(t) or DENVER_ADDR.search(t)
 hits = []
 for p in list(walk(os.path.join(ROOT, 'hub'))) + [os.path.join(SRC, 'topic-template.html')]:
     b = read(p, 'rb')
@@ -160,10 +169,12 @@ for p in list(walk(os.path.join(ROOT, 'hub'))) + [os.path.join(SRC, 'topic-templ
     except UnicodeDecodeError:
         t = b.decode('latin-1')
     t2 = t.replace('jebbdykstra99/subx-factory', '')
-    if BANNED.search(t) or re.search(r'jebb|dykstra', t2, re.I):
+    if banned(t) or re.search(r'jebb|dykstra', t2, re.I):
         hits.append(os.path.relpath(p, ROOT))
-ok(not hits, 'no PEEKAI / VokaDots / private name or city under hub/ or the topic template (%s)' % hits)
+ok(not hits, 'no PEEKAI / VokaDots / private name or Denver street address under hub/ or the topic template (%s)' % hits)
 # the check itself catches them
+ok(not banned('/t/denver/') and not banned('Denver') and not banned('denver'), 'bare "denver" slug/word passes')
+ok(banned('1234 Example St, Suite 100, Denver, CO 80202') and banned('55 N. Main Street Denver Colorado') and banned('Denver, CO 80203'), 'Denver street-address pattern is blocked')
 ok(BANNED.search('PeekAI') and BANNED.search('vokadots') and BANNED.search('PEEKAI'), 'banned-name grep matches any case')
 
 if fails:

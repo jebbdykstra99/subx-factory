@@ -226,7 +226,7 @@ ok(topics_seed.check(bad), 'seed check refuses a reserved slug')
 bad = json.loads(json.dumps(seed)); by2 = {t['slug']: t for t in bad['topics']}; by2['grief']['status'] = 'hidden'
 ok(topics_seed.check(bad), 'seed check refuses grief out of HOLD')
 txt = json.dumps(seed).lower()
-ok(not re.search(r'jebb|denver|\b310[-. ]|peekai|vokadots|dmca-1084331|[\u2013\u2014]', txt), 'seed: no private names, contacts or dashes')
+ok(not re.search(r'jebb|\bdenver,?\s*(?:co|colorado)\s+802\d\d|\d+\s+\w[\w. ]*\b(?:st|street|ave|avenue|blvd)\b[^\n]{0,60}denver|\b310[-. ]|peekai|vokadots|dmca-1084331|[\u2013\u2014]', txt), 'seed: no private names, contacts or dashes')
 
 def run(args, env=None):
     e = dict(os.environ); e.pop(topics_seed.APPLY_ENV, None); e.update(env or {})
