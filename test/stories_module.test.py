@@ -54,10 +54,12 @@ ok('.hub-story' in css and '.hub-compose' in css, 'hub.css: hub-story / hub-comp
 ok(re.search(r"/stories\.json\?v=[0-9a-f]+", js) is not None, 'hub.js: stories.json is cache-busted')
 ok("'compose=' + encodeURIComponent(text)" in js and "roomHref(r.domain, 'story')" in js, 'hub.js: hand-off goes to https://<room>/#compose= and #story')
 ok(not re.search(r"firestore|firebase|method:\s*'POST'|sendBeacon|XMLHttpRequest|sessionStorage|document\.cookie|indexedDB", js, re.I), 'hub.js: no writes, no Firebase, no cookies or session storage')
-# 2026-11-04 (hub Following): the ONE browser-storage use is the follows key, read and written only through HUB_STORE
-ls = re.findall(r"localStorage[^;]*", js)
-ok(len(ls) == 2 and all(re.fullmatch(r"localStorage\.(getItem|setItem)\(HUB_STORE[^;]*", x) for x in ls) and "var HUB_STORE = 'hub.follows.v1';" in js,
-   'hub.js: localStorage only for hub.follows.v1 (getItem + setItem), nothing else stored')
+# 2026-11-04 (hub Following): the ONE browser-storage use is the follows key (test/hub_storage_guard.py, which also
+# refuses bracket access, built names, and other indirect routes to storage)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import hub_storage_guard  # noqa: E402
+probs = hub_storage_guard.problems(js)
+ok(not probs, 'hub.js: storage only via window.localStorage get/setItem(HUB_STORE = hub.follows.v1), no indirect access (%s)' % probs)
 csp = re.search(r"connect-src ([^;\"]+)", read('hub', 'firebase.json') if os.path.exists(os.path.join(ROOT, 'hub', 'firebase.json')) else idx)
 ok(csp is None or csp.group(1).strip() == "'self'", "hub CSP connect-src stays 'self'")
 vis = re.sub(r'<[^>]+>', ' ', re.sub(r'<(script|style)\b.*?</\1>', '', idx, flags=re.S))
