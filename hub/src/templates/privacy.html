@@ -6,12 +6,12 @@
 <body class="legal-page">
 
   <article class="legal-doc">
-    <p class="legal-kicker">Effective November 4, 2026. The hub is read-only: it does not take accounts, posts, or messages, and does not send the visit beacon. Highlights link to the original post in its room, where that room’s own terms apply.</p>
+    <p class="legal-kicker">Effective November 4, 2026. The hub takes sign-in but no posts: you can sign in with the same account the rooms use, and posts, replies, stories, and messages stay in each room. The hub does not send the visit beacon. Highlights link to the original post in its room, where that room’s own terms apply.</p>
     <p class="legal-kicker">Governing law: State of California, United States of America</p>
     <h1>Privacy Policy</h1>
     <p>This Privacy Policy explains how {{brand.legalEntity}} (“Operator,” “we,” “us”) collects, uses, and shares information when you use <strong>{{brand.name}}</strong>, the hub site for the {{brand.name}} family of niche community rooms (the “Service”).</p>
     <p>The email listed for notices is Operator’s designated legal contact channel.</p>
-    <p><em>{{brand.name}} is a read-only index of public highlights from {{brand.name}} rooms. Each room is a separate Service with its own posted rules. Not affiliated with any person, brand, or organization a room discusses.</em></p>
+    <p><em>{{brand.name}} is an index of public highlights from {{brand.name}} rooms, where you can sign in with your {{brand.name}} account. Each room is a separate Service with its own posted rules. Not affiliated with any person, brand, or organization a room discusses.</em></p>
     <p>International users: the Service is operated in the United States. If you use it from another country, your information will be processed in the United States (and other locations where our processors operate), which may have different data-protection rules than your home country.</p>
 
     <h2>1. Who we are</h2>
@@ -22,8 +22,9 @@
 
     <h2>2. Information we collect</h2>
     <ul>
-      <li><strong>Account data</strong> when you register: email address, password (stored by our auth provider as hashes), display name / handle, and a site identifier (<code>siteId</code>).</li>
+      <li><strong>Account data</strong> when you register: email address, password (stored by our auth provider as hashes), display name / handle, and a site identifier (<code>siteId</code>). Your public handle is something you choose. We do not make it from your email address, and we do not show your email address to other users.</li>
       <li><strong>Sign-in providers</strong>: if Google (or another provider) is enabled, we receive identifiers and profile fields the provider shares with us when you authorize sign-in.</li>
+      <li><strong>Hub accounts</strong>: signing in on the hub uses the same {{brand.name}} account as the rooms. When you sign in on the hub, we store your account ID (<code>uid</code>), your display name, the hub’s site identifier (<code>siteId</code>), and the basic profile fields your sign-in provider shares with us (for Google: your name, email address, and profile photo link). Follows and direct messages you make with that account are stored with your account, the same way as in the rooms. The hub does not take posts, replies, or stories.</li>
       <li><strong>Content you submit</strong>: posts, replies, images, polls, direct messages (where enabled), reports, and similar UGC.</li>
       <li><strong>Usage / device data</strong>: approximate logs such as IP address, browser type, referring URL, timestamps, and App Check / abuse-prevention signals needed to secure Firebase Auth, Firestore, and Storage. Request logs kept in {{brand.legalEntity}}'s own Google Cloud project (such as those for the visit beacon and link previews) are deleted automatically after about 30 days. The pages are hosted on Firebase Hosting (Google), and sign-in, database and file storage run on Google Firebase; those providers keep their own server logs, including IP addresses, under their own retention policies, which {{brand.legalEntity}} does not control.</li>
       <li><strong>Automated-traffic signals</strong>: {{brand.legalEntity}}'s visit records do not store your browser's user agent, brand headers, language settings, or automation (headless or webdriver) flags. Google Cloud's standard request logs for the visit beacon record the IP address, browser user agent and referring page along with the visitor ID, and are kept for about 30 days. They may be reviewed to detect abuse or automated traffic.</li>
@@ -50,13 +51,13 @@
     </ul>
 
     <h2>5. Retention</h2>
-    <p>We retain account and content data while your account is active and as needed for legitimate operations, disputes, and legal obligations. You may delete many posts in-product; residual copies may remain in backups for a limited period.</p>
+    <p>We retain account and content data while your account is active and as needed for legitimate operations, disputes, and legal obligations. You may delete many posts in-product; residual copies may remain in backups for a limited period. Hub account data, including follows and messages made with a hub account, is kept the same way as room account data. The hub does not send the visit beacon, so it creates no visitor ID; where a room sends it, the 25-month visitor-ID limit above applies.</p>
 
     <h2>6. Security</h2>
     <p>We use industry-standard measures (encrypted transport, access controls, App Check, server rules). No method of transmission or storage is 100% secure.</p>
 
     <h2>7. Children’s privacy</h2>
-    <p>The Service is not directed to anyone under 18. We do not knowingly collect personal information from children below that age. If you believe we have, contact us and we will delete it.</p>
+    <p>You must be at least 18 to have an account on {{brand.name}}. The Service is not directed to children, and we do not knowingly collect personal information from anyone under 18, including children under 13. If we learn that we have, we close the account and delete the information, except what the law requires us to keep. If you believe we have information about someone under 18, contact us at <a data-takedown href="mailto:{{brand.takedownEmail}}">{{brand.takedownEmail}}</a>.</p>
 
     <h2>8. Your privacy rights</h2>
     <p><strong>Global / U.S. state rights (including California):</strong> Subject to applicable law, you may request access to, correction of, or deletion of personal information we hold about you, or appeal a denial. Email <a data-takedown href="mailto:{{brand.takedownEmail}}">{{brand.takedownEmail}}</a> with the subject line “Privacy request: {{brand.name}}.” We will verify your request and respond as required. You will not be discriminated against for exercising rights under CCPA/CPRA.</p>

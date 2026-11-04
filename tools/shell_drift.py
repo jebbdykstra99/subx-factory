@@ -32,7 +32,8 @@ layer. Besides <script>:
   - CSP rule: every HTML page needs a strict CSP (meta or hosting header; see csp_weak and shell/csp.md). Rooms on
     tools/csp_legacy_rooms.json get WARN until their migration PR; elsewhere it is DRIFT (cspRequired defaults true)
     A meta CSP counts only as the first element in <head> with an exact http-equiv and no comma (D1-D3); subx-factory
-    sources must be the page's own pin folder (C1); reCAPTCHA only exact files with shell.recaptcha (C2); a hosting
+    sources must be the page's own pin folder (C1); reCAPTCHA only exact files with shell.recaptcha (C2); Google sign-in's two gapi sources only with
+    shell.googleSignIn (C2g); a hosting
     redirect/rewrite to another origin is DRIFT (C3); worker-src/child-src must not be open
   - a pin counts only if it will run: classic type (empty/JS; type=module is DRIFT since currentScript is null), no
     nomodule, no query/fragment on the URL, not inside <template>, <noscript>, raw-text or foreign (svg/math, so
@@ -485,6 +486,9 @@ EMOJI_SRC_RE = re.compile(r'^https://cdn\.jsdelivr\.net/npm/emoji-picker-element
 # folder on gstatic: the rest of /recaptcha/ on both hosts serves a public AngularJS gadget (a CSP bypass)
 RECAPTCHA_SRCS = ('https://www.google.com/recaptcha/api.js', 'https://www.google.com/recaptcha/enterprise.js',
                   'https://www.gstatic.com/recaptcha/releases/')
+# Google sign-in helper (Firebase Auth signInWithPopup / signInWithRedirect load gapi), only with shell.googleSignIn:
+# true. The exact loader file and the abc-static module folder it loads gapi_iframes from; nothing else on the host
+GOOGLE_SIGNIN_SRCS = ('https://apis.google.com/js/api.js', 'https://apis.google.com/_/scs/abc-static/')
 SUBX_SRC_RE = re.compile(r'^(?:https?://)?cdn\.jsdelivr\.net/gh/jebbdykstra99/subx-factory', re.I)
 CSP_WEAK_KEYWORDS = ("'unsafe-inline'", "'unsafe-eval'", "'unsafe-hashes'", "'wasm-unsafe-eval'", "'strict-dynamic'",
                      "'unsafe-allow-redirects'", "'inline-speculation-rules'")
@@ -522,11 +526,12 @@ def pin_dirs_of(pg):
     return out
 
 
-def csp_weak(policy, room_hashes, has_pin, pin_dirs=(), recaptcha=False):
+def csp_weak(policy, room_hashes, has_pin, pin_dirs=(), recaptcha=False, google_signin=False):
     """Why one CSP policy is not strict ([] = strict). Strict: script-src (or default-src) lists only 'self', 'none',
     hashes of the room's redirect-stub / 404.html inline scripts, the page's own pin folder (pin_dirs: its 40-char
     commit SHA and exact /shell/v<base>/ path, C1; no other subx-factory source), and exact-version Firebase /
-    emoji-picker-element paths (reCAPTCHA's exact files only with shell.recaptcha, C2); no unsafe-*, nonce,
+    emoji-picker-element paths (reCAPTCHA's exact files only with shell.recaptcha, C2; Google sign-in's exact gapi
+    sources only with shell.googleSignIn, C2g); no unsafe-*, nonce,
     strict-dynamic, wildcard or scheme source; worker-src / child-src not open; object-src 'none'; base-uri 'none'."""
     why = []
     srcs = policy.get('script-src', policy.get('default-src'))
@@ -561,6 +566,10 @@ def csp_weak(policy, room_hashes, has_pin, pin_dirs=(), recaptcha=False):
                 if not recaptcha:
                     why.append('%s source %s is a reCAPTCHA source: allowed only when the room sets shell.recaptcha: '
                                'true' % (dname, x))
+            elif lx in GOOGLE_SIGNIN_SRCS:
+                if not google_signin:
+                    why.append('%s source %s is a Google sign-in source: allowed only when the site sets '
+                               'shell.googleSignIn: true' % (dname, x))
             elif 'jsdelivr' in lx and 'subx-factory' in lx or lx.rstrip('/') in ('https://cdn.jsdelivr.net', 'cdn.jsdelivr.net'):
                 why.append('%s source %s is not the full pinned path with the 40-char commit SHA (bare host, repo path, '
                            'tag or branch)' % (dname, x[:80]))
@@ -1238,6 +1247,9 @@ def check(room, mans, legacy=None):
     if sh.get('recaptcha') is not None and not isinstance(sh.get('recaptcha'), bool):
         f.append('CSP rule: shell.recaptcha must be true or false')
     recaptcha = sh.get('recaptcha') is True
+    if sh.get('googleSignIn') is not None and not isinstance(sh.get('googleSignIn'), bool):
+        f.append('CSP rule: shell.googleSignIn must be true or false')
+    google_signin = sh.get('googleSignIn') is True
     f.extend(hosting_redirects(room))  # C3
     fork = bool(sh.get('fork'))
     fork_file = posixpath.normpath(sh.get('file', 'factory.js')) if fork else None
@@ -1764,7 +1776,7 @@ def check(room, mans, legacy=None):
             continue
         good, reasons = [], []
         for pol, bad in pols:
-            why = [bad] if bad else csp_weak(pol, room_hashes, page in pin_pages, dirs, recaptcha)
+            why = [bad] if bad else csp_weak(pol, room_hashes, page in pin_pages, dirs, recaptcha, google_signin)
             (reasons.extend(why) if why else good.append(pol))
         if good:
             strict_pols[page] = good

@@ -1102,6 +1102,15 @@ with tempfile.TemporaryDirectory() as t:
     c_ok('C2: /recaptcha/ folder even with the opt-in', c_room('c2d', '<html><head>' + _m('https://www.google.com/recaptcha/') + _PIN + '</head></html>', {'recaptcha': True}), 'DRIFT', 'not allowed in a strict CSP')
     c_ok('C2: gstatic /recaptcha/about/ with the opt-in', c_room('c2e', '<html><head>' + _m('https://www.gstatic.com/recaptcha/about/js/main.min.js') + _PIN + '</head></html>', {'recaptcha': True}), 'DRIFT', 'not allowed in a strict CSP')
     c_ok('C2: shell.recaptcha must be a boolean', c_room('c2f', '<html><head>' + _m() + _PIN + '</head></html>', {'recaptcha': 'yes'}), 'DRIFT', 'shell.recaptcha must be true or false')
+    GS = 'https://apis.google.com/js/api.js https://apis.google.com/_/scs/abc-static/'
+    c_ok('C2g: exact Google sign-in sources with shell.googleSignIn: true', c_room('c2g1', '<html><head>' + _m(GS) + _PIN + '</head></html>', {'googleSignIn': True}), 'OK')
+    c_ok('C2g: Google sign-in sources without the opt-in', c_room('c2g2', '<html><head>' + _m(GS) + _PIN + '</head></html>'), 'DRIFT', 'shell.googleSignIn: true')
+    c_ok('C2g: bare apis.google.com even with the opt-in', c_room('c2g3', '<html><head>' + _m('https://apis.google.com') + _PIN + '</head></html>', {'googleSignIn': True}), 'DRIFT', 'not allowed in a strict CSP')
+    c_ok('C2g: apis.google.com/js/ folder even with the opt-in', c_room('c2g4', '<html><head>' + _m('https://apis.google.com/js/') + _PIN + '</head></html>', {'googleSignIn': True}), 'DRIFT', 'not allowed in a strict CSP')
+    c_ok('C2g: apis.google.com/_/scs/ (wider than abc-static) with the opt-in', c_room('c2g5', '<html><head>' + _m('https://apis.google.com/_/scs/') + _PIN + '</head></html>', {'googleSignIn': True}), 'DRIFT', 'not allowed in a strict CSP')
+    c_ok('C2g: shell.googleSignIn must be a boolean', c_room('c2g6', '<html><head>' + _m() + _PIN + '</head></html>', {'googleSignIn': 'yes'}), 'DRIFT', 'shell.googleSignIn must be true or false')
+    ok(SD.csp_weak(SD.csp_policies("script-src 'self' https://www.google.com/recaptcha/api.js; object-src 'none'; base-uri 'none'")[0], set(), False, (), True) == [],
+       'C2g: csp_weak stays backward compatible (positional recaptcha, no google_signin argument)')
     OUT = 'to an outside origin'
     c_ok('C3: _redirects to an outside origin', c_room('c3a', '<html><head>' + _m() + _PIN + '</head></html>', files={'_redirects': '/go.js https://cdn.jsdelivr.net/npm/x@1/x.js 302\n'}), 'DRIFT', OUT)
     c_ok('C3: _redirects local SPA fallback = OK', c_room('c3b', '<html><head>' + _m() + _PIN + '</head></html>', files={'_redirects': '# c\n/*    /index.html   200\n'}), 'OK')

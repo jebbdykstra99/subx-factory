@@ -3,7 +3,7 @@
   "domain": "subx.it",
   "name": "SubX",
   "tagline": "Small rooms for big interests.",
-  "accountsOpen": false,
+  "accountsOpen": true,
   "pixel": false,
   "whoMark": true,
   "minAge": 18,
@@ -13,9 +13,9 @@
     "enabled": false
   },
   "earlyWelcome": false,
-  "composePlaceholder": "The hub is read-only. Post in a room.",
-  "emptyState": "The hub is read-only. Pick a room to read or post.",
-  "trustBlurb": "Read-only hub. Highlights link back to the original post in its room.",
+  "composePlaceholder": "Posts live in the rooms. Post in a room.",
+  "emptyState": "Posts live in the rooms. Pick a room to read or post.",
+  "trustBlurb": "Sign in here, post in the rooms. Highlights link back to the original post in its room.",
   "exploreExplainer": "Every SubX room, one hop away.",
   "theme": {
     "bg": "#f3f1ec",
@@ -164,6 +164,8 @@
     "base": "v1.2.6",
     "fork": true,
     "cspRequired": true,
+    "recaptcha": true,
+    "googleSignIn": true,
     "overrides": {
       "theme": [
         "styles.css",
@@ -192,8 +194,8 @@
       },
       {
         "file": "hub.js",
-        "sha256": "9e635e266f48c9bd6b1b4c7680457b35991a2800a98803d000989f0437e15ba8",
-        "reason": "hub: renders highlights.json + rooms.json (read-only, no auth, no writes)",
+        "sha256": "e5e06dc6428594a3acc80295043a651ce6258f365697db8f123e5b283de2cd88",
+        "reason": "hub: renders highlights.json + rooms.json, and the header Sign in / Join button that opens the shell sign-in (no writes of its own)",
         "noShellOk": true
       },
       {
@@ -267,7 +269,7 @@
     ],
     "file": "shell/v1.2.6/factory.js",
     "sha256": "798184e45cdd243a04c81b065689f7fe1744263314a1a49b487ad1ac199ba48e",
-    "reason": "Self-hosted hub fork of shell/v1.2.6/factory.js: header source line only, new SRI; script-src and connect-src are self only",
+    "reason": "Self-hosted hub fork of shell/v1.2.6/factory.js: header source line only, new SRI; static pages are self only, the shell page adds only the Firebase Auth origins",
     "exception": "E21"
   }
 }

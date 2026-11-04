@@ -1,0 +1,116 @@
+--- rules/firestore.rules.proposed
++++ rules/firestore.rules.hub-signin.proposed
+@@ -11,6 +11,11 @@
+ // or by admin; ONLY admin o774wL9hUVSi19EkDCgLqQomP8i2 can delete/restore; never updated), splits /posts and
+ // /stories read into list + get (denying single-doc get when hidden for non-admin), and adds optional per-user
+ // hide rate-limit keys (lastHideAt 60s gap, hideDay/hideDayCount <= 5/UTC day) on /rateLimits/{uid}.
++// HUB SIGN-IN (2026-11-04, draft, NOT published): amended copy of firestore.rules.proposed.
++// Lets the subx.it hub (siteId 'subx') hold accounts WITHOUT making it a posting room.
++// 'subx' is accepted ONLY for: users/{uid} profile, blocks, following, mutes, follow notifications,
++// and factory DMs (conversations + messages). posts, stories, reports, hides, bookmarks, hidden,
++// memberNests stay factorySite() only, so the hub stays read-only for posts.
+ service cloud.firestore {
+   match /databases/{database}/documents {
+     function signedIn() {
+@@ -39,6 +44,13 @@
+         'behindtheblackwall', 'btbw'
+       ];
+     }
++    // HUB SIGN-IN: the subx.it hub. Accounts, follows and DMs only; never posts or stories.
++    function hubSite(data) {
++      return data.siteId == 'subx';
++    }
++    function memberSite(data) {
++      return factorySite(data) || hubSite(data);
++    }
+     function nestSlugOk(slug) {
+       return slug is string
+         && slug.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
+@@ -328,7 +340,7 @@
+       allow create, update: if signedIn()
+         && request.auth.uid == uid
+         && request.resource.data.keys().hasAll(['siteId'])
+-        && factorySite(request.resource.data)
++        && memberSite(request.resource.data)                       // HUB SIGN-IN
+         && !request.resource.data.keys().hasAny(['email', 'phone', 'phoneNumber'])
+         && profileOk(request.resource.data)                        // PREVIEW-LIFT GUARD
+         && suspendOk(request.resource.data);                       // GPCHAT LIFT R2
+@@ -339,7 +351,7 @@
+           && request.auth.uid == uid
+           && request.resource.data.blockerUid == uid
+           && request.resource.data.targetUid == targetUid
+-          && factorySite(request.resource.data);
++          && memberSite(request.resource.data);                    // HUB SIGN-IN
+         allow delete: if signedIn() && request.auth.uid == uid;
+       }
+       match /following/{targetUid} {
+@@ -349,7 +361,7 @@
+         allow create, update: if emailVerified()
+           && request.auth.uid == uid
+           && request.auth.uid != targetUid
+-          && factorySite(request.resource.data)
++          && memberSite(request.resource.data)                     // HUB SIGN-IN
+           && (!request.resource.data.keys().hasAny(['followerUid']) || request.resource.data.followerUid == uid)
+           && request.resource.data.targetUid == targetUid;
+         allow delete: if signedIn() && request.auth.uid == uid;
+@@ -359,7 +371,7 @@
+         allow create, update: if emailVerified()
+           && request.auth.uid == uid
+           && request.auth.uid != targetUid
+-          && factorySite(request.resource.data)
++          && memberSite(request.resource.data)                     // HUB SIGN-IN
+           && request.resource.data.muterUid == uid
+           && request.resource.data.targetUid == targetUid;
+         allow delete: if signedIn() && request.auth.uid == uid;
+@@ -392,7 +404,8 @@
+           && request.resource.data.toUid == uid
+           && request.resource.data.fromUid == request.auth.uid
+           && request.resource.data.fromUid != uid
+-          && factorySite(request.resource.data)
++          && (factorySite(request.resource.data)
++              || (hubSite(request.resource.data) && request.resource.data.type == 'follow'))  // HUB SIGN-IN: follow alerts only
+           && request.resource.data.type in ['reply', 'like', 'follow', 'mention', 'report', 'report_update']  // NOTIFS-REPORTS 2026-10-22 + A9 report_update
+           && request.resource.data.keys().hasOnly(['toUid', 'fromUid', 'type', 'siteId', 'postId', 'read', 'text', 'createdAt'])  // NOTIFS-REPORTS 2026-10-22
+           && (!request.resource.data.keys().hasAny(['text'])
+@@ -598,16 +611,16 @@
+     match /conversations/{convId} {
+       allow read: if signedIn()
+         && (!exists(/databases/$(database)/documents/conversations/$(convId))
+-            || (factorySite(resource.data)
++            || (memberSite(resource.data)                          // HUB SIGN-IN
+                 && request.auth.uid in resource.data.participants));
+       allow create: if emailVerified()
+-        && factorySite(request.resource.data)
++        && memberSite(request.resource.data)                       // HUB SIGN-IN
+         && notKilled(request.resource.data.siteId)
+         && request.auth.uid in request.resource.data.participants
+         && twoParticipants(request.resource.data)
+         && !blockedEitherWay(request.resource.data.participants[0], request.resource.data.participants[1]);
+       allow update: if emailVerified()
+-        && factorySite(resource.data)
++        && memberSite(resource.data)                               // HUB SIGN-IN
+         && request.auth.uid in resource.data.participants
+         && dmUnreadUpdate()
+         && !blockedEitherWay(resource.data.participants[0], resource.data.participants[1]);
+@@ -622,7 +635,7 @@
+         }
+         allow read: if signedIn()
+           && (!exists(/databases/$(database)/documents/conversations/$(convId))
+-              || (request.auth.uid in conv().participants && factorySite(conv())));
++              || (request.auth.uid in conv().participants && memberSite(conv())));  // HUB SIGN-IN
+         allow create: if emailVerified()
+           && request.resource.data.fromUid == request.auth.uid
+           && authorTypeOk(request.resource.data)                   // GROWTH CONSOLE
+@@ -631,10 +644,10 @@
+           && request.resource.data.text.size() <= 1000
+           && (isAdmin() || spamFree(request.resource.data.text))   // PREVIEW-LIFT GUARD
+           && msgThrottled(request.resource.data.siteId)            // PREVIEW-LIFT GUARD
+-          && factorySite(request.resource.data)
++          && memberSite(request.resource.data)                     // HUB SIGN-IN
+           && notKilled(request.resource.data.siteId)
+           && request.auth.uid in convAfter().participants
+-          && factorySite(convAfter())
++          && memberSite(convAfter())                               // HUB SIGN-IN
+           && request.resource.data.siteId == convAfter().siteId
+           && !blockedEitherWay(convAfter().participants[0], convAfter().participants[1]);
+         allow update, delete: if false;

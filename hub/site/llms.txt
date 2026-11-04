@@ -1,6 +1,6 @@
 # SubX
 
-> SubX is the read-only hub for the SubX family of single-topic community rooms ("Small rooms for big interests."). It lists live rooms and shows short highlights copied from their public posts; every highlight links to the original post in its own room. Search engines may index the hub pages; new and quiet topic pages stay noindex until they are active, and robots.txt allows search and answer agents but disallows AI training crawlers.
+> SubX is the hub for the SubX family of single-topic community rooms ("Small rooms for big interests."). It lists live rooms and shows short highlights copied from their public posts; every highlight links to the original post in its own room. Search engines may index the hub pages; new and quiet topic pages stay noindex until they are active, and robots.txt allows search and answer agents but disallows AI training crawlers.
 
 ## What an agent will find here
 - Highlights: [/highlights.json](/highlights.json). Each item has room, roomName, domain, postId, url (the original post), text (clipped to 280 characters), authorName, authorHandle, tier (provenance label), createdAt, and featured.

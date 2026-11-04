@@ -13,7 +13,7 @@
         "headers": [
           {
             "key": "Content-Security-Policy",
-            "value": "script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'; frame-ancestors 'none'"
+            "value": "script-src 'self' https://www.gstatic.com/firebasejs/10.12.2/ https://www.google.com/recaptcha/api.js https://www.gstatic.com/recaptcha/releases/ https://apis.google.com/js/api.js https://apis.google.com/_/scs/abc-static/; connect-src 'self' https://subx-skins.web.app https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://content-firebaseappcheck.googleapis.com https://www.google.com/recaptcha/; frame-src https://subx-skins.firebaseapp.com https://www.google.com/recaptcha/; object-src 'none'; base-uri 'none'; font-src 'self'; frame-ancestors 'none'"
           },
           {
             "key": "X-Content-Type-Options",
