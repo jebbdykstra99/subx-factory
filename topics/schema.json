@@ -13,6 +13,7 @@
     "status": {"enum": ["hidden", "eligible", "active", "quiet", "archived", "hold"], "description": "eligible = met the active rule, waiting on its wave approval (noindex); only active is indexable"},
     "createdAt": {"type": "string", "format": "date-time"},
     "activatedAt": {"type": ["string", "null"], "format": "date-time", "description": "set when the topic (re)enters active; drives the doorway 302 -> 301 switch after 60 days"},
+    "archivedAt": {"type": ["string", "null"], "format": "date-time", "description": "set by tools/topic_status.apply() each time the topic enters archived (rests after 90 days with no counted post); kept afterwards, nothing is deleted. While set, only an approval with approvedAt strictly later than archivedAt is valid, so a rested topic returns to search only on a fresh wave approval. Quiet topics never get it."},
     "approvedWave": {"type": ["integer", "null"], "minimum": 1, "description": "approval record, part 1: the wave this topic was approved in; valid only while that wave is listed in topics/approved_waves.json"},
     "approvedBy": {"type": ["string", "null"], "minLength": 1, "maxLength": 80, "description": "approval record, part 2: the approver (an internal role or id, never published)"},
     "approvedAt": {"type": ["string", "null"], "format": "date-time", "description": "approval record, part 3: when the wave was approved"},
