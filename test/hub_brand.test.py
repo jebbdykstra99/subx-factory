@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Hub (hub/src -> hub/site) and brand/brand.json: render is reproducible, a dummy rename reaches every page with no
-brand literal left, every page carries the preview locks + strict CSP + footer, and tools/shell_drift.py scores the
+brand literal left, every page carries the go-live robots rules (public hub pages indexed, topics hide-until-active) + strict CSP + footer, and tools/shell_drift.py scores the
 hub OK with the CSP rule enforced. Offline; temp dirs only (the hub data files are not refetched)."""
 import json, os, re, shutil, subprocess, sys, tempfile
 
@@ -69,6 +69,9 @@ topic_index = brand['topicPathPrefix'].strip('/') + '/index.html'
 SEED = json.load(open(os.path.join(ROOT, 'topics', 'seed_wave1.json')))
 LIVE_TOPICS = [t for t in SEED['topics'] if t['status'] != 'hold']
 TOPIC_PAGES = [brand['topicPathPrefix'].strip('/') + '/' + t['slug'] + '/index.html' for t in LIVE_TOPICS]
+# go-live 2026-11-04: the public hub pages are indexed; 404, the topic index and every non-active topic stay noindex
+PUBLIC_PAGES = ['index.html', 'rooms.html', 'about.html', 'terms.html', 'privacy.html', 'guidelines.html', 'report.html']
+NOINDEX_PAGES = ['404.html', topic_index] + TOPIC_PAGES
 ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', '404.html'] + TOPIC_PAGES),
    'hub pages: home, rooms, about, topic index, 4 legal, 404 + %d topic pages (%d pages)' % (len(TOPIC_PAGES), len(pages)))
 site = json.load(open(os.path.join(SITE, 'site.json')))
@@ -90,8 +93,11 @@ for p in pages:
         c = m.group(1)
         ok(all(32 <= ord(ch) < 127 for ch in c) and ',' not in c and PIN_DIR in c.split(';')[0].split(), '%s: CSP is ASCII, no commas, script-src lists the pin folder' % p)
     ok(h.count('Content-Security-Policy') == 1, '%s: exactly one CSP meta' % p)
-    ok('<meta name="robots" content="noindex,nofollow">' in h, '%s: robots noindex,nofollow' % p)
-    ok('<div class="preview-banner" role="status">Preview only. Not public and not indexed.</div>' in h, '%s: preview banner' % p)
+    want_robots = 'index,follow' if p in PUBLIC_PAGES else 'noindex,nofollow'
+    ok(re.findall(r'<meta name="robots" content="([^"]*)">', h) == [want_robots], '%s: exactly one robots meta, %s' % (p, want_robots))
+    canon = 'https://%s/%s' % (brand['primaryDomain'], p[:-len('index.html')] if p.endswith('index.html') else p)
+    ok(re.findall(r'<link rel="canonical" href="([^"]*)">', h) == [canon], '%s: canonical %s' % (p, canon))
+    ok('preview-banner' not in h and 'Not public and not indexed' not in h, '%s: no preview banner' % p)
     fm = re.search(r'<footer class="legal-footer"[^>]*>(.*?)</footer>', h, re.S)
     ok(fm is not None and brand['legalEntity'] in fm.group(1) and brand['takedownEmail'] in fm.group(1) and brand['nonAffiliation'] in fm.group(1),
        '%s: legal footer with %s, the takedown email and the non-affiliation line' % (p, brand['legalEntity']))
@@ -179,7 +185,8 @@ tdir_ = os.path.join(SITE, brand['topicPathPrefix'].strip('/'))
 ok(files(tdir_) == sorted(['index.html'] + [t['slug'] + '/index.html' for t in LIVE_TOPICS]), 'topic folder = index + one page per non-HOLD seed topic')
 ok(len(SEED['topics']) == 52 and len(LIVE_TOPICS) == 51 and [t['slug'] for t in SEED['topics'] if t['status'] == 'hold'] == ['grief'], 'seed: 52 topics, 51 rendered, grief is the only HOLD')
 ok(not os.path.exists(os.path.join(tdir_, 'grief')), 'HOLD topic grief is not rendered')
-ok(all(t['status'] == 'hidden' for t in LIVE_TOPICS), 'every rendered topic is hidden tonight')
+ok(all(t['status'] == 'hidden' for t in LIVE_TOPICS), 'every rendered topic is hidden at go-live')
+ok(cfg['topics']['hubNoindex'] is False, 'config.json topics.hubNoindex is false (hub-wide noindex lifted)')
 for t in LIVE_TOPICS:
     pg = brand['topicPathPrefix'].strip('/') + '/' + t['slug'] + '/index.html'
     h = read(os.path.join(SITE, pg))
@@ -198,9 +205,44 @@ for t in LIVE_TOPICS:
     ok(('About this %s' % brand['roomNoun']['one']) not in h, '%s: no "About this %s"' % (pg, brand['roomNoun']['one']))
     ok(('Browse %s' % brand['roomNoun']['many']) in h, '%s: live-rooms link keeps %s' % (pg, brand['roomNoun']['many']))
 sm = read(os.path.join(SITE, 'sitemap.xml'))
-ok('<urlset' in sm and '<url>' not in sm, 'sitemap.xml lists 0 topics while the hub-wide noindex is on')
-ok(all('<meta name="robots" content="noindex,nofollow">' in read(os.path.join(SITE, f)) for f in pages), 'hub-wide noindex,nofollow on every page')
-ok('Preview only. Not public and not indexed.' in read(os.path.join(SITE, TOPIC_PAGES[0])), 'preview banner on topic pages')
+locs = re.findall(r'<loc>([^<]*)</loc>', sm)
+want_locs = sorted('https://%s/%s' % (brand['primaryDomain'], '' if p == 'index.html' else p) for p in PUBLIC_PAGES)
+ok('<urlset' in sm and sorted(locs) == want_locs, 'sitemap.xml lists exactly the 7 public hub pages (%s)' % locs)
+ok(not [u for u in locs if brand['topicPathPrefix'] in u] and not [u for u in locs if '404' in u], 'sitemap.xml lists no topic page, no topic index and no 404 while no topic is active')
+ok(all('<meta name="robots" content="noindex,nofollow">' in read(os.path.join(SITE, f)) for f in NOINDEX_PAGES), 'hide-until-active: 404, topic index and every hidden topic stay noindex,nofollow')
+ok(all('<meta name="robots" content="index,follow">' in read(os.path.join(SITE, f)) for f in PUBLIC_PAGES), 'public hub pages are index,follow')
+ok(not any('preview-banner' in read(os.path.join(SITE, f)) for f in files(SITE) if f.endswith(TEXT)) and not os.path.exists(os.path.join(SRC, 'partials', 'banner.html')),
+   'no preview banner markup or style anywhere in hub/site; banner partial removed')
+rt = read(os.path.join(SITE, 'robots.txt'))
+groups = [g for g in re.split(r'\n\s*\n', rt) if 'User-agent' in g]
+star = [g for g in groups if re.search(r'^User-agent: \*$', g, re.M)]
+ok(len(star) == 1 and 'Allow: /' in star[0] and 'Disallow' not in star[0], 'robots.txt: User-agent * may crawl (no Disallow), so noindex metas on topic pages are readable')
+ok(not re.search(r'^Disallow: %s' % re.escape(brand['topicPathPrefix']), rt, re.M), 'robots.txt does not disallow the topic path (crawlers must see the topic noindex)')
+ai = [g for g in groups if 'GPTBot' in g]
+ok(len(ai) == 1 and all(b in ai[0] for b in ('GPTBot', 'ClaudeBot', 'Google-Extended', 'CCBot', 'Applebot-Extended')) and re.search(r'^Disallow: /$', ai[0], re.M),
+   'robots.txt: named AI crawlers and training bots stay fully disallowed')
+ok(re.search(r'^Sitemap: https://%s/sitemap\.xml$' % re.escape(brand['primaryDomain']), rt, re.M) is not None, 'robots.txt names the sitemap on the primary domain')
+ll = read(os.path.join(SITE, 'llms.txt'))
+ok('robots.txt disallows all crawling' not in ll and 'pages are marked noindex' not in ll and 'noindex until they are active' in ll, 'llms.txt describes the go-live crawl policy')
+# hide-until-active holds through the renderer with today's config (hub-wide noindex off)
+rr_live = BR.Renderer(SRC, BRAND, tempfile.mkdtemp())
+rr_live.run()
+_row = dict(LIVE_TOPICS[0])
+ok('content="noindex,nofollow"' in rr_live.render_topic(dict(_row, status='hidden')) and 'content="noindex,nofollow"' in rr_live.render_topic(dict(_row, status='eligible'))
+   and 'content="noindex,nofollow"' in rr_live.render_topic(dict(_row, status='quiet')) and 'content="noindex,nofollow"' in rr_live.render_topic(dict(_row, status='archived'))
+   and 'content="index,follow"' in rr_live.render_topic(dict(_row, status='active')), 'live config: only an active topic renders index,follow')
+ok('/t/' + _row['slug'] + '/' in rr_live.sitemap([dict(_row, status='active')]) and '/t/' + _row['slug'] + '/' not in rr_live.sitemap([dict(_row, status='hidden')]),
+   'live config: an active topic joins the sitemap, a hidden one never does')
+shutil.rmtree(rr_live.out, ignore_errors=True)
+# rollback switch: hubNoindex true puts every page back under noindex with an empty sitemap
+with tempfile.TemporaryDirectory() as t:
+    src2 = os.path.join(t, 'src'); shutil.copytree(SRC, src2)
+    c2 = json.load(open(os.path.join(src2, 'config.json'))); c2['topics']['hubNoindex'] = True
+    json.dump(c2, open(os.path.join(src2, 'config.json'), 'w'))
+    BR.render(src=src2, out=os.path.join(t, 'out'))
+    outp = [f for f in BR.files_under(os.path.join(t, 'out')) if f.endswith('.html')]
+    ok(all('content="noindex,nofollow"' in read(os.path.join(t, 'out', f)) for f in outp) and '<url>' not in read(os.path.join(t, 'out', 'sitemap.xml')),
+       'rollback: hubNoindex true = every page noindex,nofollow and an empty sitemap')
 ok(not any('topics_wave1' in f for f in BR.files_under(ROOT) if not f.startswith(('.git/', 'node_modules/'))), 'topics_wave1.csv is not in this PR')
 
 # ---- hard rules: private strings never appear; phone + mailing address only on About ----
@@ -278,7 +320,13 @@ with tempfile.TemporaryDirectory() as t:
     hs = fb['hosting']
     hdr = {h['key']: h['value'] for e in hs['headers'] for h in e['headers']}
     ok(hs['public'] == 'site' and not hs.get('redirects') and not hs.get('rewrites'), 'hub/firebase.json: public site, no redirects or rewrites')
-    ok(hdr.get('X-Robots-Tag') == 'noindex, nofollow' and hdr.get('Content-Security-Policy') == CSP + "; frame-ancestors 'none'", 'hub/firebase.json: X-Robots-Tag noindex + header CSP = meta CSP + frame-ancestors')
+    allh = {h['key']: h['value'] for e in hs['headers'] if e['source'] == '**' for h in e['headers']}
+    jsonh = {h['key']: h['value'] for e in hs['headers'] if e['source'] == '**/*.json' for h in e['headers']}
+    ok('X-Robots-Tag' not in allh and allh.get('Content-Security-Policy') == CSP + "; frame-ancestors 'none'", 'hub/firebase.json: no site-wide X-Robots-Tag; header CSP = meta CSP + frame-ancestors')
+    ok(jsonh == {'X-Robots-Tag': 'noindex'}, 'hub/firebase.json: JSON data files stay noindex')
+    rc = json.load(open(os.path.join(ROOT, 'hub', '.firebaserc')))
+    ok(hs.get('target') == 'hub' and 'site' not in hs and rc['targets']['subx-skins']['hosting']['hub'] == ['subx-hub'],
+       'hub/firebase.json deploys to target hub = site subx-hub (never the subx-skins site, whose live channel is SubX Master)')
     # a local shell copy is drift: the hub never vendors factory.js
     shutil.copy(os.path.join(ROOT, 'factory', 'factory.js'), os.path.join(d, 'factory.js'))
     r = drift(d)

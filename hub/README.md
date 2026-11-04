@@ -1,4 +1,4 @@
-# hub/ — the brand hub (preview)
+# hub/ — the brand hub
 
 The hub is rendered from `brand/brand.json` + `hub/src/` into `hub/site/` (committed, so a
 deploy needs no build step). Every name, domain, tagline, noun, contact line and the footer
@@ -25,7 +25,7 @@ project/site ids).
 - Every page has the strict meta CSP as the first element of `<head>`:
   `script-src 'self' <pin folder>/; object-src 'none'; base-uri 'none'; font-src 'self'` (fonts are self-hosted under assets/fonts, OFL 1.1).
   `hub/firebase.json` sends the same policy as a header plus `frame-ancestors 'none'`,
-  and `X-Robots-Tag: noindex, nofollow`.
+  and `X-Robots-Tag: noindex` on the JSON data files only.
 - Check: `python3 tools/shell_drift.py hub/site --csp-legacy <file> --strict`.
 
 ## Disclosure mark
@@ -39,11 +39,24 @@ is unchanged. Check: `python3 test/whomark_hub.test.py`.
 `hub/src/build_highlights.py` refreshes `hub/src/data/` (highlights, rooms, rail) from
 the public read-only room data; then re-render. It writes nothing else.
 
-## Preview deploy (never live)
+## Indexing (go-live 2026-11-04)
 
-    cd hub && firebase hosting:channel:deploy hub-shell --expires 7d --project subx-skins
+`hub/src/config.json` `topics.hubNoindex` is `false`: the hub pages (home, rooms, about, terms, privacy, guidelines,
+report) render `index,follow` with a canonical `https://<brand.primaryDomain>/...` link and are listed in
+`sitemap.xml`; robots.txt allows search crawling (named AI crawlers and training bots stay disallowed) and names the
+sitemap. The 404 page and the topic index keep `noindex,nofollow` (their `pages` entry sets `robots`). Topic pages
+keep the hide-until-active rule from `tools/topic_status.py`: only an `active` topic is indexable or in the sitemap;
+hidden, eligible, quiet and archived topics stay `noindex,nofollow`. There is no preview banner.
+Rollback: set `hubNoindex` to `true` and re-render (every page noindex,nofollow, empty sitemap).
 
-The preview banner and `noindex,nofollow` stay on every page; topics are not seeded.
+## Deploy
+
+`hub/firebase.json` deploys to the hosting target `hub`, which `hub/.firebaserc` maps to the dedicated site
+`subx-hub` in project `subx-skins`. Never point the hub at the `subx-skins` site: its live channel is the SubX
+Master console.
+
+    cd hub && firebase hosting:channel:deploy golive --only hub --expires 7d --project subx-skins   # preview (Firebase adds noindex on channels)
+    cd hub && firebase deploy --only hosting:hub --project subx-skins                              # production (live channel of subx-hub)
 
 ### WHOMARK spec §7 deviation
 

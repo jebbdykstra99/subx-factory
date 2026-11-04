@@ -26,7 +26,11 @@ hub/src/topic-template.html to <topicPathPrefix><slug>/index.html (listed in she
 that template are kept or dropped per topic (status, profile, optional copy) and the markers never reach the output.
 A topic row with govNonAffiliation true (topics/seed_wave2_agency.json) shows brand.nonAffiliationGov under the title
 (if:gov) and as a line inside the footer.
-sitemap.xml lists only sitemap-eligible topics (tools/topic_status.py): none while "topics.hubNoindex" is true.
+Robots: "topics.hubNoindex" true = every page noindex,nofollow and an empty sitemap (preview). When it is false, a hub page
+is index,follow unless its config.json "pages" entry sets "robots" (404 and the topic index keep noindex,nofollow), and
+every topic page follows its own status (tools/topic_status.py: only "active" is indexable; hidden, eligible, quiet and
+archived stay noindex,nofollow). sitemap.xml lists the indexable hub pages and the sitemap-eligible topics, nothing else.
+Every page carries <link rel="canonical"> on https://<brand.primaryDomain>, so the *.web.app hosts never compete with it.
 shell.keep sha256 values in site.json are filled from the rendered files.
 
 Usage: python3 tools/brand_render.py [--check] [--brand PATH] [--out DIR] [--src DIR]
@@ -241,9 +245,18 @@ class Renderer:
         missing = [n for n in names if n.endswith('.html') and n not in pages]
         if missing:
             raise RenderError('templates without a "pages" entry in config.json: %s' % ', '.join(missing))
+        hub_noindex = self.topic_cfg()['hubNoindex']
+        self.indexable_pages = []
         for n, meta in sorted(pages.items()):
-            page = {k: expand(v, self.ctx) if isinstance(v, str) else v for k, v in meta.items()}
-            page.setdefault('robots', topic_status.NOINDEX)
+            page = {k: expand(v, self.ctx) if isinstance(v, str) else v for k, v in meta.items() if not k.startswith('_')}
+            if hub_noindex:
+                page['robots'] = topic_status.NOINDEX
+            page.setdefault('robots', topic_status.INDEX)
+            if page['robots'] not in (topic_status.INDEX, topic_status.NOINDEX):
+                raise RenderError('config.json pages.%s.robots must be %r or %r' % (n, topic_status.INDEX, topic_status.NOINDEX))
+            page['canonical'] = self.canonical(self.out_path(n))
+            if page['robots'] == topic_status.INDEX:
+                self.indexable_pages.append(page['canonical'])
             text = self.render_text(open(os.path.join(tdir, n), encoding='utf-8').read(), '.html', page, where=n)
             self.write(self.out_path(n), text.encode('utf-8'))
         # 4. topic pages (non-HOLD seed rows) and the sitemap (eligible topics only)
@@ -255,6 +268,12 @@ class Renderer:
     # ---- topics ----
     def topic_cfg(self):
         return dict({'seed': None, 'open': False, 'showDoorways': False, 'hubNoindex': True}, **self.cfg.get('topics', {}))
+
+    def canonical(self, rel):
+        """https://<primaryDomain>/<rel>, with a trailing index.html dropped (index.html -> /, t/x/index.html -> /t/x/)."""
+        if rel == 'index.html' or rel.endswith('/index.html'):
+            rel = rel[:-len('index.html')]
+        return 'https://%s/%s' % (self.ctx['brand']['primaryDomain'], rel)
 
     def topic_path(self, slug):
         return '%s/%s/index.html' % (self.topic_dir, slug)
@@ -278,8 +297,9 @@ class Renderer:
     def sitemap(self, topics):
         b = self.ctx['brand']
         hub_noindex = self.topic_cfg()['hubNoindex']
-        locs = ['https://%s%s%s/' % (b['primaryDomain'], b['topicPathPrefix'], t['slug'])
-                for t in topics if topic_status.sitemap_eligible(t['status'], hub_noindex)]
+        locs = [] if hub_noindex else list(getattr(self, 'indexable_pages', []))
+        locs += ['https://%s%s%s/' % (b['primaryDomain'], b['topicPathPrefix'], t['slug'])
+                 for t in topics if topic_status.sitemap_eligible(t['status'], hub_noindex)]
         body = ''.join('  <url><loc>%s</loc></url>\n' % html_attr(u) for u in locs)
         return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n%s</urlset>\n' % body
 
@@ -326,7 +346,7 @@ class Renderer:
         if '<!--' in text:
             raise RenderError('topic-template.html: unbalanced <!--if:--> block or stray comment')
         page = {'title': topic['name'] + ' · ' + self.ctx['brand']['name'], 'description': topic['description'],
-                'robots': topic_status.robots(st, tc['hubNoindex'])}
+                'robots': topic_status.robots(st, tc['hubNoindex']), 'canonical': self.canonical(self.topic_path(topic['slug']))}
         gov = cond['gov']
         topic = {k: v for k, v in topic.items() if isinstance(v, str)}
         out = self.render_text(text, '.html', page, where='topic-template.html', extra={'topic': topic})

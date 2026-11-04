@@ -1,11 +1,12 @@
-# {{brand.name}} hub robots.txt · PREVIEW LOCK
-# Preview only: do not crawl, index, scrape, or use any content for AI training.
-# Operator: {{brand.legalEntity}} · Contact: {{brand.takedownEmail}}
+# {{brand.name}} hub robots.txt
+# Search engines may crawl the hub. Pages that must stay out of search (new and quiet topics, the topic index, 404)
+# carry <meta name="robots" content="noindex,nofollow">; they are not disallowed here so crawlers can read that tag.
+# No use of any content for AI training. Operator: {{brand.legalEntity}} · Contact: {{brand.takedownEmail}}
 
 User-agent: *
-Disallow: /
+Allow: /
 
-# Named AI crawlers and training bots: also fully disallowed (redundant with *, listed for clarity)
+# Named AI crawlers and training bots: fully disallowed
 User-agent: GPTBot
 User-agent: ChatGPT-User
 User-agent: OAI-SearchBot
@@ -19,4 +20,4 @@ User-agent: Bytespider
 User-agent: Meta-ExternalAgent
 Disallow: /
 
-# No Sitemap line during preview.
+Sitemap: https://{{brand.primaryDomain}}/sitemap.xml

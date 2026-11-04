@@ -131,7 +131,9 @@
     },
     "topics.html": {
       "title": "{{brand.topicNoun.Many}} (coming soon), {{brand.name}}",
-      "description": "{{brand.topicNoun.Many}} are not open yet. How they are planned to work."
+      "description": "{{brand.topicNoun.Many}} are not open yet. How they are planned to work.",
+      "robots": "noindex,nofollow",
+      "_robots": "Kept noindex while no topic is active: the topic index is a coming-soon page. Topic pages follow their own status."
     },
     "terms.html": {
       "title": "Terms of Service, {{brand.name}}",
@@ -151,14 +153,15 @@
     },
     "404.html": {
       "title": "Not found, {{brand.name}}",
-      "description": "Page not found."
+      "description": "Page not found.",
+      "robots": "noindex,nofollow"
     }
   },
   "topics": {
     "seed": "topics/seed_wave1.json",
     "open": false,
     "showDoorways": false,
-    "hubNoindex": true,
-    "_doc": "Topic pages from the seed (HOLD rows never render). open=false: hidden topics show the not-live-yet state. showDoorways=false: no 'Also reachable at' line. hubNoindex=true: every page noindex,nofollow and the sitemap lists 0 topics."
+    "hubNoindex": false,
+    "_doc": "Topic pages from the seed (HOLD rows never render). open=false: hidden topics show the not-live-yet state. showDoorways=false: no 'Also reachable at' line. hubNoindex=false (go-live 2026-11-04): hub pages are index,follow unless their pages entry sets robots; every topic page keeps the hide-until-active rule (only status active is indexable or in the sitemap). Set hubNoindex=true to put every page back under noindex,nofollow with an empty sitemap."
   }
 }

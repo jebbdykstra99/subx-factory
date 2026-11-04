@@ -1,1 +1,1 @@
-{"projects":{"default":"subx-skins"}}
+{"projects":{"default":"subx-skins"},"targets":{"subx-skins":{"hosting":{"hub":["subx-hub"]}}}}
