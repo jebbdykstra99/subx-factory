@@ -189,7 +189,7 @@
       },
       {
         "file": "hub.js",
-        "sha256": "0f054f6a9de5422beffb7ff88ea0f7516f27996282c33ff7225ac4a42fc86cd9",
+        "sha256": "faabae4bba55b99b9c77620ea107385003981f03c87da5243998934477308100",
         "reason": "hub: renders highlights.json + rooms.json (read-only, no auth, no writes)",
         "noShellOk": true
       },

@@ -120,6 +120,26 @@ ok('id="hub-rooms"' in read(os.path.join(SITE, 'rooms.html')) and '/hub.js?v=' i
 hl = json.load(open(os.path.join(SITE, 'highlights.json')))
 rooms = json.load(open(os.path.join(SITE, 'rooms.json')))
 ok(len(hl['items']) > 0 and all(re.fullmatch(r'https://[a-z0-9.-]+\.[a-z]{2,}/\?p=[A-Za-z0-9_-]+', it['url']) for it in hl['items']), 'highlights.json: items, each linking to its room post')
+# Key 1 edit E1: highlights skip dash and "Seed" posts (build_highlights.text_rule / check); quoted text never edited
+sys.path.insert(0, os.path.join(ROOT, 'hub', 'src'))
+import build_highlights as BH  # noqa: E402
+for t, want in (('Race day \u2014 who is in?', 'dash'), ('Laps 10\u201312 were wild', 'dash'), ('Seed: first post', 'seed_prefix'),
+                ('  seed post here', 'seed_prefix'), ('SEEDED thread', 'seed_prefix'), ('A seed of an idea', None),
+                ('Plain text - with a hyphen', None)):
+    ok(BH.text_rule(t) == want, 'build_highlights.text_rule(%r) == %r' % (t, want))
+doc = {'name': 'projects/x/databases/(default)/documents/posts/P1', 'createTime': '2026-11-01T00:00:00Z'}
+base = {'siteId': 'x', 'authorUid': 'u1', 'createdAt': '2026-11-01T00:00:00Z'}
+ok(BH.check(dict(base, text='Seed \u2014 hello'), doc, set()) in ('dash', 'seed_prefix')
+   and BH.check(dict(base, text='Seedlings up'), doc, set()) == 'seed_prefix'
+   and BH.check(dict(base, text='Hello there, all good'), doc, set()) is None, 'build_highlights.check drops dash/Seed posts, keeps plain ones')
+src_hl = json.load(open(os.path.join(ROOT, 'hub', 'src', 'data', 'highlights.json'), encoding='utf-8'))
+ok(not [it['postId'] for it in src_hl['items'] if BH.text_rule(it['text'])], 'highlights.json: no item with an em/en dash or a "Seed" start')
+ok('AT1RMUrXqDWrXqKmGn36' not in json.dumps(hl) and 'AT1RMUrXqDWrXqKmGn36' not in idx, 'highlights: 808chat post AT1RMUrXqDWrXqKmGn36 is gone')
+ok(src_hl['counts'] == {r: sum(1 for it in src_hl['items'] if it['room'] == r) for r in src_hl['counts']}
+   and sum(src_hl['counts'].values()) == len(src_hl['items']), 'highlights.json: counts match items')
+# Key 1 edit E2: sign-up consent wording
+ok('(preview stubs, not final counsel)' not in idx and idx.count('Privacy Policy</a> (preview drafts).') == 2,
+   'index.html: both sign-up consent lines say "(preview drafts)"')
 ok(len(rooms['rooms']) > 0 and [x['url'] for x in site['rail']['outbound']] == ['https://%s/' % x['domain'] for x in rooms['rooms']], 'site.json rail.outbound mirrors rooms.json')
 
 # WHOMARK legend: both AI rows (AI steward + AI-made) on about + topic index

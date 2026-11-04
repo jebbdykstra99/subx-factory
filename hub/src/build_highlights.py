@@ -11,9 +11,12 @@ Option A from the 2026-10-30 readiness notes: a static build, no rules change, n
   replies, posts hidden by a hides doc (postId, parentId or uid:<author>; same as factory isPostHidden),
   posts flagged hidden/deleted/removed/underReport or with reportCount > 0, backdated posts,
   third-party agent posts, image-only posts, and any text with an email, phone number, secret or blocked string.
+- Also drops (Key 1 edit E1, 2026-11-03) any post whose text contains an em dash (U+2014) or en dash (U+2013), or
+  starts with "Seed" (any case). Post text is never edited: a post passes whole or is left out.
+  --refilter re-applies these text rules to the existing data/highlights.json without fetching (no new posts).
 - Writes only hub/src/data (no CNAME, no site.json edit: tools/brand_render.py fills site.json rail.outbound from
   rail.json). The per-room report is printed, not saved.
-Usage: python3 hub/src/build_highlights.py [--fetch 40] [--max 40] [--no-live-check]
+Usage: python3 hub/src/build_highlights.py [--fetch 40] [--max 40] [--no-live-check] | --refilter
 
 Slots come from rooms.json: featuredRooms (in order) get featuredPerRoom posts each and lead the feed;
 every other live room gets otherPerRoom (0 = suggestion only), trailing in roomOrder.
@@ -102,6 +105,14 @@ def tier_for(f):
     if isinstance(f.get('authorUid'), str) and f['authorUid']: return 'human'
     return None
 
+DASHES = ('\u2014', '\u2013')   # em dash, en dash
+
+def text_rule(t):
+    """Key 1 edit E1: reason a post text is left out, or None. Applied to the full text before clip()."""
+    if any(d in t for d in DASHES): return 'dash'
+    if t.lstrip().lower().startswith('seed'): return 'seed_prefix'
+    return None
+
 def check(f, doc, hidden):
     pid = doc['name'].rsplit('/', 1)[-1]
     if f.get('parentId'): return 'reply'
@@ -111,6 +122,8 @@ def check(f, doc, hidden):
     if ct is not None and st is not None and st - ct > BACKDATE_MS: return 'backdated'
     t = f.get('text')
     if not isinstance(t, str) or not t.strip(): return 'no_text'
+    why = text_rule(t)
+    if why: return why
     if tier_for(f) is None: return 'no_label'
     hay = '\n'.join([t, f.get('authorName') or '', f.get('authorHandle') or ''])
     if EMAIL_RE.search(hay) or SECRET_RE.search(hay): return 'lint'
@@ -122,13 +135,29 @@ def clip(t):
     t = re.sub(r'\s+\n', '\n', t.strip())
     return t if len(t) <= MAX_TEXT else t[:MAX_TEXT - 1].rstrip() + '…'
 
+def refilter():
+    p = os.path.join(DATA, 'highlights.json')
+    d = json.load(open(p, encoding='utf-8'))
+    keep, drop = [], []
+    for it in d['items']:
+        (drop if text_rule(it['text']) else keep).append(it)
+    counts = {}
+    for it in keep: counts[it['room']] = counts.get(it['room'], 0) + 1
+    d['items'], d['counts'] = keep, counts
+    json.dump(d, open(p, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+    print('refilter: kept %d, dropped %d (%s)' % (len(keep), len(drop), ', '.join('%s/%s' % (i['room'], i['postId']) for i in drop) or '-'))
+    return 0
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--fetch', type=int, default=40)
     ap.add_argument('--max', type=int, default=40)
     ap.add_argument('--no-live-check', action='store_true')
     ap.add_argument('--allow-unverified-members', action='store_true', help='include member posts even when hides cannot be read (not recommended)')
+    ap.add_argument('--refilter', action='store_true', help='re-apply text_rule to data/highlights.json only (no fetch)')
     a = ap.parse_args()
+    if a.refilter:
+        return refilter()
 
     cfg = json.load(open(os.path.join(HERE, 'rooms.json')))
     featured = [x for x in cfg.get('featuredRooms', [])]

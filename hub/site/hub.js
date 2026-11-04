@@ -45,7 +45,7 @@
   function getJSON(p) { return fetch(p, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(p + ' ' + r.status); return r.json(); }); }
   var feed = document.getElementById('hub-feed'), roomsEl = document.getElementById('hub-rooms'), coming = document.getElementById('hub-coming');
   if (feed) {
-    getJSON('/highlights.json?v=fbba3099b4').then(function (d) {
+    getJSON('/highlights.json?v=d9dc228224').then(function (d) {
       var items = (d && d.items) || [];
       var feat = items.filter(function (it) { return it.featured; }), rest = items.filter(function (it) { return !it.featured; });
       var html = (feat.length ? '<h2 class="hub-section">Featured rooms</h2>' + feat.map(card).join('') : '') +
