@@ -31,11 +31,12 @@ def files(d):
 TEXT = BR.TEXT_EXT
 cfg = json.load(open(os.path.join(SRC, 'config.json')))
 brand = json.load(open(BRAND))
-# B2 (Key 2, 2026-11-04): the shell is self-hosted at /shell/<base>/factory.js (byte copy, SRI kept); script-src is 'self' only
+# B2 (Key 2, 2026-11-04): the shell is self-hosted at /shell/<base>/factory.js as a hub-only fork (header line only, new SRI);
+# script-src and connect-src are 'self' only (Round 5: the hub makes no external request)
 SHELL_REL = 'shell/%s/factory.js' % cfg['shell']['base']
 PIN = '/' + SHELL_REL
 CDN_PIN = 'https://cdn.jsdelivr.net/gh/%s@%s/shell/%s/factory.js' % (cfg['shell']['repo'], cfg['shell']['sha'], cfg['shell']['base'])
-CSP = "script-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'"
+CSP = "script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'"
 
 # ---- brand.json ----
 want_keys = ['name', 'legalEntity', 'primaryDomain', 'shortName', 'tagline', 'takedownEmail', 'topicPathPrefix',
@@ -82,18 +83,32 @@ no_shell = set(x.lstrip('/') for x in sh.get('noShell', []))
 ok(site['siteId'] == 'subx' and site['accountsOpen'] is False and sh['cspRequired'] is True and sh['base'] == cfg['shell']['base'],
    'site.json: siteId subx, accounts closed, cspRequired true, base = pin base')
 _man = json.load(open(os.path.join(ROOT, 'shell', cfg['shell']['base'], 'SHELL.json')))['files']['factory.js']
-ok(sh.get('fork') is True and sh.get('file') == SHELL_REL and sh.get('sha256') == _man['sha256'] and sh.get('exception') == 'E21' and sh.get('reason'),
-   'site.json: the self-hosted shell is a declared byte-identical fork (file, SHELL.json sha256, EXCEPTIONS.md E21)')
-ok('| E21 | hub (subx.it) |' in open(os.path.join(ROOT, 'EXCEPTIONS.md'), encoding='utf-8').read(), 'EXCEPTIONS.md has the E21 row for the self-hosted hub shell')
 _sb = open(os.path.join(SITE, SHELL_REL), 'rb').read()
-ok(_sb == open(os.path.join(ROOT, SHELL_REL), 'rb').read(), 'hub/site/%s is byte-identical to the pinned shell/%s' % (SHELL_REL, SHELL_REL))
+_pb = open(os.path.join(ROOT, SHELL_REL), 'rb').read()
+_fsha = hashlib.sha256(_sb).hexdigest()
+_fsri = 'sha384-' + base64.b64encode(hashlib.sha384(_sb).digest()).decode()
+ok(sh.get('fork') is True and sh.get('file') == SHELL_REL and sh.get('sha256') == _fsha and sh.get('exception') == 'E21' and 'header' in sh.get('reason', ''),
+   'site.json: the self-hosted shell is a declared hub-only fork (file, fork sha256, EXCEPTIONS.md E21, header-only reason)')
+_e21 = [l for l in open(os.path.join(ROOT, 'EXCEPTIONS.md'), encoding='utf-8').read().splitlines() if l.startswith('| E21 | hub (subx.it) |')]
+ok(len(_e21) == 1 and 'hub-only fork' in _e21[0] and 'header' in _e21[0] and _fsri in _e21[0] and 'jebbdykstra99' not in _e21[0],
+   'EXCEPTIONS.md E21 describes the hub-only header fork with its new SRI')
+# the pinned source is verified first (SRI, sha256, size = config.json + SHELL.json), and is the bytes at the pinned commit
+_psri = 'sha384-' + base64.b64encode(hashlib.sha384(_pb).digest()).decode()
+ok(_psri == cfg['shell']['integrity'] == _man['integrity'] and hashlib.sha256(_pb).hexdigest() == _man['sha256'] and len(_pb) == _man['bytes'],
+   'pinned shell/%s: sha384 = config.json integrity = SHELL.json, sha256 and size = SHELL.json' % SHELL_REL)
 _pinned = subprocess.run(['git', '-C', ROOT, 'show', '%s:%s' % (cfg['shell']['sha'], SHELL_REL)], capture_output=True)
-ok(_pinned.returncode != 0 or _pinned.stdout == _sb, 'self-hosted shell = the bytes at the pinned commit %s (when that commit is in the clone)' % cfg['shell']['sha'][:7])
-_sri = 'sha384-' + base64.b64encode(hashlib.sha384(_sb).digest()).decode()
-ok(_sri == cfg['shell']['integrity'] == _man['integrity'] and hashlib.sha256(_sb).hexdigest() == _man['sha256'] and len(_sb) == _man['bytes'],
-   'self-hosted shell: sha384 = config.json integrity = SHELL.json, sha256 and size = SHELL.json')
-_jb = [f for f in files(SITE) if 'jebbdykstra99' in open(os.path.join(SITE, f), encoding='utf-8', errors='replace').read() and f != SHELL_REL]
-ok(not _jb and 'jebbdykstra99' not in open(os.path.join(ROOT, 'hub', 'firebase.json')).read(), 'no jebbdykstra99 in rendered hub output (besides the byte-identical shell header) or hub/firebase.json (%s)' % _jb[:3])
+ok(_pinned.returncode != 0 or _pinned.stdout == _pb, 'pinned shell = the bytes at the pinned commit %s (when that commit is in the clone)' % cfg['shell']['sha'][:7])
+# the fork differs from the pin by exactly one line: the header source line
+_pl, _fl = _pb.split(b'\n'), _sb.split(b'\n')
+_dl = [i for i in range(max(len(_pl), len(_fl))) if i >= len(_pl) or i >= len(_fl) or _pl[i] != _fl[i]]
+_hdr = (' * Source: SubX shared shell %s (hub fork, header only)' % cfg['shell']['base']).encode()
+ok(len(_pl) == len(_fl) and len(_dl) == 1 and b'github.com/jebbdykstra99/subx-factory' in _pl[_dl[0]] and _pl[_dl[0]].lstrip().startswith(b'*') and _fl[_dl[0]] == _hdr,
+   'hub fork = pinned shell with exactly one line changed (header source line -> %r) (diff lines %s)' % (_hdr.decode(), [i + 1 for i in _dl][:5]))
+ok(_sb.replace(_hdr, _pl[_dl[0]] if _dl else b'', 1) == _pb, 'hub fork: undoing the one header substitution gives the pinned bytes exactly')
+ok(_fsri != cfg['shell']['integrity'] and len(_sb) == len(_pb) - len(_pl[_dl[0]] if _dl else b'') + len(_hdr), 'hub fork has its own SRI (not the pin SRI) and the expected size')
+ok(BR.Renderer(SRC, os.path.join(ROOT, 'brand', 'brand.json'), SITE).shell_bytes() == (_sb, _fsha, _fsri), 'renderer shell_bytes() = (fork bytes, fork sha256, fork SRI)')
+_jb = [f for f in files(SITE) if 'jebbdykstra99' in open(os.path.join(SITE, f), encoding='utf-8', errors='replace').read()]
+ok(not _jb and 'jebbdykstra99' not in open(os.path.join(ROOT, 'hub', 'firebase.json')).read(), 'no jebbdykstra99 anywhere in rendered hub output or hub/firebase.json (%s)' % _jb[:3])
 ok(not any('jsdelivr' in open(os.path.join(SITE, f), encoding='utf-8', errors='replace').read() for f in files(SITE) if f.endswith('.html')), 'no page references jsDelivr')
 leg = json.load(open(os.path.join(ROOT, 'tools', 'csp_legacy_rooms.json')))['rooms']
 ok('subx' not in leg and 'hub' not in leg, 'the hub is not on the CSP legacy list')
@@ -119,7 +134,7 @@ for p in pages:
        '%s: legal footer with %s, the takedown email and the non-affiliation line' % (p, brand['legalEntity']))
     pins = re.findall(r'<script\b[^>]*\bsrc="([^"]*factory[^"]*)"[^>]*>', h)
     if p == 'index.html':
-        tag = re.search(r'<script src="%s" integrity="%s" crossorigin="anonymous" data-site="/site\.json\?v=[0-9a-f]{10}"></script>' % (re.escape(PIN), re.escape(cfg['shell']['integrity'])), h)
+        tag = re.search(r'<script src="%s" integrity="%s" crossorigin="anonymous" data-site="/site\.json\?v=[0-9a-f]{10}"></script>' % (re.escape(PIN), re.escape(_fsri)), h)
         ok(tag is not None and pins == [PIN], 'index.html: the self-hosted shell (SRI, crossorigin, data-site) and no other factory script')
     else:
         ok(pins == [], '%s: static page loads no factory script (declared noShell)' % p)
@@ -336,10 +351,10 @@ for p in scan_files():
         for m in rx.finditer(t):
             hits.append('%s: %s' % (os.path.relpath(p, ROOT), m.group(0)))
 ok(not hits, 'no private names, emails, 310 numbers, registered-agent city or internal codes in the hub, brand or renderer (%s)' % hits[:5])
-# the self-hosted shell is an immutable byte copy (SRI): its only owner-handle strings are the known v1.2.6 ones
+# the self-hosted hub fork keeps upstream code: its only owner-handle string is the functional reserved-handle regex "jebb"
 _sh = [m.group(0) for rx in FORBID[:1] + [re.compile('jebbdykstra99')] for m in rx.finditer(read(SELF_SHELL))]
-ok(sorted(_sh) == ['jebb', 'jebbdykstra99'] and not [m for rx in FORBID[1:] for m in rx.finditer(read(SELF_SHELL))],
-   'self-hosted shell: only the known v1.2.6 strings (header source line jebbdykstra99, reserved-handle regex "jebb"); no other private string (%s)' % _sh)
+ok(_sh == ['jebb'] and '(admin|moderator|official|subx|jebb)' in read(SELF_SHELL) and not [m for rx in FORBID[1:] for m in rx.finditer(read(SELF_SHELL))],
+   'self-hosted hub fork: only the reserved-handle regex "jebb" (functional); no repo path, no other private string (%s)' % _sh)
 # Key 2 B1: never claim affiliation with X ("Affiliated with X" only ever as "Not affiliated with X")
 AFFIL = re.compile(r'(?<!not )affiliated with x\b', re.I)
 bad = []
@@ -387,11 +402,11 @@ def drift(d, legacy=()):
 with tempfile.TemporaryDirectory() as t:
     d = os.path.join(t, 'site'); shutil.copytree(SITE, d)
     r = drift(d)
-    ok(r['status'] == 'FORK' and r['layers'].get('forkDiffLines') == 0 and not r['findings'] and not r['warnings'], 'shell_drift hub/site = FORK (byte-identical self-hosted shell), no findings or warnings, CSP enforced (%s %s)' % (r['findings'][:3], r['warnings'][:3]))
+    ok(r['status'] == 'FORK' and r['layers'].get('forkDiffLines') == 2 and not r['findings'] and not r['warnings'], 'shell_drift hub/site = FORK (hub-only header fork: 2 diff lines), no findings or warnings, CSP enforced (%s %s)' % (r['findings'][:3], r['warnings'][:3]))
     fb = json.load(open(os.path.join(ROOT, 'hub', 'firebase.json')))
     shutil.copy(os.path.join(ROOT, 'hub', 'firebase.json'), os.path.join(d, 'firebase.json'))
     r = drift(d)
-    ok(r['status'] == 'FORK' and r['layers'].get('forkDiffLines') == 0 and not r['findings'] and not r['warnings'], 'shell_drift hub/site + hub/firebase.json headers = FORK (%s %s)' % (r['findings'][:3], r['warnings'][:3]))
+    ok(r['status'] == 'FORK' and r['layers'].get('forkDiffLines') == 2 and not r['findings'] and not r['warnings'], 'shell_drift hub/site + hub/firebase.json headers = FORK (%s %s)' % (r['findings'][:3], r['warnings'][:3]))
     hs = fb['hosting']
     hdr = {h['key']: h['value'] for e in hs['headers'] for h in e['headers']}
     ok(hs['public'] == 'site' and not hs.get('redirects') and not hs.get('rewrites'), 'hub/firebase.json: public site, no redirects or rewrites')
@@ -466,7 +481,7 @@ with tempfile.TemporaryDirectory() as t:
        'rename: hub.js steward label and the whomark.js shell-pill selector follow the brand')
     d2 = os.path.join(t, 'drift', 'site'); shutil.copytree(out, d2)
     r = drift(d2)
-    ok(r['status'] == 'FORK' and r['layers'].get('forkDiffLines') == 0 and not r['findings'] and not r['warnings'], 'rename: shell_drift still FORK (%s)' % r['findings'][:3])
+    ok(r['status'] == 'FORK' and r['layers'].get('forkDiffLines') == 2 and not r['findings'] and not r['warnings'], 'rename: shell_drift still FORK (%s)' % r['findings'][:3])
     # topic template (HUB_COPY 4a-4e) renders every state with a dummy topic; topic text is escaped and never token-expanded
     rr = BR.Renderer(SRC, bp, os.path.join(t, 'tt')).run()
     full = {'slug': 'tide-pools', 'name': 'Tide <Pools>', 'description': 'Rock pools {{brand.name}}', 'longDescription': 'All about pools.',

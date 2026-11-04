@@ -263,8 +263,8 @@
       "t/books/index.html"
     ],
     "file": "shell/v1.2.6/factory.js",
-    "sha256": "53765ec2c8206b6c153cf1d28324de317097f12b84871c1cda70e55f16d2c7d2",
-    "reason": "Self-hosted byte copy of shell/v1.2.6/factory.js (SRI kept), so script-src is self only",
+    "sha256": "798184e45cdd243a04c81b065689f7fe1744263314a1a49b487ad1ac199ba48e",
+    "reason": "Self-hosted hub fork of shell/v1.2.6/factory.js: header source line only, new SRI; script-src and connect-src are self only",
     "exception": "E21"
   }
 }

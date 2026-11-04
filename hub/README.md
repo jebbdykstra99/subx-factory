@@ -16,16 +16,19 @@ left outside `brand/brand.json` (allowed: the Firebase project/site ids).
 ## Shell and CSP
 
 - `index.html` runs the shared shell `shell/v1.2.6/factory.js`, self-hosted at
-  `/shell/v1.2.6/factory.js` as a byte copy with SRI (`hub/src/config.json` -> `shell`; the render
-  stops unless the bytes match `config.json` integrity and `shell/v1.2.6/SHELL.json`). `site.json`
-  declares it as a byte-identical fork (`shell.fork`, EXCEPTIONS.md E21), so shell_drift reports
-  `FORK` with 0 diff lines. No CDN: script-src is `'self'` only.
+  `/shell/v1.2.6/factory.js` as a hub-only fork (`hub/src/config.json` -> `shell`). The render first
+  verifies the pinned file against `config.json` integrity and `shell/v1.2.6/SHELL.json`, then replaces
+  only the header comment line that names the source repo with
+  ` * Source: SubX shared shell v1.2.6 (hub fork, header only)`, and loads the result with its own new
+  SRI. Every other byte is identical. `site.json` declares it (`shell.fork`, EXCEPTIONS.md E21), so
+  shell_drift reports `FORK` with 2 diff lines (one line out, one in). No CDN: script-src and
+  connect-src are `'self'` only, so the hub makes no external request.
 - The other pages (rooms, about, topics, legal, 404) are static and declared in
   `site.json` `shell.noShell` (see `shell/README.md`): the v1.2.6 shell is an app shell
   and needs the app DOM, so it is not loaded on them. They only load files listed in
   `shell.keep`.
 - Every page has the strict meta CSP as the first element of `<head>`:
-  `script-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'` (fonts are self-hosted under assets/fonts, OFL 1.1).
+  `script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'` (fonts are self-hosted under assets/fonts, OFL 1.1).
   `hub/firebase.json` sends the same policy as a header plus `frame-ancestors 'none'`,
   and `X-Robots-Tag: noindex` on the JSON data files only.
 - Check: `python3 tools/shell_drift.py hub/site --csp-legacy <file> --strict`.

@@ -42,6 +42,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import topic_slug, topic_status  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# hub fork of the shared shell (EXCEPTIONS.md E21): the one header line that names the source repo is replaced
+FORK_HEADER_FROM = b'github.com/jebbdykstra99/subx-factory'
+FORK_HEADER = ' * Source: SubX shared shell %s (hub fork, header only)'
 # Strings the shared upstream files (assets/whomark/*) were written with. Not hub copy: only used to re-brand
 # vendored bytes; most specific first.
 UPSTREAM = [('legalEntity', 'Sub' + 'X, LLC'), ('takedownEmail', 'takedown@sub' + 'x.it'),
@@ -117,15 +120,17 @@ class Renderer:
         if not re.fullmatch(r'^\d{4}$', year):
             raise RenderError('hub/src/data/highlights.json has no "generated" year')
         sh = self.cfg['shell']
-        # B2 (2026-11-04): the pinned shell is self-hosted as a byte copy at /shell/<base>/factory.js (SRI kept), so
-        # script-src is 'self' only and no CDN or repo path appears in the page source. shell_bytes() checks the bytes.
+        # B2 (2026-11-04): the pinned shell is self-hosted at /shell/<base>/factory.js as a hub-only fork (EXCEPTIONS.md E21):
+        # the pinned bytes with ONLY the header source line replaced, under a new SRI. script-src and connect-src are 'self'
+        # only, so the hub makes no external request and no CDN or repo path appears in the output. shell_bytes() builds it.
         self.shell_rel = 'shell/%s/factory.js' % sh['base']
         pin = '/' + self.shell_rel
-        csp = "script-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'"
+        self.shell_data, self.shell_sha, self.shell_sri = self.shell_bytes()
+        csp = "script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; font-src 'self'"
         if re.search(r'[^\x20-\x7e]|,', csp):
             raise RenderError('CSP must be printable ASCII without commas')
         self.ctx = {'brand': brand, 'year': year,
-                    'shell': {'pinUrl': pin, 'integrity': sh['integrity'], 'csp': csp, 'base': sh['base']}}
+                    'shell': {'pinUrl': pin, 'integrity': self.shell_sri, 'csp': csp, 'base': sh['base']}}
         prefix = brand.get('topicPathPrefix', '')
         if not re.fullmatch(r'^/[a-z0-9][a-z0-9-]*/$', prefix):
             raise RenderError('brand.topicPathPrefix must look like /t/ (got %r)' % prefix)
@@ -188,8 +193,10 @@ class Renderer:
         return p
 
     def shell_bytes(self):
-        """The self-hosted shell: shell/<base>/factory.js copied byte for byte (never re-branded). Its sha384 must equal
-        config.json shell.integrity and SHELL.json, and its sha256 must equal SHELL.json, or the render stops."""
+        """The self-hosted hub fork of shell/<base>/factory.js (never re-branded). The pinned file is verified first: its
+        sha384 must equal config.json shell.integrity and SHELL.json, and its sha256 and size must equal SHELL.json, or the
+        render stops. Then exactly one line changes: the header comment line naming the source repo becomes
+        FORK_HEADER. Every other byte is identical. Returns (fork bytes, fork sha256, fork SRI sha384)."""
         sh = self.cfg['shell']
         man = json.load(open(os.path.join(ROOT, 'shell', sh['base'], 'SHELL.json'), encoding='utf-8'))['files']['factory.js']
         data = open(os.path.join(ROOT, 'shell', sh['base'], 'factory.js'), 'rb').read()
@@ -198,7 +205,15 @@ class Renderer:
             raise RenderError('shell/%s/factory.js sha384 %s != config.json shell.integrity / SHELL.json' % (sh['base'], sri))
         if hashlib.sha256(data).hexdigest() != man['sha256'] or len(data) != man['bytes']:
             raise RenderError('shell/%s/factory.js sha256/bytes != SHELL.json' % sh['base'])
-        return data, man['sha256']
+        lines = data.split(b'\n')
+        hits = [i for i, ln in enumerate(lines) if FORK_HEADER_FROM in ln]
+        if len(hits) != 1 or not lines[hits[0]].lstrip().startswith(b'*'):
+            raise RenderError('shell/%s/factory.js: expected exactly one header comment line with %r (found %d)'
+                              % (sh['base'], FORK_HEADER_FROM.decode(), len(hits)))
+        lines[hits[0]] = (FORK_HEADER % sh['base']).encode()
+        fork = b'\n'.join(lines)
+        fsri = 'sha384-' + base64.b64encode(hashlib.sha384(fork).digest()).decode()
+        return fork, hashlib.sha256(fork).hexdigest(), fsri
 
     def rebrand_vendor(self, data):
         brand = self.ctx['brand']
@@ -226,8 +241,7 @@ class Renderer:
             self.write(v['to'], data)
             self.assets['/' + v['to']] = hashlib.sha256(data).hexdigest()[:10]
         # 1b. the self-hosted shell (byte copy, no ?v= query: a pin URL may not carry one)
-        shell_data, shell_sha = self.shell_bytes()
-        self.write(self.shell_rel, shell_data)
+        self.write(self.shell_rel, self.shell_data)
         # 2. data files copied as is (room content, not brand copy)
         for d in cfg.get('data', []):
             data = open(os.path.join(self.src, 'data', d), 'rb').read()
@@ -247,9 +261,9 @@ class Renderer:
             self.assets['/' + n] = hashlib.sha256(data).hexdigest()[:10]
         site = json.loads(self.render_text(open(os.path.join(tdir, 'site.json'), encoding='utf-8').read(), '.json',
                                            where='site.json'))
-        # the self-hosted shell is a declared byte-identical fork (shell_drift reports FORK with 0 diff lines), EXCEPTIONS.md E21
-        site.setdefault('shell', {}).update({'fork': True, 'file': self.shell_rel, 'sha256': shell_sha,
-                                             'reason': 'Self-hosted byte copy of shell/%s/factory.js (SRI kept), so script-src is self only' % self.cfg['shell']['base'],
+        # the self-hosted shell is a declared hub-only fork (header line only; shell_drift reports FORK with 2 diff lines), E21
+        site.setdefault('shell', {}).update({'fork': True, 'file': self.shell_rel, 'sha256': self.shell_sha,
+                                             'reason': 'Self-hosted hub fork of shell/%s/factory.js: header source line only, new SRI; script-src and connect-src are self only' % self.cfg['shell']['base'],
                                              'exception': 'E21'})
         for k in site.get('shell', {}).get('keep', []):
             p = os.path.join(self.out, k['file'])

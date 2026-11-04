@@ -1,5 +1,5 @@
 /* SubX factory.js (subx-factory master). DO NOT EDIT IN A ROOM REPO.
- * Source: github.com/jebbdykstra99/subx-factory  (version + sha256 in the room's FACTORY.lock)
+ * Source: SubX shared shell v1.2.6 (hub fork, header only)
  * Room differences belong in site.json (features, skin, rail, nests, minAge) or in EXCEPTIONS.md. */
 (function () {
   'use strict';
