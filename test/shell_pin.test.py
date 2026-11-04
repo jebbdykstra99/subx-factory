@@ -861,6 +861,199 @@ for name, (st_, needle) in sorted(ADV9_EXPECT.items()):
             good = good and not r['findings'] and not r['warnings']
         ok(good, 'adv9 %s = %s%s (%s %s %s)' % (name, st_, ' with "%s"' % needle if needle else '', r['status'], r['findings'][:3], r['warnings'][:3]))
 
+# adv10 (Juno K2 at 3cf3cc8): CSP placement (D1-D3), pin-folder exactness (C1), reCAPTCHA (C2), hosting redirects (C3),
+# worker-src. Run as one checker call with the fixture's own legacy list (k* rooms off it unless named legacy, n* on it).
+ADV10 = os.path.join(ROOT, 'test', 'fixtures', 'shell_drift', 'adv10')
+ADV10_EXPECT = {
+    'k00_strict_ok': ('OK', None),
+    'k01_missing_nonlegacy': ('DRIFT', 'CSP rule: no Content-Security-Policy on 1 of 1 pages (index.html): add the shell/csp.md me'),
+    'k02_missing_legacy': ('WARN', 'CSP rule (legacy room on tools/csp_legacy_rooms.json, WARN until its migration PR): no Con'),
+    'k03_false_offlist': ('DRIFT', 'CSP rule: cspRequired:false is allowed only for rooms on tools/csp_legacy_rooms.json (site'),
+    'k04_false_legacy': ('WARN', 'CSP rule (legacy room on tools/csp_legacy_rooms.json, WARN until its migration PR): no Con'),
+    'k04b_true_legacy_missing': ('DRIFT', 'CSP rule: no Content-Security-Policy on 1 of 1 pages (index.html): add the shell/csp.md me'),
+    'k05_bare_host': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source https://cdn.jsdelivr.net is n'),
+    'k06_repo': ('DRIFT', 'index.html:1 factory.js pin is blocked by index.html:1 <meta> CSP (script-src/default-src '),
+    'k07_tag': ('DRIFT', 'index.html:1 factory.js pin is blocked by index.html:1 <meta> CSP (script-src/default-src '),
+    'k08_branch': ('DRIFT', 'index.html:1 factory.js pin is blocked by index.html:1 <meta> CSP (script-src/default-src '),
+    'k09_short_sha': ('DRIFT', 'index.html:1 factory.js pin is blocked by index.html:1 <meta> CSP (script-src/default-src '),
+    'k10_unsafe_inline': ('DRIFT', "CSP rule: CSP is not strict on index.html: script-src has 'unsafe-inline'"),
+    'k11_unsafe_eval': ('DRIFT', "CSP rule: CSP is not strict on index.html: script-src has 'unsafe-eval'"),
+    'k12_strict_dynamic': ('DRIFT', 'index.html:1 factory.js pin is blocked by index.html:1 <meta> CSP (script-src/default-src '),
+    'k13_star': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source * is not allowed in a strict '),
+    'k14_https': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source https: is not allowed in a st'),
+    'k15_data': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source data: is not allowed in a str'),
+    'k16_blob': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source blob: is not allowed in a str'),
+    'k16b_nonce': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src has a nonce (a static page cannot ro'),
+    'k16c_evil_host': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source https://evil.example is not a'),
+    'k16d_jsdelivr_npm_any': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source https://cdn.jsdelivr.net/npm/'),
+    'k16e_upper_unsafe': ('DRIFT', "CSP rule: CSP is not strict on index.html: script-src has 'UNSAFE-INLINE'"),
+    'k17_no_objsrc': ('DRIFT', "CSP rule: CSP is not strict on index.html: object-src is not 'none'"),
+    'k18_no_baseuri': ('DRIFT', "CSP rule: CSP is not strict on index.html: base-uri is not 'none'"),
+    'k19_default_src_only_ok': ('OK', None),
+    'k20_default_star': ('DRIFT', 'CSP rule: CSP is not strict on index.html: default-src source * is not allowed in a strict'),
+    'k20b_no_script_or_default': ('DRIFT', 'CSP rule: CSP is not strict on index.html: no script-src or default-src'),
+    'k21_two_meta_strict_weak_ok': ('OK', None),
+    'k22_two_meta_both_weak': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source * is not allowed in a strict '),
+    'k23_meta_after_script': ('DRIFT', 'CSP rule: CSP is not strict on index.html: the meta CSP is not the first element in <head>'),
+    'k24_meta_in_body': ('DRIFT', 'CSP rule: CSP is not strict on index.html: the meta CSP is not the first element in <head>'),
+    'k25_upper_HTTP_EQUIV_ok': ('OK', None),
+    'k26_http_equiv_leading_space': ('DRIFT', "CSP rule: CSP is not strict on index.html: http-equiv=' Content-Security-Policy' has surro"),
+    'k27_script_src_elem_star': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src-elem source * is not allowed in a st'),
+    'k28_dup_directive_first_weak': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source * is not allowed in a strict '),
+    'k29_comma_in_meta': ('DRIFT', 'CSP rule: CSP is not strict on index.html: the meta CSP contains a comma: a <meta> deliver'),
+    'k30_head_closed_by_div': ('DRIFT', 'CSP rule: CSP is not strict on index.html: the meta CSP is not the first element in <head>'),
+    'k31_head_closed_by_text': ('DRIFT', 'CSP rule: CSP is not strict on index.html: the meta CSP is not the first element in <head>'),
+    'k32_after_head_p': ('DRIFT', 'CSP rule: CSP is not strict on index.html: the meta CSP is not the first element in <head>'),
+    'k32b_after_head_meta_ok': ('OK', None),
+    'k32c_no_head_img': ('DRIFT', 'CSP rule: CSP is not strict on index.html: the meta CSP is not the first element in <head>'),
+    'k33_csp_in_noscript': ('DRIFT', 'index.html:a <meta http-equiv=\'Content-Security-Policy\' content="script-src \'self\' https:/'),
+    'k34_csp_in_template': ('DRIFT', 'CSP rule: CSP is not strict on index.html: the meta CSP is not the first element in <head>'),
+    'k35_firebase_header_ok': ('OK', None),
+    'k36_headers_file_ok': ('OK', None),
+    'k37_firebase_header_partial': ('DRIFT', 'CSP rule: no Content-Security-Policy on 1 of 2 pages (promo.html): add the shell/csp.md me'),
+    'k38_csp_other_sha_only': ('DRIFT', 'index.html:1 factory.js pin is blocked by index.html:1 <meta> CSP (script-src/default-src '),
+    'k39_extra_foreign_sha_root': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source https://cdn.jsdelivr.net/gh/j'),
+    'k40_pin_sha_repo_root': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source https://cdn.jsdelivr.net/gh/j'),
+    'k41_recaptcha_bare_google': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source https://www.google.com is not'),
+    'k41b_recaptcha_bare_gstatic': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source https://www.gstatic.com/ is n'),
+    'k42_recaptcha_paths_ok': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source https://www.google.com/recapt'),
+    'k42b_firebase_exact_ok': ('OK', None),
+    'k42c_firebase_any': ('DRIFT', 'CSP rule: CSP is not strict on index.html: script-src source https://www.gstatic.com/fireb'),
+    'k43_firebase_redirect_remote': ('DRIFT', 'firebase.json redirects sends /go.js to an outside origin (https://cdn.jsdelivr.net/npm/ev'),
+    'k44_hash_unmatched': ('DRIFT', "CSP rule: CSP is not strict on index.html: script-src lists hash 'sha256-AAAAAAAAAAAA that"),
+    'k45_worker_src_star': ('DRIFT', 'CSP rule: CSP is not strict on index.html: worker-src has * (a worker may load from anywhe'),
+    'k46_meta_after_base': ('DRIFT', "index.html:1 <base href='/'> retargets every relative src (not allowed)"),
+    'k50_emoji_range_cdn': ('WARN', 'index.html:1 emoji-picker-element@1 has no SRI pin: load it from an exact-version folder l'),
+    'k51_emoji_exact_folder_ok': ('OK', None),
+    'k52_emoji_cdn_sri_only': ('WARN', 'index.html:1 emoji-picker-element@1.29.1 has no SRI pin: load it from an exact-version fol'),
+    'k53_emoji_folder_no_trailing_slash': ('WARN', 'index.html:1 emoji-picker-element@1.29.1 has no SRI pin: load it from an exact-version fol'),
+    'n00_xsl_page': ('DRIFT', 'p.xsl:1 loads undeclared remote script https://evil.example/x.js'),
+    'n01_xslt_page': ('DRIFT', 'p.xslt:1 loads undeclared remote script https://evil.example/x.js'),
+    'n02_svg_href_script': ('DRIFT', 'p.svg:1 <script> contains markup after an <svg>/<math>: in foreign content a browser parse'),
+    'n02b_svg_xlink_script': ('DRIFT', 'p.svg:1 <script> contains markup after an <svg>/<math>: in foreign content a browser parse'),
+    'n03_meta_charset_1252': ('DRIFT', "index.html:1 <meta charset='windows-1252'>: a declared charset other than utf-8 (the page "),
+    'n04_httpequiv_ctype_sjis': ('DRIFT', "index.html:1 <meta http-equiv Content-Type charset='shift_jis'>: a declared charset other "),
+    'n05_nul_in_text': ('DRIFT', 'index.html has NUL bytes: a page must be UTF-8 with no NUL bytes'),
+    'n06_xml_encoding_utf16': ('DRIFT', "p.xhtml:1 <?xml encoding='utf-16'?>: a declared charset other than utf-8 (the page must be"),
+    'n07_invalid_utf8': ('DRIFT', 'p.html has bytes that are not valid UTF-8 (first at offset 12): a page must be UTF-8 with '),
+    'n08_script_charset': ('DRIFT', "index.html:1 <script charset='iso-8859-1'>: a declared charset other than utf-8 (the page "),
+    'n10_pin_end_of_body_ok': ('WARN', 'CSP rule (legacy room on tools/csp_legacy_rooms.json, WARN until its migration PR): no Con'),
+    'n11_body_pin_after_frameset': ('DRIFT', 'index.html:1 factory.js pin is not live: the page has a <frameset> (a browser then never r'),
+    'n12_body_pin_in_noscript': ('DRIFT', "index.html:a <script src='https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@000000000"),
+    'n13_body_pin_in_template': ('DRIFT', 'index.html:1 factory.js pin is not live: it is not a direct child of <head> or <body> (ope'),
+    'n14_body_selfclosed_noscript': ('DRIFT', "index.html:a <script src='https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@000000000"),
+    'n15_body_selfclosed_template': ('DRIFT', 'index.html:1 factory.js pin is not live: it is not a direct child of <head> or <body> (ope'),
+    'n16_body_selfclosed_textarea': ('DRIFT', "index.html:a <script src='https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@000000000"),
+    'n17_body_selfclosed_iframe': ('DRIFT', "index.html:a <script src='https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@000000000"),
+    'n18_body_pin_in_svg': ('DRIFT', 'index.html:1 factory.js pin is not live: it is not a direct child of <head> or <body> (ope'),
+    'n19_body_pin_extra_attr': ('DRIFT', 'index.html:1 factory.js pin is not live: it carries attributes outside the pin template (e'),
+    'n20_body_pin_type_module': ('DRIFT', 'index.html:1 factory.js pin has type=module: document.currentScript is null there, so the '),
+    'n21_body_xmp': ('DRIFT', 'index.html runs no shell (no live, running factory.js pin): the main page must run it'),
+    'n22_body_noembed': ('DRIFT', 'index.html runs no shell (no live, running factory.js pin): the main page must run it'),
+    'n23_body_noframes': ('DRIFT', 'index.html runs no shell (no live, running factory.js pin): the main page must run it'),
+    'n24_after_body_ok': ('WARN', 'CSP rule (legacy room on tools/csp_legacy_rooms.json, WARN until its migration PR): no Con'),
+    'n25_body_svg_end_tag_trick': ('WARN', 'CSP rule (legacy room on tools/csp_legacy_rooms.json, WARN until its migration PR): no Con'),
+    'n26_body_math_selfclose': ('WARN', 'CSP rule (legacy room on tools/csp_legacy_rooms.json, WARN until its migration PR): no Con'),
+    'n27_body_template_in_svg': ('DRIFT', 'index.html:1 factory.js pin is inert (inside <template>): it does not run'),
+    'n28_body_pin_language': ('DRIFT', 'index.html:1 factory.js pin is not live: it carries attributes outside the pin template (l'),
+    'n29_body_pin_nomodule': ('DRIFT', 'index.html:1 factory.js pin is not live: it carries attributes outside the pin template (n'),
+    'n30_ns_settimeout_string_inj': ('DRIFT', 'app.js is loaded on noShell page terms.html and evaluates a string as code (setTimeout("):'),
+    'n31_ns_docwrite_inj': ('DRIFT', 'app.js is loaded on noShell page terms.html and evaluates a string as code (document.write'),
+    'n32_ns_settimeout_fn_ok': ('WARN', 'CSP rule (legacy room on tools/csp_legacy_rooms.json, WARN until its migration PR): no Con'),
+    'n33_ns_function_inj': ('DRIFT', 'app.js is loaded on noShell page terms.html and evaluates a string as code (Function(): no'),
+    'n34_ns_eval_noinj': ('DRIFT', 'app.js is loaded on noShell page terms.html and evaluates a string as code (eval(): not al'),
+    'n35_ns_docwriteln': ('DRIFT', 'app.js is loaded on noShell page terms.html and evaluates a string as code (document.write'),
+    'n36_ns_setinterval_tpl': ('DRIFT', 'app.js is loaded on noShell page terms.html and evaluates a string as code (setInterval(`)'),
+    'n37_ns_window_eval': ('DRIFT', 'app.js is loaded on noShell page terms.html and evaluates a string as code (eval(): not al'),
+    'n38_ns_indirect_eval': ('DRIFT', 'app.js injects or evaluates code at runtime (,eval)) without a declared "injects" reason'),
+    'n40_importmap_local_declared_ok': ('WARN', 'CSP rule (legacy room on tools/csp_legacy_rooms.json, WARN until its migration PR): no Con'),
+    'n41_importmap_remote_declared': ('DRIFT', 'index.html:1 import map points a specifier at remote https://evil.example/a.js'),
+    'n42_importmap_external': ('DRIFT', 'index.html:1 <script type=importmap src=...>: external import maps are not allowed'),
+    'n43_importmap_undeclared_flag': ('DRIFT', 'index.html:1 <script type=importmap>: an import map can remap module specifiers; not allow'),
+    'n44_importmap_remap_pin': ('DRIFT', 'index.html:1 undeclared import map (sha256 91d7e5f84127)'),
+}
+
+ok(sorted(ADV10_EXPECT) == sorted(x for x in os.listdir(ADV10) if os.path.isdir(os.path.join(ADV10, x))), 'every adv10 fixture room has an expectation')
+with tempfile.TemporaryDirectory() as t:
+    lf = os.path.join(t, 'leg.json')
+    json.dump({'rooms': json.load(open(os.path.join(ADV10, 'legacy10.json')))}, open(lf, 'w'))
+    subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'shell_drift.py'), '--csp-legacy', lf, '--json', os.path.join(t, 'o.json')]
+                   + [os.path.join(ADV10, n) for n in sorted(ADV10_EXPECT)], capture_output=True, text=True)
+    res = {os.path.basename(x['room'].rstrip('/')): x for x in json.load(open(os.path.join(t, 'o.json')))}
+for name, (st_, needle) in sorted(ADV10_EXPECT.items()):
+    r = res.get(name) or {'status': 'missing', 'findings': [], 'warnings': []}
+    good = r['status'] == st_ and (needle is None or any(needle in x for x in r['findings'] + r['warnings']))
+    if st_ == 'OK':
+        good = good and not r['findings'] and not r['warnings']
+    ok(good, 'adv10 %s = %s%s (%s %s %s)' % (name, st_, ' with "%s"' % needle[:50] if needle else '', r['status'], r['findings'][:2], r['warnings'][:2]))
+
+# D1-D3, C1-C3 and worker-src unit rooms (non-legacy: every CSP problem is DRIFT)
+with tempfile.TemporaryDirectory() as t:
+    _Z = '0' * 40
+    _PIN = ('<script src="https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@%s/shell/v1.2.6/factory.js" integrity="sha384-'
+            'P1qjkeL0BmNyUksLCAUJJ0Lws2AX1bx7hdOGxVHEbHjXQsof63F7DxNAZQbDXFpY" crossorigin="anonymous"></script>' % _Z)
+    _DIR = 'https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@%s/shell/v1.2.6/' % _Z
+    _TAIL = "; object-src 'none'; base-uri 'none'"
+
+    def _m(extra='', tail='', equiv='Content-Security-Policy'):
+        return '<meta http-equiv="%s" content="script-src \'self\' %s%s%s%s">' % (equiv, _DIR, (' ' + extra) if extra else '', _TAIL, tail)
+
+    def c_room(name, html, shell=None, files=None):
+        d = os.path.join(t, name); os.makedirs(d)
+        sh = {'base': 'v1.2.6', 'fork': False}; sh.update(shell or {})
+        json.dump({'siteId': name, 'shell': sh}, open(os.path.join(d, 'site.json'), 'w'))
+        open(os.path.join(d, 'index.html'), 'w').write(html)
+        for fn, c in (files or {}).items():
+            open(os.path.join(d, fn), 'w').write(c)
+        return run(d, csp=True, legacy=[])
+
+    def c_ok(label, r, want, needle=None):
+        good = r['status'] == want and (needle is None or any(needle in x for x in r['findings']))
+        ok(good, 'CSP %s = %s (%s %s)' % (label, want, r['findings'][:2], r['warnings'][:2]))
+
+    FIRST = 'not the first element in <head>'
+    c_ok('D1: <!DOCTYPE>, comment, <meta charset> before the meta', c_room('d1a', '<!DOCTYPE html><!-- x --><html>\n<head>\n  <meta charset="utf-8">\n  ' + _m() + _PIN + '</head><body></body></html>'), 'OK')
+    c_ok('D1: <title> before the meta', c_room('d1b', '<html><head><title>t</title>' + _m() + _PIN + '</head></html>'), 'DRIFT', FIRST)
+    c_ok('D1: <meta name=viewport> before the meta', c_room('d1c', '<html><head><meta name="viewport" content="x">' + _m() + _PIN + '</head></html>'), 'DRIFT', FIRST)
+    c_ok('D1: <link> before the meta', c_room('d1d', '<html><head><link rel="icon" href="a.png">' + _m() + _PIN + '</head></html>'), 'DRIFT', FIRST)
+    c_ok('D1: text before <html>', c_room('d1e', 'hi<html><head>' + _m() + _PIN + '</head></html>'), 'DRIFT', FIRST)
+    c_ok('D1: <style> before the meta', c_room('d1f', '<html><head><style>a{}</style>' + _m() + _PIN + '</head></html>'), 'DRIFT', FIRST)
+    c_ok('D1: two metas first, both strict', c_room('d1g', '<html><head>' + _m() + _m() + _PIN + '</head></html>'), 'OK')
+    c_ok('D2: comma in a meta', c_room('d2a', '<html><head>' + _m('', ', script-src *') + _PIN + '</head></html>'), 'DRIFT', 'contains a comma')
+    c_ok('D2: comma in a header still splits (strict, weak = OK)', c_room('d2b', '<html><head>' + _PIN + '</head></html>', files={
+        '_headers': "/*\n  Content-Security-Policy: script-src 'self' %s%s, script-src *\n" % (_DIR, _TAIL)}), 'OK')
+    c_ok('D3: http-equiv with a trailing space', c_room('d3a', '<html><head>' + _m(equiv='Content-Security-Policy ') + _PIN + '</head></html>'), 'DRIFT', 'surrounding whitespace')
+    c_ok('D3: http-equiv with a tab', c_room('d3b', '<html><head>' + _m(equiv='\tcontent-security-policy') + _PIN + '</head></html>'), 'DRIFT', 'surrounding whitespace')
+    NOTPIN = "is not this page's pin folder"
+    c_ok('C1: pin folder plus factory.js file = OK', c_room('c1a', '<html><head>' + _m(_DIR + 'factory.js') + _PIN + '</head></html>'), 'OK')
+    c_ok('C1: pin SHA, other version folder', c_room('c1b', '<html><head>' + _m(_DIR.replace('v1.2.6', 'v1.2.5')) + _PIN + '</head></html>'), 'DRIFT', NOTPIN)
+    c_ok('C1: pin SHA, /factory/ folder on a /shell/ pin', c_room('c1c', '<html><head>' + _m(_DIR.replace('shell/v1.2.6', 'factory')) + _PIN + '</head></html>'), 'DRIFT', NOTPIN)
+    c_ok('C1: only a foreign SHA folder (pin not listed)', c_room('c1d', '<html><head>' + _m().replace(_Z, '2' * 40) + _PIN + '</head></html>'), 'DRIFT')
+    _pre = _PIN.replace('shell/v1.2.6/', 'factory/')
+    _pd = 'https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@%s/factory/' % _Z
+    _pp = SD.csp_policies("script-src 'self' %s%s" % (_pd, _TAIL))[0]
+    ok(SD.csp_weak(_pp, set(), True, {_pd}) == [] and SD.csp_weak(_pp, set(), True, {_DIR}) != [],
+       'C1: the pre-merge /factory/ folder is the pin source only for a /factory/ pin')
+    RC = 'https://www.google.com/recaptcha/api.js https://www.gstatic.com/recaptcha/releases/'
+    c_ok('C2: exact reCAPTCHA sources with shell.recaptcha: true', c_room('c2a', '<html><head>' + _m(RC) + _PIN + '</head></html>', {'recaptcha': True}), 'OK')
+    c_ok('C2: enterprise.js with shell.recaptcha: true', c_room('c2b', '<html><head>' + _m('https://www.google.com/recaptcha/enterprise.js') + _PIN + '</head></html>', {'recaptcha': True}), 'OK')
+    c_ok('C2: exact reCAPTCHA sources without the opt-in', c_room('c2c', '<html><head>' + _m(RC) + _PIN + '</head></html>'), 'DRIFT', 'shell.recaptcha: true')
+    c_ok('C2: /recaptcha/ folder even with the opt-in', c_room('c2d', '<html><head>' + _m('https://www.google.com/recaptcha/') + _PIN + '</head></html>', {'recaptcha': True}), 'DRIFT', 'not allowed in a strict CSP')
+    c_ok('C2: gstatic /recaptcha/about/ with the opt-in', c_room('c2e', '<html><head>' + _m('https://www.gstatic.com/recaptcha/about/js/main.min.js') + _PIN + '</head></html>', {'recaptcha': True}), 'DRIFT', 'not allowed in a strict CSP')
+    c_ok('C2: shell.recaptcha must be a boolean', c_room('c2f', '<html><head>' + _m() + _PIN + '</head></html>', {'recaptcha': 'yes'}), 'DRIFT', 'shell.recaptcha must be true or false')
+    OUT = 'to an outside origin'
+    c_ok('C3: _redirects to an outside origin', c_room('c3a', '<html><head>' + _m() + _PIN + '</head></html>', files={'_redirects': '/go.js https://cdn.jsdelivr.net/npm/x@1/x.js 302\n'}), 'DRIFT', OUT)
+    c_ok('C3: _redirects local SPA fallback = OK', c_room('c3b', '<html><head>' + _m() + _PIN + '</head></html>', files={'_redirects': '# c\n/*    /index.html   200\n'}), 'OK')
+    c_ok('C3: _redirects protocol-relative', c_room('c3c', '<html><head>' + _m() + _PIN + '</head></html>', files={'_redirects': '/a //evil.example/a 301\n'}), 'DRIFT', OUT)
+    c_ok('C3: firebase.json rewrite to a remote destination', c_room('c3d', '<html><head>' + _m() + _PIN + '</head></html>', files={'firebase.json': json.dumps({'hosting': [{'rewrites': [{'source': '/x.js', 'destination': 'https://evil.example/x.js'}]}]})}), 'DRIFT', OUT)
+    c_ok('C3: firebase.json local rewrite = OK', c_room('c3e', '<html><head>' + _m() + _PIN + '</head></html>', files={'firebase.json': json.dumps({'hosting': {'rewrites': [{'source': '**', 'destination': '/index.html'}]}})}), 'OK')
+    c_ok('C3: netlify.toml redirect', c_room('c3f', '<html><head>' + _m() + _PIN + '</head></html>', files={'netlify.toml': '[[redirects]]\nfrom = "/a.js"\nto = "https://evil.example/a.js"\n'}), 'DRIFT', OUT)
+    c_ok('C3: vercel.json redirect', c_room('c3g', '<html><head>' + _m() + _PIN + '</head></html>', files={'vercel.json': json.dumps({'redirects': [{'source': '/a.js', 'destination': 'https://evil.example/a.js'}]})}), 'DRIFT', OUT)
+    c_ok('C3: _headers Location to an outside origin', c_room('c3h', '<html><head>' + _m() + _PIN + '</head></html>', files={'_headers': '/a.js\n  Location: https://evil.example/a.js\n'}), 'DRIFT', OUT)
+    c_ok('worker-src *', c_room('w1', '<html><head>' + _m('', '; worker-src *') + _PIN + '</head></html>'), 'DRIFT', 'worker-src has *')
+    c_ok('child-src https:', c_room('w2', '<html><head>' + _m('', '; child-src https:') + _PIN + '</head></html>'), 'DRIFT', 'child-src has https:')
+    c_ok("worker-src 'self' = OK", c_room('w3', '<html><head>' + _m('', "; worker-src 'self'") + _PIN + '</head></html>'), 'OK')
+
 # N1-N6 unit rooms beyond adv9
 with tempfile.TemporaryDirectory() as t:
     def n_room(name, html, files=None, shell=None, page='index.html'):
@@ -1047,10 +1240,10 @@ for nm, prep, needle in (
         ('a nonce', lambda d: with_csp(d, strict_src(d) + " 'nonce-abc'"), 'has a nonce'),
         ('a wildcard', lambda d: with_csp(d, strict_src(d) + ' https:'), 'is not allowed in a strict CSP'),
         ('a hash that matches no inline script', lambda d: with_csp(d, strict_src(d) + " 'sha256-%s'" % ('A' * 43 + '=')), 'matches no redirect-stub or 404.html inline script'),
-        ('no pin path', lambda d: with_csp(d, strict_src(d).replace(PIN_DIR + ' ', '')), 'does not list the pinned shell path'),
+        ('no pin path', lambda d: with_csp(d, strict_src(d).replace(PIN_DIR + ' ', '')), "does not list this page's pin folder"),
         ("no object-src 'none'", lambda d: with_csp(d, strict_src(d), "base-uri 'none'"), "object-src is not 'none'"),
         ("no base-uri 'none'", lambda d: with_csp(d, strict_src(d), "object-src 'none'"), "base-uri is not 'none'"),
-        ('meta CSP in <body>', lambda d: with_csp(d, strict_src(d), where='body'), 'not inside <head>')):
+        ('meta CSP in <body>', lambda d: with_csp(d, strict_src(d), where='body'), 'not the first element in <head>')):
     csp_case('weak CSP: %s, room off the list' % nm, prep, [], 'DRIFT', f_needle=needle)
 with tempfile.TemporaryDirectory() as t:  # a fresh room (hub / topic mode / new spin-up shape) starts DRIFT without a CSP
     r = run(room(t, 'newroom', pinned, {'base': V}), csp=True)
@@ -1061,7 +1254,7 @@ with tempfile.TemporaryDirectory() as t:  # a fresh room (hub / topic mode / new
     r = run(d, csp=True); ok(r['status'] == 'OK', 'CSP: a new room with the shell/csp.md meta = OK (%s %s)' % (r['findings'], r['warnings']))
     h2 = h.replace('content="script-src', 'content="default-src \'self\'; script-src').replace('<head>', '<head><script>var a=1</script>')
     open(os.path.join(d, 'index.html'), 'w').write(h2)
-    r = run(d, csp=True); ok(r['status'] == 'DRIFT' and any('comes after a <script>' in x for x in r['findings']), 'CSP: a meta CSP after a <script> = DRIFT (%s)' % r['findings'])
+    r = run(d, csp=True); ok(r['status'] == 'DRIFT' and any('not the first element in <head>' in x for x in r['findings']), 'CSP: a meta CSP after a <script> = DRIFT (%s)' % r['findings'])
     hsrc = sorted(SD.script_hash_sources('var a=1'))[0]
     open(os.path.join(d, 'index.html'), 'w').write(h.replace("base-uri 'none'", "base-uri 'none'").replace(FBSRC, FBSRC + ' ' + hsrc).replace('</body>', '<script>var a=1</script></body>'))
     r = run(d, csp=True); ok(r['status'] == 'DRIFT' and any('matches no redirect-stub or 404.html inline script' in x for x in r['findings']),
@@ -1074,7 +1267,7 @@ ok(len(leg['rooms']) == 20 and 'migration PR' in leg['_comment'], 'tools/csp_leg
 csp_md = open(os.path.join(ROOT, 'shell', 'csp.md')).read()
 m_ = re.search(r'content="([^"]+)"', csp_md)
 csp_ex = re.sub(r" 'sha256-<[^>]*>'", '', m_.group(1).replace('<FULL_MERGE_SHA>', '0' * 40)) if m_ else ''
-ok(m_ is not None and SD.csp_policies(csp_ex) and not SD.csp_weak(SD.csp_policies(csp_ex)[0], set(), True), 'shell/csp.md meta tag is strict (with the merge SHA filled in)')
+ok(m_ is not None and SD.csp_policies(csp_ex) and not SD.csp_weak(SD.csp_policies(csp_ex)[0], set(), True, {PIN_DIR}), 'shell/csp.md meta tag is strict (with the merge SHA filled in)')
 
 print('\n%d failure(s)' % len(fails))
 sys.exit(1 if fails else 0)

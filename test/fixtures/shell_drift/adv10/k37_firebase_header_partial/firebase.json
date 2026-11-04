@@ -1,0 +1,1 @@
+{"hosting": {"headers": [{"source": "/index.html", "headers": [{"key": "Content-Security-Policy", "value": "script-src 'self' https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@0000000000000000000000000000000000000000/shell/v1.2.6/; object-src 'none'; base-uri 'none'"}]}]}}

@@ -1,0 +1,1 @@
+{"siteId": "n33_ns_function_inj", "shell": {"base": "v1.2.6", "fork": false, "keep": [{"file": "app.js", "sha256": "0b10a5b235dfaf10ba1b9c322afc4f3e9457def848754ef166e953ba5fdaef73", "reason": "r", "injects": "r"}], "noShell": ["terms.html"]}}

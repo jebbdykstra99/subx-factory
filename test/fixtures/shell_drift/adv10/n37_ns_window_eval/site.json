@@ -1,0 +1,1 @@
+{"siteId": "n37_ns_window_eval", "shell": {"base": "v1.2.6", "fork": false, "keep": [{"file": "app.js", "sha256": "66287d6ea7e67cc4a54efc0addf123e5c3f81387f47f6662c5faac7ba3a0da6c", "reason": "r"}], "noShell": ["terms.html"]}}

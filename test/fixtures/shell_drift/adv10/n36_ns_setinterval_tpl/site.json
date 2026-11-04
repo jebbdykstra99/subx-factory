@@ -1,0 +1,1 @@
+{"siteId": "n36_ns_setinterval_tpl", "shell": {"base": "v1.2.6", "fork": false, "keep": [{"file": "app.js", "sha256": "9b0ba33d01b8bbd423d48b094e343f2f5863c0f306022a41d5a91157c2734d5d", "reason": "r"}], "noShell": ["terms.html"]}}

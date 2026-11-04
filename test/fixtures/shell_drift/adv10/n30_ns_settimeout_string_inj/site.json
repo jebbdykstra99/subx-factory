@@ -1,0 +1,1 @@
+{"siteId": "n30_ns_settimeout_string_inj", "shell": {"base": "v1.2.6", "fork": false, "keep": [{"file": "app.js", "sha256": "78d5eec0e41548f21b14763e91bf8039b487417efb7e9682a6e6090ab32c83ba", "reason": "r", "injects": "r"}], "noShell": ["terms.html"]}}

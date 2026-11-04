@@ -1,0 +1,1 @@
+{"siteId": "n35_ns_docwriteln", "shell": {"base": "v1.2.6", "fork": false, "keep": [{"file": "app.js", "sha256": "0b33ea78315facf9b6ee8438e63ddb2e836b3425358f39f49c275a3038b34715", "reason": "r"}], "noShell": ["terms.html"]}}
