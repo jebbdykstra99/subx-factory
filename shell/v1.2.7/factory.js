@@ -6003,10 +6003,10 @@
    ov.id = 'stories-composer';
    ov.className = 'stories-composer-overlay';
    ov.hidden = true;
+   var nu = site.imageUploads === false;
    ov.innerHTML =
-     '<div class="stories-composer" role="dialog" aria-modal="true" aria-labelledby="stories-composer-title"><h2 id="stories-composer-title">Add a story</h2><p class="stories-composer-note">Lives 24 hours on this room only. Text, a photo, or a short clip.</p><div class="stories-composer-types"><button type="button" data-story-type="text" class="is-on">Text</button><button type="button" data-story-type="image">Photo</button><button type="button" data-story-type="video">Clip</button></div><textarea id="stories-composer-text" maxlength="' + STORIES_TEXT_MAX + '" placeholder="' + escapeHtml(storiesComposePlaceholder()) + '"></textarea><input class="stories-composer-file" id="stories-composer-image" type="file" accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp" hidden><input class="stories-composer-file" id="stories-composer-video" type="file" accept="video/mp4,video/webm,.mp4,.webm" hidden><div class="stories-composer-preview" id="stories-composer-preview"></div><input class="stories-composer-caption" id="stories-composer-caption" maxlength="' + STORIES_CAPTION_MAX + '" placeholder="Caption (optional)" hidden><div class="stories-composer-err" id="stories-composer-err" role="status"></div><div class="stories-composer-bar"><button type="button" class="stories-composer-close" id="stories-composer-close">Cancel</button><button type="button" class="stories-composer-post" id="stories-composer-post">Share story</button></div></div>';
+     '<div class="stories-composer" role="dialog" aria-modal="true" aria-labelledby="stories-composer-title"><h2 id="stories-composer-title">Add a story</h2><p class="stories-composer-note">Lives 24 hours on this room only. Text' + (nu ? ' only in this room.</p>' : ', a photo, or a short clip.</p><div class="stories-composer-types"><button type="button" data-story-type="text" class="is-on">Text</button><button type="button" data-story-type="image">Photo</button><button type="button" data-story-type="video">Clip</button></div>') + '<textarea id="stories-composer-text" maxlength="' + STORIES_TEXT_MAX + '" placeholder="' + escapeHtml(storiesComposePlaceholder()) + '"></textarea>' + (nu ? '' : '<input class="stories-composer-file" id="stories-composer-image" type="file" accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp" hidden><input class="stories-composer-file" id="stories-composer-video" type="file" accept="video/mp4,video/webm,.mp4,.webm" hidden><div class="stories-composer-preview" id="stories-composer-preview"></div><input class="stories-composer-caption" id="stories-composer-caption" maxlength="' + STORIES_CAPTION_MAX + '" placeholder="Caption (optional)" hidden>') + '<div class="stories-composer-err" id="stories-composer-err" role="status"></div><div class="stories-composer-bar"><button type="button" class="stories-composer-close" id="stories-composer-close">Cancel</button><button type="button" class="stories-composer-post" id="stories-composer-post">Share story</button></div></div>';
    document.body.appendChild(ov);
-   if (site.imageUploads === false) ov.querySelectorAll('[data-story-type=image],[data-story-type=video]').forEach(function (b) { b.remove(); });
    ov.addEventListener('click', function (e) {
      if (e.target === ov) closeStoriesComposer();
    });
@@ -6093,7 +6093,7 @@
    var body = ((textEl && textEl.value) || '').trim().slice(0, STORIES_TEXT_MAX);
    var caption = ((capEl && capEl.value) || '').trim().slice(0, STORIES_CAPTION_MAX);
    if (storyType === 'text' && !body) {
-     storiesErr('Write a short card, or switch to photo / clip.');
+     storiesErr(site.imageUploads === false ? 'Write a short card.' : 'Write a short card, or switch to photo / clip.');
      return;
    }
    if ((storyType === 'image' || storyType === 'video') && !storyFile) {
