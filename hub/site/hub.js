@@ -59,7 +59,7 @@
     }).catch(function () { feed.innerHTML = '<div class="post-empty">Highlights are unavailable right now. Open a room from the list.</div>'; });
   }
   if (roomsEl) {
-    getJSON('/rooms.json?v=2fcf997cfb').then(function (d) {
+    getJSON('/rooms.json?v=509bc95e46').then(function (d) {
       roomsEl.innerHTML = ((d && d.rooms) || []).map(roomCard).join('') || '<div class="post-empty">No rooms listed.</div>';
     }).catch(function () { roomsEl.innerHTML = '<div class="post-empty">Rooms are unavailable right now.</div>'; });
   }
@@ -116,7 +116,7 @@
   }
   var ta = document.getElementById('hub-compose-text'), sel = document.getElementById('hub-compose-room'), go = document.getElementById('hub-compose-go');
   if (ta && sel && go) {
-    getJSON('/rooms.json?v=2fcf997cfb').then(function (d) {
+    getJSON('/rooms.json?v=509bc95e46').then(function (d) {
       ((d && d.rooms) || []).forEach(function (r) {
         if (!domainOk(r.domain)) return;
         var o = document.createElement('option'); o.value = r.domain; o.textContent = r.name + ' · ' + r.domain; sel.appendChild(o);
