@@ -180,6 +180,21 @@ for p in ('terms.html', 'privacy.html', 'guidelines.html', 'report.html'):
     ok('<p class="legal-kicker">Effective November 4, 2026. The hub is read-only:' in lp and 'Draft for review' not in lp, '%s: effective November 4, 2026' % p)
 pv = read(os.path.join(SITE, 'privacy.html'))
 ok('The pages are hosted on Firebase Hosting (Google), and sign-in,' in pv and 'hosted on GitHub Pages' not in pv, 'privacy.html: hosting line names Firebase Hosting (Google)')
+# CLO edits 2026-11-04 (3)-(5): second kickers and the Processors bullet, exact
+KICK2 = {'guidelines.html': 'Community guidelines', 'report.html': 'Report / takedown request',
+         'terms.html': 'Governing law: State of California, United States of America', 'privacy.html': 'Governing law: State of California, United States of America'}
+for p, k in KICK2.items():
+    kk = re.findall(r'<p class="legal-kicker">([^<]*)</p>', read(os.path.join(SITE, p)))
+    ok(len(kk) == 2 and kk[0].startswith('Effective November 4, 2026. ') and kk[1] == k, '%s: kickers = effective Nov 4, 2026 + exactly %r (%s)' % (p, k, kk[1:]))
+    ok('Effective October 22' not in read(os.path.join(SITE, p)) and 'Effective on launch' not in read(os.path.join(SITE, p)), '%s: no stale effective date' % p)
+PROC = ("<li><strong>Processors</strong>: service providers that host, deliver, or secure the Service (Google Firebase / Google Cloud, "
+        "including Firebase Hosting; jsDelivr, which serves the site's script files; GoDaddy, for domain DNS) under contracts or terms that limit use of the data.</li>")
+ok(pv.count(PROC) == 1 and pv.count('<strong>Processors</strong>') == 1 and 'Cloudflare' not in pv and 'GitHub Pages' not in pv, 'privacy.html: Processors bullet is exactly the CLO text (no GitHub Pages, no Cloudflare)')
+# CLO note (a): the sign-in modal on the hub is inert: hidden, accounts closed, no Firebase SDK can load
+ok(re.search(r'#cv-auth-overlay[^{]*\{ display: none !important; \}', read(os.path.join(SITE, 'hub.css'))) is not None, 'hub.css hides the sign-in modal (#cv-auth-overlay) and the sidebar auth entry')
+ok(site.get('accountsOpen') is False, 'site.json accountsOpen false: Register and Google are gated closed by the shell')
+ok(not [p for p in pages if re.search(r'<script[^>]+(gstatic|firebase|googleapis|apis\.google)', read(os.path.join(SITE, p)), re.I)], 'no page loads the Firebase / Google auth SDK')
+ok(not re.search(r'gstatic|googleapis|apis\.google|firebase', CSP.split('script-src', 1)[1].split(';')[0]), 'CSP script-src cannot load the Firebase / Google auth SDK')
 for p in ('about.html', 'rooms.html', '404.html'):
     ok('<p class="legal-kicker">%s</p>' % brand['name'] in read(os.path.join(SITE, p)), '%s: kicker without Preview' % p)
 ok('<p class="legal-kicker">%s · Coming soon</p>' % brand['name'] in read(os.path.join(SITE, topic_index)), 'topic index: kicker without Preview')
