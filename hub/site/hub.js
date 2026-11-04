@@ -59,7 +59,7 @@
     }).catch(function () { feed.innerHTML = '<div class="post-empty">Highlights are unavailable right now. Open a room from the list.</div>'; });
   }
   if (roomsEl) {
-    getJSON('/rooms.json?v=cbf03afb71').then(function (d) {
+    getJSON('/rooms.json?v=b867cffa5b').then(function (d) {
       roomsEl.innerHTML = ((d && d.rooms) || []).map(roomCard).join('') || '<div class="post-empty">No rooms listed.</div>';
     }).catch(function () { roomsEl.innerHTML = '<div class="post-empty">Rooms are unavailable right now.</div>'; });
   }
@@ -116,7 +116,7 @@
   }
   var ta = document.getElementById('hub-compose-text'), sel = document.getElementById('hub-compose-room'), go = document.getElementById('hub-compose-go');
   if (ta && sel && go) {
-    getJSON('/rooms.json?v=cbf03afb71').then(function (d) {
+    getJSON('/rooms.json?v=b867cffa5b').then(function (d) {
       ((d && d.rooms) || []).forEach(function (r) {
         if (!domainOk(r.domain)) return;
         var o = document.createElement('option'); o.value = r.domain; o.textContent = r.name + ' · ' + r.domain; sel.appendChild(o);
@@ -271,7 +271,7 @@
       hubSave(); renderHub('following'); paintBadge();
       var again = document.querySelector('[data-follow-room="' + room + '"]'); if (again) again.focus();
     });
-    Promise.all([getJSON('/rooms.json?v=cbf03afb71'), getJSON('/highlights.json?v=d9dc228224')]).then(function (d) {
+    Promise.all([getJSON('/rooms.json?v=b867cffa5b'), getJSON('/highlights.json?v=d9dc228224')]).then(function (d) {
       hubRooms = ((d[0] && d[0].rooms) || []).filter(function (r) { return r && /^[a-z0-9-]{1,40}$/.test(r.room || '') && domainOk(r.domain); });
       hubDomains = {}; hubNotifs = {};
       hubRooms.forEach(function (r) { hubDomains[String(r.domain).toLowerCase()] = true; hubNotifs[r.room] = r.notifs === true; });
