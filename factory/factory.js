@@ -2156,62 +2156,62 @@
   }
 
   function nestRailCards(nest) {
-    if (!nest) return [];
-    var cards = [];
-    var room = (site && site.name) || SITE_ID || 'room';
-    if (nest.blurb) {
-      cards.push({
-        tag: nest.kind || 'Nest',
-        headline: nest.label || nest.slug,
-        snippet: nest.blurb,
-        meta: 'Nest · ' + room,
-        url: ''
-      });
-    }
-    var ranks = nest.rankings || [];
-    for (var r = 0; r < ranks.length; r++) {
-      var pack = ranks[r];
-      if (!pack) continue;
-      var items = pack.items || [];
-      var bits = [];
-      for (var i = 0; i < items.length && bits.length < 3; i++) {
-        var it = items[i];
-        if (!it || !it.name) continue;
-        bits.push((it.rank != null ? it.rank + '. ' : '') + it.name);
-      }
-      cards.push({
-        tag: 'Ranking',
-        headline: pack.title || 'Ranking',
-        snippet: bits.join(' · ') || (pack.title || ''),
-        meta: (nest.label || nest.slug) + (items[0] && items[0].priceHint ? ' · ' + items[0].priceHint : ''),
-        url: (items[0] && items[0].url) || ''
-      });
-    }
-    var reviews = nest.reviews || [];
-    for (var v = 0; v < reviews.length; v++) {
-      var rev = reviews[v];
-      if (!rev) continue;
-      cards.push({
-        tag: 'Review',
-        headline: (rev.stars != null ? String(rev.stars) + '★ ' : '') + (rev.subject || 'Review'),
-        snippet: rev.snippet || '',
-        meta: [nest.label || nest.slug, rev.region].filter(Boolean).join(' · '),
-        url: rev.url || ''
-      });
-    }
-    var pins = nest.railPins || [];
-    for (var p = 0; p < pins.length; p++) {
-      var pin = pins[p];
-      if (!pin || !pin.headline) continue;
-      cards.push({
-        tag: pin.tag || 'Pin',
-        headline: pin.headline,
-        snippet: pin.snippet || '',
-        meta: pin.meta || (nest.label || nest.slug),
-        url: pin.url || ''
-      });
-    }
-    return cards;
+   if (!nest) return [];
+   var cards = [];
+   var room = (site && site.name) || SITE_ID || 'room';
+   if (nest.blurb) {
+     cards.push({
+       tag: nest.kind || 'Nest',
+       headline: nest.label || nest.slug,
+       snippet: nest.blurb,
+       meta: 'Nest · ' + room,
+       url: ''
+     });
+   }
+   var ranks = nest.rankings || [];
+   for (var r = 0; r < ranks.length; r++) {
+     var pack = ranks[r];
+     if (!pack) continue;
+     var items = pack.items || [];
+     var bits = [];
+     for (var i = 0; i < items.length && bits.length < 3; i++) {
+       var it = items[i];
+       if (!it || !it.name) continue;
+       bits.push((it.rank != null ? it.rank + '. ' : '') + it.name);
+     }
+     cards.push({
+       tag: 'Ranking',
+       headline: pack.title || 'Ranking',
+       snippet: bits.join(' · ') || (pack.title || ''),
+       meta: (nest.label || nest.slug) + (items[0] && items[0].priceHint ? ' · ' + items[0].priceHint : ''),
+       url: (items[0] && items[0].url) || ''
+     });
+   }
+   var reviews = nest.reviews || [];
+   for (var v = 0; v < reviews.length; v++) {
+     var rev = reviews[v];
+     if (!rev) continue;
+     cards.push({
+       tag: 'Review',
+       headline: (rev.stars != null ? String(rev.stars) + '★ ' : '') + (rev.subject || 'Review'),
+       snippet: rev.snippet || '',
+       meta: [nest.label || nest.slug, rev.region].filter(Boolean).join(' · '),
+       url: rev.url || ''
+     });
+   }
+   var pins = nest.railPins || [];
+   for (var p = 0; p < pins.length; p++) {
+     var pin = pins[p];
+     if (!pin || !pin.headline) continue;
+     cards.push({
+       tag: pin.tag || 'Pin',
+       headline: pin.headline,
+       snippet: pin.snippet || '',
+       meta: pin.meta || (nest.label || nest.slug),
+       url: pin.url || ''
+     });
+   }
+   return cards;
   }
 
   function applyNestRailChrome(nest) {
@@ -2540,65 +2540,65 @@
   }
 
   function applyRoute() {
-    closeMobileNav();
-    currentNest = resolveNestFromPath();
-    syncNestFeed();
-    applyNestChrome();
-    const raw = routeFromHash();
-    var roomHighlight = currentNest ? currentNest.slug : 'home';
-    var topicMatch = /^topic\/([a-z0-9-]{1,80})$/.exec(raw);
-    if (topicMatch) {
-      focusedTopicId = topicMatch[1];
-      closeSocialOverlays();
-      showContentPage('thoughts');
-      highlightSocial(roomHighlight);
-      currentTab = 'foryou';
-      document.querySelectorAll('[data-thoughts-tab]').forEach(function (t) {
-        t.classList.toggle('active', t.dataset.thoughtsTab === 'foryou');
-      });
-      renderWatchlist();
-      renderFeed();
-      return;
-    }
-    if (focusedTopicId) {
-      focusedTopicId = '';
-      renderWatchlist();
-    }
+   closeMobileNav();
+   currentNest = resolveNestFromPath();
+   syncNestFeed();
+   applyNestChrome();
+   const raw = routeFromHash();
+   var roomHighlight = currentNest ? currentNest.slug : 'home';
+   var topicMatch = /^topic\/([a-z0-9-]{1,80})$/.exec(raw);
+   if (topicMatch) {
+     focusedTopicId = topicMatch[1];
+     closeSocialOverlays();
+     showContentPage('thoughts');
+     highlightSocial(roomHighlight);
+     currentTab = 'foryou';
+     document.querySelectorAll('[data-thoughts-tab]').forEach(function (t) {
+       t.classList.toggle('active', t.dataset.thoughtsTab === 'foryou');
+     });
+     renderWatchlist();
+     renderFeed();
+     return;
+   }
+   if (focusedTopicId) {
+     focusedTopicId = '';
+     renderWatchlist();
+   }
 
-    if (raw === 'following') {
-      closeSocialOverlays();
-      showContentPage('thoughts');
-      highlightSocial('following');
-      selectThoughtsTab('following');
-      return;
-    }
-    if (raw === 'hot' || raw === 'new') {
-      closeSocialOverlays();
-      showContentPage('thoughts');
-      highlightSocial(roomHighlight);
-      selectThoughtsTab(raw);
-      return;
-    }
-    if (raw === 'home' || raw === 'feed' || raw === 'thoughts') {
-      closeSocialOverlays();
-      showContentPage('thoughts');
-      highlightSocial(roomHighlight);
-      selectThoughtsTab('foryou');
-      return;
-    }
-    if (raw === 'chat') { openChat(); return; }
-    if (raw === 'notifications') { openNotif(); return; }
-    if (raw === 'explore') { openExplore(); return; }
-    if (raw === 'profile') { openProfile(); return; }
-    if (raw === 'news') {
-      closeSocialOverlays();
-      showContentPage('news');
-      highlightSocial('news');
-      return;
-    }
-    closeSocialOverlays();
-    showContentPage('thoughts');
-    highlightSocial(roomHighlight);
+   if (raw === 'following') {
+     closeSocialOverlays();
+     showContentPage('thoughts');
+     highlightSocial('following');
+     selectThoughtsTab('following');
+     return;
+   }
+   if (raw === 'hot' || raw === 'new') {
+     closeSocialOverlays();
+     showContentPage('thoughts');
+     highlightSocial(roomHighlight);
+     selectThoughtsTab(raw);
+     return;
+   }
+   if (raw === 'home' || raw === 'feed' || raw === 'thoughts') {
+     closeSocialOverlays();
+     showContentPage('thoughts');
+     highlightSocial(roomHighlight);
+     selectThoughtsTab('foryou');
+     return;
+   }
+   if (raw === 'chat') { openChat(); return; }
+   if (raw === 'notifications') { openNotif(); return; }
+   if (raw === 'explore') { openExplore(); return; }
+   if (raw === 'profile') { openProfile(); return; }
+   if (raw === 'news') {
+     closeSocialOverlays();
+     showContentPage('news');
+     highlightSocial('news');
+     return;
+   }
+   closeSocialOverlays();
+   showContentPage('thoughts');
+   highlightSocial(roomHighlight);
   }
 
   function renderPostMedia(post) {
@@ -2735,119 +2735,119 @@
   }
 
   function renderFollowingFeed() {
-    var el = document.getElementById('thoughts-feed');
-    if (!el) return;
-    if (!isLiveUser()) {
-      el.innerHTML = '<div class="post-empty"><strong>Sign in to follow people.</strong><p>Following is people in this room. The watchlist is topics.</p></div>';
-      refreshPorchUi();
-      return;
-    }
-    if (!followingReady && !followingError) {
-      el.innerHTML = '<div class="post-empty">Loading who you follow…</div>';
-      refreshPorchUi();
-      return;
-    }
-    if (followingError) {
-      el.innerHTML = '<div class="post-empty"><strong>Following could not load.</strong><p>' +
-        escapeHtml((followingError && followingError.message) || 'Could not read follows.') + '</p></div>';
-      refreshPorchUi();
-      return;
-    }
-    if (!followingCount()) {
-      el.innerHTML = '<div class="post-empty"><strong>You are not following anyone yet.</strong><p>Open a profile and hit Follow. This is not the topic watchlist.</p></div>';
-      refreshPorchUi();
-      return;
-    }
-    if (!liveReady && !liveError) {
-      el.innerHTML = '<div class="post-empty">Connecting to the live feed…</div>';
-      refreshPorchUi();
-      return;
-    }
-    if (liveError) {
-      el.innerHTML = '<div class="post-empty"><strong>Live feed could not load.</strong><p>Follows are saved, but posts could not be listed.</p></div>';
-      refreshPorchUi();
-      return;
-    }
-    var posts = livePosts.filter(function (p) {
-      if (!p || p.parentId || isPostHidden(p)) return false;
-      if (p.authorUid && blockedUids[p.authorUid]) return false;
-      return !!(p.authorUid && followingUids[p.authorUid]);
-    });
-    if (!posts.length) {
-      el.innerHTML = '<div class="post-empty"><strong>No posts from people you follow.</strong><p>When they post in this room, it shows up here.</p></div>';
-      refreshPorchUi();
-      return;
-    }
-    el.innerHTML = posts.map(function (p) {
-      var kids = repliesFor(p.id);
-      return renderPost(p, false) + kids.map(function (r) { return renderPost(r, true); }).join('');
-    }).join('');
-    highlightDeepPost();
-    refreshPorchUi();
+   var el = document.getElementById('thoughts-feed');
+   if (!el) return;
+   if (!isLiveUser()) {
+     el.innerHTML = '<div class="post-empty"><strong>Sign in to follow people.</strong><p>Following is people in this room. The watchlist is topics.</p></div>';
+     refreshPorchUi();
+     return;
+   }
+   if (!followingReady && !followingError) {
+     el.innerHTML = '<div class="post-empty">Loading who you follow…</div>';
+     refreshPorchUi();
+     return;
+   }
+   if (followingError) {
+     el.innerHTML = '<div class="post-empty"><strong>Following could not load.</strong><p>' +
+       escapeHtml((followingError && followingError.message) || 'Could not read follows.') + '</p></div>';
+     refreshPorchUi();
+     return;
+   }
+   if (!followingCount()) {
+     el.innerHTML = '<div class="post-empty"><strong>You are not following anyone yet.</strong><p>Open a profile and hit Follow. This is not the topic watchlist.</p></div>';
+     refreshPorchUi();
+     return;
+   }
+   if (!liveReady && !liveError) {
+     el.innerHTML = '<div class="post-empty">Connecting to the live feed…</div>';
+     refreshPorchUi();
+     return;
+   }
+   if (liveError) {
+     el.innerHTML = '<div class="post-empty"><strong>Live feed could not load.</strong><p>Follows are saved, but posts could not be listed.</p></div>';
+     refreshPorchUi();
+     return;
+   }
+   var posts = livePosts.filter(function (p) {
+     if (!p || p.parentId || isPostHidden(p)) return false;
+     if (p.authorUid && blockedUids[p.authorUid]) return false;
+     return !!(p.authorUid && followingUids[p.authorUid]);
+   });
+   if (!posts.length) {
+     el.innerHTML = '<div class="post-empty"><strong>No posts from people you follow.</strong><p>When they post in this room, it shows up here.</p></div>';
+     refreshPorchUi();
+     return;
+   }
+   el.innerHTML = posts.map(function (p) {
+     var kids = repliesFor(p.id);
+     return renderPost(p, false) + kids.map(function (r) { return renderPost(r, true); }).join('');
+   }).join('');
+   highlightDeepPost();
+   refreshPorchUi();
   }
 
   function renderFeed() {
-    const el = document.getElementById('thoughts-feed');
-    if (!el) return;
+   const el = document.getElementById('thoughts-feed');
+   if (!el) return;
 
-    if (focusedTopicId) {
-      renderTopicFeed();
-      return;
-    }
+   if (focusedTopicId) {
+     renderTopicFeed();
+     return;
+   }
 
-    if (currentTab === 'following') {
-      if (!followingLive()) {
-        el.innerHTML = '<div class="post-empty soon-panel"><strong>Following: Soon.</strong> There is no follows graph yet. The live room is on For You.</div>';
-        refreshPorchUi();
-        return;
-      }
-      renderFollowingFeed();
-      return;
-    }
+   if (currentTab === 'following') {
+     if (!followingLive()) {
+       el.innerHTML = '<div class="post-empty soon-panel"><strong>Following: Soon.</strong> There is no follows graph yet. The live room is on For You.</div>';
+       refreshPorchUi();
+       return;
+     }
+     renderFollowingFeed();
+     return;
+   }
 
-    var nestView = !!currentNest;
-    var seeds = nestView ? [] : sessionSeedPosts();
-    var scopeError = nestView ? nestError : liveError;
-    var scopeReady = nestView ? nestReady : liveReady;
-    if (scopeError && !seeds.length) {
-      el.innerHTML = '<div class="post-empty">' + (nestView
-        ? 'This nest could not load. The error is in the compose line above. This is not an empty room.'
-        : 'Live feed could not load. The error is in the compose line above. This is not an empty room.') + '</div>';
-      refreshPorchUi();
-      return;
-    }
-    if (!scopeReady && !seeds.length) {
-      el.innerHTML = '<div class="post-empty">Connecting to the live feed…</div>';
-      refreshPorchUi();
-      return;
-    }
+   var nestView = !!currentNest;
+   var seeds = nestView ? [] : sessionSeedPosts();
+   var scopeError = nestView ? nestError : liveError;
+   var scopeReady = nestView ? nestReady : liveReady;
+   if (scopeError && !seeds.length) {
+     el.innerHTML = '<div class="post-empty">' + (nestView
+       ? 'This nest could not load. The error is in the compose line above. This is not an empty room.'
+       : 'Live feed could not load. The error is in the compose line above. This is not an empty room.') + '</div>';
+     refreshPorchUi();
+     return;
+   }
+   if (!scopeReady && !seeds.length) {
+     el.innerHTML = '<div class="post-empty">Connecting to the live feed…</div>';
+     refreshPorchUi();
+     return;
+   }
 
-    let posts = (scopeReady && !scopeError) ? topLevelPosts().slice() : [];
-    if (scopeReady && !scopeError && currentTab === 'hot') posts.sort(function (a, b) { return (b.likes || 0) - (a.likes || 0); });
-    if (scopeReady && !scopeError && currentTab === 'new') posts.sort(function (a, b) { return (b.ms || 0) - (a.ms || 0); });
-    var seedIds = {};
-    for (var si = 0; si < seeds.length; si++) seedIds[seeds[si].id] = true;
-    posts = seeds.concat(posts.filter(function (p) { return !seedIds[p.id]; }));
+   let posts = (scopeReady && !scopeError) ? topLevelPosts().slice() : [];
+   if (scopeReady && !scopeError && currentTab === 'hot') posts.sort(function (a, b) { return (b.likes || 0) - (a.likes || 0); });
+   if (scopeReady && !scopeError && currentTab === 'new') posts.sort(function (a, b) { return (b.ms || 0) - (a.ms || 0); });
+   var seedIds = {};
+   for (var si = 0; si < seeds.length; si++) seedIds[seeds[si].id] = true;
+   posts = seeds.concat(posts.filter(function (p) { return !seedIds[p.id]; }));
 
-    if (!posts.length) {
-      var empty = nestView
-        ? (nestScanCapped
-          ? ('Posts in ' + (currentNest.label || currentNest.slug) + ' could not be reached yet. The nest index is not built, and the fallback scan stopped after ' + NEST_SCAN_CAP + ' newer posts. This is not an empty room.')
-          : ('No posts in ' + (currentNest.label || currentNest.slug) + ' yet. This nest is live at /' + currentNest.slug + '. Sign in to post the first take.'))
-        : ((site && site.emptyState) || 'This room is empty. Sign in to post. Guest can browse only.');
-      el.innerHTML = '<div class="post-empty">' + escapeHtml(empty) + '</div>';
-      refreshPorchUi();
-      refreshNestSurfaces();
-      return;
-    }
+   if (!posts.length) {
+     var empty = nestView
+       ? (nestScanCapped
+         ? ('Posts in ' + (currentNest.label || currentNest.slug) + ' could not be reached yet. The nest index is not built, and the fallback scan stopped after ' + NEST_SCAN_CAP + ' newer posts. This is not an empty room.')
+         : ('No posts in ' + (currentNest.label || currentNest.slug) + ' yet. This nest is live at /' + currentNest.slug + '. Sign in to post the first take.'))
+       : ((site && site.emptyState) || 'This room is empty. Sign in to post. Guest can browse only.');
+     el.innerHTML = '<div class="post-empty">' + escapeHtml(empty) + '</div>';
+     refreshPorchUi();
+     refreshNestSurfaces();
+     return;
+   }
 
-    el.innerHTML = posts.map(function (p) {
-      var kids = repliesFor(p.id);
-      return renderPost(p, false) + kids.map(function (r) { return renderPost(r, true); }).join('');
-    }).join('') + nestMoreHtml();
-    highlightDeepPost();
-    refreshPorchUi();
-    refreshNestSurfaces();
+   el.innerHTML = posts.map(function (p) {
+     var kids = repliesFor(p.id);
+     return renderPost(p, false) + kids.map(function (r) { return renderPost(r, true); }).join('');
+   }).join('') + nestMoreHtml();
+   highlightDeepPost();
+   refreshPorchUi();
+   refreshNestSurfaces();
   }
 
   var RAIL_MAX = 3;
@@ -3400,56 +3400,56 @@
   }
 
   function renderTrends(quiet) {
-    var liveFetch = null;
-    if (railUsesCwf()) liveFetch = fetchCwfCards;
-    else if (railKind() === 'bart-bsa') liveFetch = fetchBartCards;
-    else if (railKind() === 'f1-calendar') liveFetch = fetchF1Cards;
-    else if (railUsesNws()) liveFetch = fetchNwsCards;
-    if (!liveFetch) {
-      if (!quiet && !railHasItems() && shouldPorchDwell()) {
-        paintRail([]);
-        startPorchDwell();
-      }
-      commitRail(outboundCards().slice(0, railNwsSlots()));
-      return;
-    }
-    if (!quiet && !railHasItems()) {
-      if (shouldPorchDwell()) {
-        paintRail([]);
-        startPorchDwell();
-      } else {
-        seedRail();
-      }
-    }
-    liveFetch().then(function (cards) {
-      var extra = outboundCards();
-      var merged;
-      if (railKind() === 'f1-calendar') {
-        merged = mergeF1Rail(cards, extra);
-      } else if (railCfg().liveKeep === true) {
-        var slots = railNwsSlots();
-        var liveKeep = Math.max(0, slots - extra.length);
-        if (!liveKeep && (cards || []).length) liveKeep = 1;
-        merged = railKind() === 'nws-forecast'
-          ? (extra || []).concat((cards || []).slice(0, liveKeep))
-          : (cards || []).slice(0, liveKeep).concat(extra);
-        if (merged.length) { commitRail(merged); return; }
-      } else if (railKind() === 'nws-forecast' || railKind() === 'bart-bsa') {
-        merged = (extra || []).concat(cards || []);
-      } else {
-        merged = (cards || []).concat(extra);
-      }
-      if (merged.length) commitRail(merged.slice(0, railNwsSlots()));
-      else commitRail(fallbackTrendCards());
-    }).catch(function (err) {
-      console.warn(railKind() || 'rail', err);
-      commitRail(fallbackTrendCards());
-    });
-    if (railKind() === 'f1-calendar' && !f1RefreshTimer) {
-      f1RefreshTimer = setInterval(function () {
-        renderTrends(true);
-      }, 5 * 60 * 1000);
-    }
+   var liveFetch = null;
+   if (railUsesCwf()) liveFetch = fetchCwfCards;
+   else if (railKind() === 'bart-bsa') liveFetch = fetchBartCards;
+   else if (railKind() === 'f1-calendar') liveFetch = fetchF1Cards;
+   else if (railUsesNws()) liveFetch = fetchNwsCards;
+   if (!liveFetch) {
+     if (!quiet && !railHasItems() && shouldPorchDwell()) {
+       paintRail([]);
+       startPorchDwell();
+     }
+     commitRail(outboundCards().slice(0, railNwsSlots()));
+     return;
+   }
+   if (!quiet && !railHasItems()) {
+     if (shouldPorchDwell()) {
+       paintRail([]);
+       startPorchDwell();
+     } else {
+       seedRail();
+     }
+   }
+   liveFetch().then(function (cards) {
+     var extra = outboundCards();
+     var merged;
+     if (railKind() === 'f1-calendar') {
+       merged = mergeF1Rail(cards, extra);
+     } else if (railCfg().liveKeep === true) {
+       var slots = railNwsSlots();
+       var liveKeep = Math.max(0, slots - extra.length);
+       if (!liveKeep && (cards || []).length) liveKeep = 1;
+       merged = railKind() === 'nws-forecast'
+         ? (extra || []).concat((cards || []).slice(0, liveKeep))
+         : (cards || []).slice(0, liveKeep).concat(extra);
+       if (merged.length) { commitRail(merged); return; }
+     } else if (railKind() === 'nws-forecast' || railKind() === 'bart-bsa') {
+       merged = (extra || []).concat(cards || []);
+     } else {
+       merged = (cards || []).concat(extra);
+     }
+     if (merged.length) commitRail(merged.slice(0, railNwsSlots()));
+     else commitRail(fallbackTrendCards());
+   }).catch(function (err) {
+     console.warn(railKind() || 'rail', err);
+     commitRail(fallbackTrendCards());
+   });
+   if (railKind() === 'f1-calendar' && !f1RefreshTimer) {
+     f1RefreshTimer = setInterval(function () {
+       renderTrends(true);
+     }, 5 * 60 * 1000);
+   }
   }
 
   function porchPrompt() {
@@ -4081,64 +4081,64 @@
   }
 
   function syncChatChrome() {
-    var newBtn = document.getElementById('chat-new-btn');
-    var phNew = document.getElementById('chat-placeholder-new');
-    var sendBtn = document.getElementById('chat-send-btn');
-    var input = document.getElementById('chat-compose-input');
-    var admin = dmsOn() && isLiveUser() && liveUid() === ADMIN_UID;
-    var threadOpen = !!activeConvId;
-    var peer = pendingPeer && pendingPeer.uid ? pendingPeer.uid : (findConv(activeConvId) ? convPeerUid(findConv(activeConvId)) : '');
-    var blocked = !!(peer && blockedUids[peer]);
+   var newBtn = document.getElementById('chat-new-btn');
+   var phNew = document.getElementById('chat-placeholder-new');
+   var sendBtn = document.getElementById('chat-send-btn');
+   var input = document.getElementById('chat-compose-input');
+   var admin = dmsOn() && isLiveUser() && liveUid() === ADMIN_UID;
+   var threadOpen = !!activeConvId;
+   var peer = pendingPeer && pendingPeer.uid ? pendingPeer.uid : (findConv(activeConvId) ? convPeerUid(findConv(activeConvId)) : '');
+   var blocked = !!(peer && blockedUids[peer]);
 
-    if (newBtn) {
-      if (!dmsOn()) {
-        newBtn.hidden = false;
-        newBtn.disabled = true;
-        newBtn.textContent = 'Soon';
-        newBtn.title = 'DMs coming soon';
-      } else if (admin) {
-        newBtn.hidden = false;
-        newBtn.disabled = false;
-        newBtn.textContent = 'New';
-        newBtn.title = 'New message';
-      } else {
-        newBtn.hidden = true;
-      }
-    }
-    if (phNew) {
-      if (!dmsOn()) {
-        phNew.hidden = false;
-        phNew.disabled = true;
-        phNew.textContent = 'Soon';
-      } else if (!isLiveUser()) {
-        phNew.hidden = false;
-        phNew.disabled = false;
-        phNew.textContent = 'Join';
-      } else if (admin && !threadOpen) {
-        phNew.hidden = false;
-        phNew.disabled = false;
-        phNew.textContent = 'New';
-      } else {
-        phNew.hidden = true;
-      }
-    }
-    if (sendBtn) {
-      if (!dmsOn()) {
-        sendBtn.disabled = true;
-        sendBtn.textContent = 'Soon';
-      } else {
-        sendBtn.textContent = 'Send';
-        sendBtn.disabled = dmSendInFlight || !(dmsOn() && isLiveUser() && threadOpen) || blocked;
-      }
-    }
-    if (input) {
-      input.maxLength = DM_TEXT_MAX;
-      input.disabled = !dmsOn() || !isLiveUser() || !threadOpen || blocked;
-    }
-    if (blocked && threadOpen) chatErr('You blocked this user.');
-    if (threadOpen) paintActiveChatName(threadPeerName());
-    paintChatPlaceholder();
-    paintDmSendBtn();
+   if (newBtn) {
+     if (!dmsOn()) {
+       newBtn.hidden = false;
+       newBtn.disabled = true;
+       newBtn.textContent = 'Soon';
+       newBtn.title = 'DMs coming soon';
+     } else if (admin) {
+       newBtn.hidden = false;
+       newBtn.disabled = false;
+       newBtn.textContent = 'New';
+       newBtn.title = 'New message';
+     } else {
+       newBtn.hidden = true;
+     }
+   }
+   if (phNew) {
+     if (!dmsOn()) {
+       phNew.hidden = false;
+       phNew.disabled = true;
+       phNew.textContent = 'Soon';
+     } else if (!isLiveUser()) {
+       phNew.hidden = false;
+       phNew.disabled = false;
+       phNew.textContent = 'Join';
+     } else if (admin && !threadOpen) {
+       phNew.hidden = false;
+       phNew.disabled = false;
+       phNew.textContent = 'New';
+     } else {
+       phNew.hidden = true;
+     }
+   }
+   if (sendBtn) {
+     if (!dmsOn()) {
+       sendBtn.disabled = true;
+       sendBtn.textContent = 'Soon';
+     } else {
+       sendBtn.textContent = 'Send';
+       sendBtn.disabled = dmSendInFlight || !(dmsOn() && isLiveUser() && threadOpen) || blocked;
+     }
+   }
+   if (input) {
+     input.maxLength = DM_TEXT_MAX;
+     input.disabled = !dmsOn() || !isLiveUser() || !threadOpen || blocked;
+   }
+   if (blocked && threadOpen) chatErr('You blocked this user.');
+   if (threadOpen) paintActiveChatName(threadPeerName());
+   paintChatPlaceholder();
+   paintDmSendBtn();
   }
 
   function renderThreads() {
@@ -4909,67 +4909,67 @@
   }
 
   function maybePost() {
-    const input = document.getElementById('thoughts-compose-input');
-    const text = (input.value || '').trim();
-    const pollReady = pollActive && [...document.querySelectorAll('#compose-poll .compose-poll-input')].filter(function (i) { return i.value.trim(); }).length >= 2;
-    if (!(text || attachedFile || pollReady)) return;
-    const live = fbAuth && fbAuth.currentUser;
-    if (!live) { composeErr('Sign in to post. Guest can only browse.'); openAuth('join'); return; }
-    if (!requireVerified('post')) return;
-    if (!fbDb) { composeErr('Feed is not connected.'); return; }
-    const parentId = replyTo;
-    replyTo = null;
-    composeErr('');
-    const btn = document.getElementById('thoughts-post-btn');
-    btn.disabled = true;
-    const start = attachedFile ? uploadImage(attachedFile, live.uid) : Promise.resolve(null);
-    start.then(function (imageUrl) {
-      const who = authorForWrite(live);
-      const doc = {
-        siteId: SITE_ID,
-        parentId: parentId,
-        authorUid: live.uid,
-        authorName: who.name,
-        authorHandle: who.handle,
-        text: text.slice(0, 280),
-        likes: {},
-        likeCount: 0,
-        replyCount: 0,
-        nestSlug: postNestSlug(parentId),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      if (imageUrl) doc.imageUrl = imageUrl;
-      if (pollActive) {
-        const opts = [...document.querySelectorAll('#compose-poll .compose-poll-input')].map(function (i) { return i.value.trim(); }).filter(Boolean);
-        if (opts.length >= 2) {
-          const duration = parseInt(document.getElementById('compose-poll-duration').value, 10) || 3;
-          doc.poll = {
-            options: opts,
-            votes: {},
-            duration: duration,
-            endsAt: firebase.firestore.Timestamp.fromMillis(Date.now() + duration * 86400000)
-          };
-        }
-      }
-      return guardedPostWrite(doc);
-    }).then(function (ref) {
-      writeReplyNotif(parentId, text, ref && ref.id);
-      input.value = '';
-      input.placeholder = input.getAttribute('data-ph') || input.placeholder;
-      resetComposeExtras();
-      syncPostBtn();
-      if (parentId) {
-        fbDb.collection('posts').doc(parentId).update({
-          replyCount: firebase.firestore.FieldValue.increment(1)
-        }).catch(function (e) {
-          composeErr((e && e.message) ? ('Posted, but reply count did not update: ' + e.message) : 'Posted, but reply count did not update.');
-        });
-      }
-    }).catch(function (e) {
-      composeErr(guardPublicErr(e, 'Could not post.'));
-      console.warn('post', e);
-      syncPostBtn();
-    });
+   const input = document.getElementById('thoughts-compose-input');
+   const text = (input.value || '').trim();
+   const pollReady = pollActive && [...document.querySelectorAll('#compose-poll .compose-poll-input')].filter(function (i) { return i.value.trim(); }).length >= 2;
+   if (!(text || attachedFile || pollReady)) return;
+   const live = fbAuth && fbAuth.currentUser;
+   if (!live) { composeErr('Sign in to post. Guest can only browse.'); openAuth('join'); return; }
+   if (!requireVerified('post')) return;
+   if (!fbDb) { composeErr('Feed is not connected.'); return; }
+   const parentId = replyTo;
+   replyTo = null;
+   composeErr('');
+   const btn = document.getElementById('thoughts-post-btn');
+   btn.disabled = true;
+   const start = attachedFile ? uploadImage(attachedFile, live.uid) : Promise.resolve(null);
+   start.then(function (imageUrl) {
+     const who = authorForWrite(live);
+     const doc = {
+       siteId: SITE_ID,
+       parentId: parentId,
+       authorUid: live.uid,
+       authorName: who.name,
+       authorHandle: who.handle,
+       text: text.slice(0, 280),
+       likes: {},
+       likeCount: 0,
+       replyCount: 0,
+       nestSlug: postNestSlug(parentId),
+       createdAt: firebase.firestore.FieldValue.serverTimestamp()
+     };
+     if (imageUrl) doc.imageUrl = imageUrl;
+     if (pollActive) {
+       const opts = [...document.querySelectorAll('#compose-poll .compose-poll-input')].map(function (i) { return i.value.trim(); }).filter(Boolean);
+       if (opts.length >= 2) {
+         const duration = parseInt(document.getElementById('compose-poll-duration').value, 10) || 3;
+         doc.poll = {
+           options: opts,
+           votes: {},
+           duration: duration,
+           endsAt: firebase.firestore.Timestamp.fromMillis(Date.now() + duration * 86400000)
+         };
+       }
+     }
+     return guardedPostWrite(doc);
+   }).then(function (ref) {
+     writeReplyNotif(parentId, text, ref && ref.id);
+     input.value = '';
+     input.placeholder = input.getAttribute('data-ph') || input.placeholder;
+     resetComposeExtras();
+     syncPostBtn();
+     if (parentId) {
+       fbDb.collection('posts').doc(parentId).update({
+         replyCount: firebase.firestore.FieldValue.increment(1)
+       }).catch(function (e) {
+         composeErr((e && e.message) ? ('Posted, but reply count did not update: ' + e.message) : 'Posted, but reply count did not update.');
+       });
+     }
+   }).catch(function (e) {
+     composeErr(guardPublicErr(e, 'Could not post.'));
+     console.warn('post', e);
+     syncPostBtn();
+   });
   }
 
   function deleteOwnPost(id) {
@@ -5671,7 +5671,7 @@
     return (site && site.stories) || {};
   }
   function storiesOn() {
-    return !!(storiesCfg().enabled);
+    return storiesCfg().enabled !== false;
   }
   function storiesComposePlaceholder() {
     return skin('storiesPlaceholder', (site && site.composePlaceholder) || 'What is happening right now?');
@@ -5905,7 +5905,7 @@
     }
   }
   function setStoryType(type) {
-    storyType = type === 'image' || type === 'video' ? type : 'text';
+    storyType = (type === 'image' || type === 'video') && site.imageUploads !== false ? type : 'text';
     document.querySelectorAll('[data-story-type]').forEach(function (btn) {
       btn.classList.toggle('is-on', btn.getAttribute('data-story-type') === storyType);
     });
@@ -6006,6 +6006,7 @@
    ov.innerHTML =
      '<div class="stories-composer" role="dialog" aria-modal="true" aria-labelledby="stories-composer-title"><h2 id="stories-composer-title">Add a story</h2><p class="stories-composer-note">Lives 24 hours on this room only. Text, a photo, or a short clip.</p><div class="stories-composer-types"><button type="button" data-story-type="text" class="is-on">Text</button><button type="button" data-story-type="image">Photo</button><button type="button" data-story-type="video">Clip</button></div><textarea id="stories-composer-text" maxlength="' + STORIES_TEXT_MAX + '" placeholder="' + escapeHtml(storiesComposePlaceholder()) + '"></textarea><input class="stories-composer-file" id="stories-composer-image" type="file" accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp" hidden><input class="stories-composer-file" id="stories-composer-video" type="file" accept="video/mp4,video/webm,.mp4,.webm" hidden><div class="stories-composer-preview" id="stories-composer-preview"></div><input class="stories-composer-caption" id="stories-composer-caption" maxlength="' + STORIES_CAPTION_MAX + '" placeholder="Caption (optional)" hidden><div class="stories-composer-err" id="stories-composer-err" role="status"></div><div class="stories-composer-bar"><button type="button" class="stories-composer-close" id="stories-composer-close">Cancel</button><button type="button" class="stories-composer-post" id="stories-composer-post">Share story</button></div></div>';
    document.body.appendChild(ov);
+   if (site.imageUploads === false) ov.querySelectorAll('[data-story-type=image],[data-story-type=video]').forEach(function (b) { b.remove(); });
    ov.addEventListener('click', function (e) {
      if (e.target === ov) closeStoriesComposer();
    });
@@ -6065,7 +6066,7 @@
     return true;
   }
   function uploadStoryMedia(file, uid, storyId) {
-    if (!fbStorage || !storiesOn()) return Promise.reject(new Error('Storage not ready'));
+    if (!fbStorage || !storiesOn() || site.imageUploads === false) return Promise.reject(new Error('Storage not ready'));
     var ext = (file.name.split('.').pop() || (storyType === 'video' ? 'mp4' : 'jpg')).toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
     var path = 'stories/' + SITE_ID + '/' + uid + '/' + storyId + '.' + ext;
     var ref = fbStorage.ref(path);
@@ -6078,67 +6079,67 @@
     });
   }
   function submitStory() {
-    if (!requireVerified('add a story')) return;
-    if (!fbDb || !storiesOn()) { storiesErr('Stories are not connected.'); return; }
-    if (siteKilled) { storiesErr('This room is paused.'); return; }
-    if (storiesPostedToday() >= STORIES_PER_DAY) {
-      storiesErr('Easy, a few stories a day is enough.');
-      return;
-    }
-    var live = fbAuth && fbAuth.currentUser;
-    if (!live) return;
-    var textEl = document.getElementById('stories-composer-text');
-    var capEl = document.getElementById('stories-composer-caption');
-    var body = ((textEl && textEl.value) || '').trim().slice(0, STORIES_TEXT_MAX);
-    var caption = ((capEl && capEl.value) || '').trim().slice(0, STORIES_CAPTION_MAX);
-    if (storyType === 'text' && !body) {
-      storiesErr('Write a short card, or switch to photo / clip.');
-      return;
-    }
-    if ((storyType === 'image' || storyType === 'video') && !storyFile) {
-      storiesErr(storyType === 'video' ? 'Choose a short mp4 or webm clip.' : 'Choose a photo.');
-      return;
-    }
-    var btn = document.getElementById('stories-composer-post');
-    if (btn) btn.disabled = true;
-    storiesErr(storyFile ? 'Uploading…' : '');
-    var docRef = fbDb.collection('stories').doc();
-    var wait = (storyType === 'video' && storyFile)
-      ? probeStoryVideo(storyFile)
-      : Promise.resolve(null);
-    wait.then(function () {
-      return storyFile ? uploadStoryMedia(storyFile, live.uid, docRef.id) : Promise.resolve('');
-    }).then(function (mediaUrl) {
-      var who = authorForWrite(live);
-      var disp = who.name;
-      var handle = who.handle;
-      var now = firebase.firestore.Timestamp.now();
-      var doc = {
-        siteId: SITE_ID,
-        authorUid: live.uid,
-        authorName: disp,
-        authorHandle: handle,
-        type: storyType,
-        createdAt: now,
-        expiresAt: firebase.firestore.Timestamp.fromMillis(now.toMillis() + STORIES_TTL_MS),
-        likeCount: 0
-      };
-      if (storyType === 'text') doc.text = body;
-      else if (caption) doc.text = caption;
-      if (mediaUrl) {
-        doc.mediaUrl = mediaUrl;
-        doc.mediaContentType = (storyFile && storyFile.type) || (storyType === 'video' ? 'video/mp4' : 'image/jpeg');
-      }
-      return docRef.set(doc);
-    }).then(function () {
-      bumpStoriesQuota();
-      if (btn) btn.disabled = false;
-      closeStoriesComposer();
-      composeErr('Story is up for 24 hours.');
-    }).catch(function (e) {
-      if (btn) btn.disabled = false;
-      storiesErr((e && e.message) ? e.message : 'Could not share that story.');
-    });
+   if (!requireVerified('add a story')) return;
+   if (!fbDb || !storiesOn()) { storiesErr('Stories are not connected.'); return; }
+   if (siteKilled) { storiesErr('This room is paused.'); return; }
+   if (storiesPostedToday() >= STORIES_PER_DAY) {
+     storiesErr('Easy, a few stories a day is enough.');
+     return;
+   }
+   var live = fbAuth && fbAuth.currentUser;
+   if (!live) return;
+   var textEl = document.getElementById('stories-composer-text');
+   var capEl = document.getElementById('stories-composer-caption');
+   var body = ((textEl && textEl.value) || '').trim().slice(0, STORIES_TEXT_MAX);
+   var caption = ((capEl && capEl.value) || '').trim().slice(0, STORIES_CAPTION_MAX);
+   if (storyType === 'text' && !body) {
+     storiesErr('Write a short card, or switch to photo / clip.');
+     return;
+   }
+   if ((storyType === 'image' || storyType === 'video') && !storyFile) {
+     storiesErr(storyType === 'video' ? 'Choose a short mp4 or webm clip.' : 'Choose a photo.');
+     return;
+   }
+   var btn = document.getElementById('stories-composer-post');
+   if (btn) btn.disabled = true;
+   storiesErr(storyFile ? 'Uploading…' : '');
+   var docRef = fbDb.collection('stories').doc();
+   var wait = (storyType === 'video' && storyFile)
+     ? probeStoryVideo(storyFile)
+     : Promise.resolve(null);
+   wait.then(function () {
+     return storyFile ? uploadStoryMedia(storyFile, live.uid, docRef.id) : Promise.resolve('');
+   }).then(function (mediaUrl) {
+     var who = authorForWrite(live);
+     var disp = who.name;
+     var handle = who.handle;
+     var now = firebase.firestore.Timestamp.now();
+     var doc = {
+       siteId: SITE_ID,
+       authorUid: live.uid,
+       authorName: disp,
+       authorHandle: handle,
+       type: storyType,
+       createdAt: now,
+       expiresAt: firebase.firestore.Timestamp.fromMillis(now.toMillis() + STORIES_TTL_MS),
+       likeCount: 0
+     };
+     if (storyType === 'text') doc.text = body;
+     else if (caption) doc.text = caption;
+     if (mediaUrl) {
+       doc.mediaUrl = mediaUrl;
+       doc.mediaContentType = (storyFile && storyFile.type) || (storyType === 'video' ? 'video/mp4' : 'image/jpeg');
+     }
+     return docRef.set(doc);
+   }).then(function () {
+     bumpStoriesQuota();
+     if (btn) btn.disabled = false;
+     closeStoriesComposer();
+     composeErr('Story is up for 24 hours.');
+   }).catch(function (e) {
+     if (btn) btn.disabled = false;
+     storiesErr((e && e.message) ? e.message : 'Could not share that story.');
+   });
   }
   function clearStoryViewerTimer() {
     if (storyViewerTimer) {
@@ -6498,7 +6499,8 @@
     window.addEventListener('hashchange', applyRoute);
     window.addEventListener('popstate', applyRoute);
     try { deepPostId = new URLSearchParams(location.search).get('p') || ''; } catch (e) { deepPostId = ''; }
-    if (!location.hash || location.hash === '#') {
+    var hand = /^#(compose|story)(?:=(.*))?$/.exec(location.hash) || [];
+    if (!location.hash || location.hash === '#' || hand[1]) {
       history.replaceState(null, '', location.pathname + location.search + '#home');
     }
     applyRoute();
@@ -6508,6 +6510,8 @@
       if (!currentNest) highlightSocial('home');
       selectThoughtsTab('foryou');
     }
+    if (hand[1] === 'story') openStoriesComposer();
+    if (hand[1] === 'compose') { try { restoreCompose(decodeURIComponent(hand[2] || '').slice(0, 280)); } catch (e) {} }
     syncHamburgerAria();
     try { if (!sessionStorage.getItem('subx.hit.'+SITE_ID)) { sessionStorage.setItem('subx.hit.'+SITE_ID,'1'); sendPixel(); } } catch (e) {}
 
