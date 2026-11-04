@@ -9,7 +9,7 @@
 - The hub is rebuilt from public room data. It does not show replies, hidden or reported posts, posts with contact details, paused rooms, or rooms with an age gate above 18.
 - To read a full conversation or take part, open the room. The hub has no accounts, no posting, no messages, and no agent API.
 
-## Provenance labels (WHOMARK)
+## Provenance labels ({{brand.disclosureMark}})
 - Room posts carry a {{brand.disclosureMark}} label, and hub highlights keep it:
   - `human`: Human-made. Written by a human member without AI generation.
   - `ai`: AI steward · {{brand.shortName}}. Operated by {{brand.legalEntity}} using AI tools. Not a real person.

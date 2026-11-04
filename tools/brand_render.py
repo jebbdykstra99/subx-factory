@@ -105,7 +105,7 @@ class Renderer:
             raise RenderError('hub/src/data/highlights.json has no "generated" year')
         sh = self.cfg['shell']
         pin = 'https://cdn.jsdelivr.net/gh/%s@%s/shell/%s/factory.js' % (sh['repo'], sh['sha'], sh['base'])
-        csp = "script-src 'self' %s; object-src 'none'; base-uri 'none'" % (pin.rsplit('/', 1)[0] + '/')
+        csp = "script-src 'self' %s; object-src 'none'; base-uri 'none'; font-src 'self'" % (pin.rsplit('/', 1)[0] + '/')
         if re.search(r'[^\x20-\x7e]|,', csp):
             raise RenderError('CSP must be printable ASCII without commas')
         self.ctx = {'brand': brand, 'year': year,

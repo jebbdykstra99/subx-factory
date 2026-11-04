@@ -46,6 +46,38 @@
     {
       "from": "assets/whomark/whomark.js",
       "to": "assets/whomark/whomark.js"
+    },
+    {
+      "from": "hub/src/fonts/OFL-Inter.txt",
+      "to": "assets/fonts/OFL-Inter.txt"
+    },
+    {
+      "from": "hub/src/fonts/OFL-Newsreader.txt",
+      "to": "assets/fonts/OFL-Newsreader.txt"
+    },
+    {
+      "from": "hub/src/fonts/inter-latin-ext.woff2",
+      "to": "assets/fonts/inter-latin-ext.woff2"
+    },
+    {
+      "from": "hub/src/fonts/inter-latin.woff2",
+      "to": "assets/fonts/inter-latin.woff2"
+    },
+    {
+      "from": "hub/src/fonts/newsreader-latin-ext-italic.woff2",
+      "to": "assets/fonts/newsreader-latin-ext-italic.woff2"
+    },
+    {
+      "from": "hub/src/fonts/newsreader-latin-ext.woff2",
+      "to": "assets/fonts/newsreader-latin-ext.woff2"
+    },
+    {
+      "from": "hub/src/fonts/newsreader-latin-italic.woff2",
+      "to": "assets/fonts/newsreader-latin-italic.woff2"
+    },
+    {
+      "from": "hub/src/fonts/newsreader-latin.woff2",
+      "to": "assets/fonts/newsreader-latin.woff2"
     }
   ],
   "data": [

@@ -33,7 +33,7 @@ cfg = json.load(open(os.path.join(SRC, 'config.json')))
 brand = json.load(open(BRAND))
 PIN = 'https://cdn.jsdelivr.net/gh/%s@%s/shell/%s/factory.js' % (cfg['shell']['repo'], cfg['shell']['sha'], cfg['shell']['base'])
 PIN_DIR = PIN.rsplit('/', 1)[0] + '/'
-CSP = "script-src 'self' %s; object-src 'none'; base-uri 'none'" % PIN_DIR
+CSP = "script-src 'self' %s; object-src 'none'; base-uri 'none'; font-src 'self'" % PIN_DIR
 
 # ---- brand.json ----
 want_keys = ['name', 'legalEntity', 'primaryDomain', 'shortName', 'tagline', 'takedownEmail', 'topicPathPrefix',
@@ -176,6 +176,31 @@ for p in scan_files():
         for m in rx.finditer(t):
             hits.append('%s: %s' % (os.path.relpath(p, ROOT), m.group(0)))
 ok(not hits, 'no private names, emails, 310 numbers, registered-agent city or internal codes in the hub, brand or renderer (%s)' % hits[:5])
+# Key 2 B1: never claim affiliation with X ("Affiliated with X" only ever as "Not affiliated with X")
+AFFIL = re.compile(r'(?<!not )affiliated with x\b', re.I)
+bad = []
+for f in files(SITE):
+    if f.endswith(TEXT):
+        t = re.sub(r'<[^>]+>', ' ', read(os.path.join(SITE, f)))
+        if 'Affiliated with X Corp.' in t or AFFIL.search(re.sub(r'\s+', ' ', t)):
+            bad.append(f)
+ok(not bad, 'no rendered page says "Affiliated with X" without "Not " before it (%s)' % bad)
+ok('Affiliated with X Corp.' not in read(os.path.join(SITE, 'about.html')) and '<li>%s</li>' % brand['nonAffiliation'] in read(os.path.join(SITE, 'about.html')),
+   'about.html: the "is not" list uses brand.nonAffiliation only')
+# Key 2 C5: the disclosure mark comes from brand.json, never typed into hub sources
+lit = [n for d in ('templates', 'partials') for n in os.listdir(os.path.join(SRC, d))
+       if n.endswith(TEXT) and 'WHOMARK' in read(os.path.join(SRC, d, n))]
+ok(not lit, 'hub/src templates + partials: no literal WHOMARK (use {{brand.disclosureMark}}) (%s)' % lit)
+ok('## Provenance labels (%s)' % brand['disclosureMark'] in read(os.path.join(SITE, 'llms.txt')), 'llms.txt: provenance heading renders brand.disclosureMark')
+# Key 2 C6: fonts self-hosted (OFL), no Google Fonts requests, font-src 'self'
+gf = [f for f in files(SITE) if f.endswith(TEXT) and re.search(r'fonts\.(googleapis|gstatic)\.com', read(os.path.join(SITE, f)))]
+ok(not gf, 'hub/site: no Google Fonts links (%s)' % gf)
+hcss = read(os.path.join(SITE, 'hub.css'))
+furls = re.findall(r"url\((/assets/fonts/[^)?]+\.woff2)\?v=[0-9a-f]{10}\)", hcss)
+ok(len(furls) == 6 and all(os.path.isfile(os.path.join(SITE, u.lstrip('/'))) for u in furls), 'hub.css: 6 self-hosted woff2 faces, all present')
+ok(all(os.path.isfile(os.path.join(SITE, 'assets', 'fonts', 'OFL-%s.txt' % n)) and 'SIL Open Font License' in read(os.path.join(SITE, 'assets', 'fonts', 'OFL-%s.txt' % n))
+       for n in ('Inter', 'Newsreader')), 'assets/fonts: OFL 1.1 license files ship with the fonts')
+ok("font-src 'self'" in json.dumps(json.load(open(os.path.join(ROOT, 'hub', 'firebase.json')))), "firebase.json header CSP: font-src 'self'")
 for f in files(SITE):
     if not f.endswith(TEXT):
         continue

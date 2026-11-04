@@ -23,7 +23,7 @@ project/site ids).
   and needs the app DOM, so it is not loaded on them. They only load files listed in
   `shell.keep`.
 - Every page has the strict meta CSP as the first element of `<head>`:
-  `script-src 'self' <pin folder>/; object-src 'none'; base-uri 'none'`.
+  `script-src 'self' <pin folder>/; object-src 'none'; base-uri 'none'; font-src 'self'` (fonts are self-hosted under assets/fonts, OFL 1.1).
   `hub/firebase.json` sends the same policy as a header plus `frame-ancestors 'none'`,
   and `X-Robots-Tag: noindex, nofollow`.
 - Check: `python3 tools/shell_drift.py hub/site --csp-legacy <file> --strict`.

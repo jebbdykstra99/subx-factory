@@ -184,7 +184,7 @@
       {
         "file": "assets/whomark/whomark.js",
         "sha256": "393b84f5bf5f46d3c1f0c05237b5d2c17985cfcf8b9d1aab2211adb91cfedf3e",
-        "reason": "WHOMARK disclosure badges (vendored byte copy of subx-factory assets/whomark, re-branded only when brand.json changes)",
+        "reason": "WHOMARK™ disclosure badges (vendored byte copy of subx-factory assets/whomark, re-branded only when brand.json changes)",
         "noShellOk": true
       },
       {
