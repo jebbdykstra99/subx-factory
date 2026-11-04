@@ -40,3 +40,7 @@ under the title (`<!--if:gov-->` in hub/src/topic-template.html) and as a line i
 `--check` refuses a flag on a non-doorway, a flagged doorway whose topic lacks govNonAffiliation, and a missing brand
 key. shell_drift allows `govAgency` only as `true` on a doorway. The agency seed is not in hub/src/config.json
 `topics.seed`, so no hub/site page renders from it yet, and everything stays hidden.
+
+fight-the-power (owner go, 2026-11-03 10:02 PM MT): ftpchat.com is a doorway to the hidden topic fight-the-power, appended to
+the same wave-2 seed with `--from-topic-md` (listed under `extraSources`). It is not an agency topic, so it carries no
+govAgency or govNonAffiliation flag. awolchat.com stays parked.

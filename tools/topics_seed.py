@@ -6,7 +6,8 @@
   python3 tools/topics_seed.py --from-csv CSV       rebuild the seed from the wave-1 CSV and compare (add --write to save)
   python3 tools/topics_seed.py --from-agency-md MD   rebuild topics/seed_wave2_agency.json from the agency-topics draft
                                                     (its slug,title,description,doorway_domains block) and compare
-                                                    (add --write to save)
+                                                    (add --write to save); add --from-topic-md MD (repeatable)
+                                                    for non-agency wave-2 topic drafts, appended without the gov flag
   python3 tools/topics_seed.py --apply              REFUSED unless SUBX_TOPICS_APPLY_GO is set; this PR never writes
                                                     Firestore, so even with the variable set it stops before any write
 
@@ -14,7 +15,8 @@ Seed invariants: every topic starts with zero stats and no activatedAt; HOLD top
 get status "hold" and stewardOnly true (never rendered); every other topic starts "hidden". Python stdlib only.
 
 Wave-2 agency seed (topics/seed_wave2_agency.json): topics reached by a doorway named after a government agency. Same
-row format and invariants (hidden, zero stats, no approval record), plus govNonAffiliation true on every row: the topic
+row format and invariants (hidden, zero stats, no approval record), plus govNonAffiliation true on every agency row (rows from --from-topic-md drafts, listed in "extraSources",
+carry no flag; owner go 2026-11-03 for fight-the-power): the topic
 page then shows {{brand.nonAffiliationGov}} under the title and in the footer (hub/src/topic-template.html if:gov).
 Its slugs and doorway domains may not repeat wave 1. It is not in hub/src/config.json "topics.seed", so nothing in
 hub/site renders from it yet.
@@ -60,8 +62,8 @@ def build(csv_path, created_at=CREATED_AT):
             'generatedBy': 'tools/topics_seed.py --from-csv', 'topics': topics}
 
 
-def build_agency(md_path, created_at=CREATED_AT):
-    """Wave-2 agency seed from the agency-topics draft: the CSV block that starts with its slug,title,... header."""
+def _md_rows(md_path, gov, created_at):
+    """Rows from a draft's CSV block (the one that starts with its slug,title,... header), plus the file's md5."""
     raw = open(md_path, 'rb').read()
     lines = raw.decode('utf-8').splitlines()
     i = next(n for n, ln in enumerate(lines) if ln.strip() == 'slug,title,description,doorway_domains')
@@ -76,15 +78,30 @@ def build_agency(md_path, created_at=CREATED_AT):
         topics.append({'slug': r['slug'].strip(), 'title': r['title'].strip(), 'description': r['description'].strip(),
                        'status': 'hidden', 'createdAt': created_at, 'activatedAt': None,
                        'posts14d': 0, 'distinctPosters14d': 0, 'posts30d': 0, 'lastCountedPostAt': None,
-                       'doorwayDomains': doors, 'stewardOnly': False, 'legalProfile': 'standard-18',
-                       'govNonAffiliation': True})
-    return {'collection': 'topics', 'wave': 2,
-            'source': {'file': os.path.basename(md_path), 'md5': hashlib.md5(raw).hexdigest(), 'rows': len(topics)},
-            'generatedBy': 'tools/topics_seed.py --from-agency-md', 'topics': topics}
+                       'doorwayDomains': doors, 'stewardOnly': False, 'legalProfile': 'standard-18'})
+        if gov:
+            topics[-1]['govNonAffiliation'] = True
+    return topics, {'file': os.path.basename(md_path), 'md5': hashlib.md5(raw).hexdigest(), 'rows': len(topics)}
+
+
+def build_agency(md_path, topic_mds=(), created_at=CREATED_AT):
+    """Wave-2 seed: the agency draft's rows (govNonAffiliation true), then each non-agency topic draft's rows (no flag)."""
+    topics, src = _md_rows(md_path, True, created_at)
+    s2 = {'collection': 'topics', 'wave': 2, 'source': src}
+    extra = []
+    for m in topic_mds:
+        rows, xs = _md_rows(m, False, created_at)
+        topics += rows
+        extra.append(xs)
+    if extra:
+        s2['extraSources'] = extra
+    s2['generatedBy'] = 'tools/topics_seed.py --from-agency-md' + (' --from-topic-md' if extra else '')
+    s2['topics'] = topics
+    return s2
 
 
 def check_agency(seed2, seed1=None, brand=None):
-    """Wave-2 agency seed: schema, slug rules, hidden, zero stats, no approval, govNonAffiliation, no overlap with wave 1."""
+    """Wave-2 seed: schema, slug rules, hidden, zero stats, no approval, gov rows match the agency source, no wave-1 overlap."""
     seed1 = seed1 if seed1 is not None else load(SEED)
     sch = load(SCHEMA)
     words = topic_slug.reserved(brand)
@@ -113,12 +130,16 @@ def check_agency(seed2, seed1=None, brand=None):
             e.append('%s: a seed row must start with zero stats' % w)
         if any(t.get(k) is not None for k in ('approvedWave', 'approvedBy', 'approvedAt')):
             e.append('%s: a seed row must not carry an approval record' % w)
-        if t.get('govNonAffiliation') is not True:
-            e.append('%s: govNonAffiliation must be true (page shows brand.nonAffiliationGov)' % w)
+        if 'govNonAffiliation' in t and t['govNonAffiliation'] is not True:
+            e.append('%s: govNonAffiliation is true or absent (true: page shows brand.nonAffiliationGov)' % w)
         if re.search('[\u2013\u2014]', t.get('title', '') + t.get('description', '')):
             e.append('%s: no dashes in title or description' % w)
-    if seed2.get('source', {}).get('rows') != len(seed2.get('topics', [])):
-        e.append('agency seed row count does not match source rows')
+    tops = seed2.get('topics', [])
+    ngov = sum(1 for t in tops if t.get('govNonAffiliation') is True)
+    if seed2.get('source', {}).get('rows') != ngov:
+        e.append('agency seed: govNonAffiliation rows do not match the agency source rows')
+    if sum(x.get('rows', 0) for x in seed2.get('extraSources', [])) != len(tops) - ngov:
+        e.append('agency seed: unflagged rows do not match the extra topic source rows')
     return e
 
 
@@ -184,6 +205,7 @@ def main(argv=None):
     ap.add_argument('--check', action='store_true')
     ap.add_argument('--from-csv')
     ap.add_argument('--from-agency-md')
+    ap.add_argument('--from-topic-md', action='append', default=[])
     ap.add_argument('--write', action='store_true')
     ap.add_argument('--apply', action='store_true')
     a = ap.parse_args(argv)
@@ -206,7 +228,7 @@ def main(argv=None):
         else:
             print('seed matches %s (md5 %s)' % (a.from_csv, seed['source']['md5']))
     if a.from_agency_md:
-        s2 = build_agency(a.from_agency_md)
+        s2 = build_agency(a.from_agency_md, a.from_topic_md)
         cur = open(AGENCY_SEED, encoding='utf-8').read() if os.path.exists(AGENCY_SEED) else ''
         if a.write:
             open(AGENCY_SEED, 'w', encoding='utf-8').write(dump(s2))

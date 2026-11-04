@@ -413,7 +413,9 @@
     {
       "domain": "ftpchat.com",
       "group": "topic",
-      "note": "parked by Key 1 review: FTP is anti-police slang (no mode, so the default applies)"
+      "mode": "doorway",
+      "topic": "fight-the-power",
+      "note": "owner go 2026-11-03 10:02 PM MT: doorway to fight-the-power (wave 2 seed); awolchat stays parked"
     },
     {
       "domain": "ftwchat.com",

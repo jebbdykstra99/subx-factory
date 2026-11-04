@@ -33,7 +33,7 @@ ok(inv == 151, 'inventory is the 151 names in the plan')
 ok(len(cfg['candidates']) + sum(ebr.values()) == inv, 'candidates + excludedByReason = inventory (%d + %d)' % (len(cfg['candidates']), sum(ebr.values())))
 ok(len(entries) == 97 and sum(ebr.values()) == 54, 'rendered 97, excluded 54')
 modes = {m: sum(1 for e in entries if e['mode'] == m) for m in SR.MODES}
-ok(modes == {'room': 0, 'doorway': 87, 'parked': 10}, 'by mode: %s' % modes)
+ok(modes == {'room': 0, 'doorway': 88, 'parked': 9}, 'by mode: %s' % modes)
 ok(len({c['domain'] for c in cfg['candidates']}) == len(cfg['candidates']), 'no candidate listed twice')
 ok('excluded' not in cfg, 'candidates.json has no excluded list')
 hexre = re.compile(r'[0-9a-fA-F]{64}')
@@ -89,11 +89,13 @@ ok(any('not a lowercase domain' in x for x in SR.resolve(bad)[1]), 'a domain wit
 bad = plus(dict(bad['candidates'][0]))
 ok(any('listed twice' in x for x in SR.resolve(bad)[1]), 'a duplicate candidate is refused')
 
-# ---- Key 1 edits: awolchat and ftpchat are parked with no topic ----
-for d in ('awolchat.com', 'ftpchat.com'):
+# ---- Key 1 edits: awolchat is parked with no topic; ftpchat is a doorway to fight-the-power (owner go 10:02 PM MT) ----
+for d in ('awolchat.com',):
     ok(byd[d]['mode'] == 'parked' and 'topic' not in byd[d], 'Key 1: %s is parked with no topic' % d)
     c = [x for x in cfg['candidates'] if x['domain'] == d][0]
     ok('mode' not in c and 'topic' not in c, 'Key 1: %s takes the parked default' % d)
+ok(byd['ftpchat.com']['mode'] == 'doorway' and byd['ftpchat.com']['topic'] == 'fight-the-power' and not byd['ftpchat.com'].get('govAgency'),
+   'ftpchat is a doorway to fight-the-power, not flagged as an agency')
 
 # ---- government-agency doorways (owner go 2026-11-03): govAgency flag, wave-2 agency topics, brand line ----
 import topics_seed  # noqa: E402
@@ -111,9 +113,21 @@ ok(not any('govAgency' in SR.site_json(e, cfg) for e in entries if e['domain'] n
 s2 = json.load(open(topics_seed.AGENCY_SEED))
 ok(not topics_seed.check_agency(s2), 'agency seed passes its check: %s' % topics_seed.check_agency(s2)[:2])
 ok(s2['source'] == {'file': 'AGENCY_TOPICS_DRAFT_2026-11-03.md', 'md5': 'e9bf6e557065b100ccaa0b8fb0e51c6e', 'rows': 7}, 'agency seed built from the 7-row draft md5 e9bf6e55')
-ok(sorted(t['slug'] for t in s2['topics']) == sorted(set(AGENCY.values())), 'agency seed has exactly the 7 agency topics')
-ok(all(t['status'] == 'hidden' and t['govNonAffiliation'] is True for t in s2['topics']), 'every agency topic is hidden with govNonAffiliation true')
-ok({d: t['slug'] for t in s2['topics'] for d in t['doorwayDomains']} == AGENCY, 'agency topic doorwayDomains match the flagged doorways')
+FTP_DESC = ('Civil rights, protest history and people pushing back on power, from the 1960s to now. '
+            'Debate the ideas, not the people. No threats, no doxxing, no calls to violence.')
+gov2 = [t for t in s2['topics'] if t.get('govNonAffiliation') is True]
+ok(sorted(t['slug'] for t in gov2) == sorted(set(AGENCY.values())), 'agency seed has exactly the 7 agency topics flagged govNonAffiliation')
+ok(all(t['status'] == 'hidden' for t in s2['topics']), 'every wave-2 topic is hidden')
+ok({d: t['slug'] for t in gov2 for d in t['doorwayDomains']} == AGENCY, 'agency topic doorwayDomains match the flagged doorways')
+ftp = [t for t in s2['topics'] if t['slug'] == 'fight-the-power']
+ok(len(ftp) == 1 and ftp[0]['title'] == 'Fight the Power' and ftp[0]['description'] == FTP_DESC and ftp[0]['doorwayDomains'] == ['ftpchat.com']
+   and 'govNonAffiliation' not in ftp[0] and ftp[0]['status'] == 'hidden', 'fight-the-power: exact title and description, hidden, no gov flag, doorway ftpchat')
+ok(s2.get('extraSources') == [{'file': 'FTP_TOPIC_DRAFT_2026-11-03.md', 'md5': '7a8f20c18faf03b3b20c6a1c7e6ffd0a', 'rows': 1}], 'fight-the-power row built from the FTP draft md5 7a8f20c1')
+ok(len(s2['topics']) == 8, 'wave-2 seed holds 8 topics (7 agency + fight-the-power)')
+b2 = copy.deepcopy(s2); b2['topics'][-1]['govNonAffiliation'] = True
+ok(topics_seed.check_agency(b2), 'agency seed check refuses a gov flag on a non-agency row')
+b2 = copy.deepcopy(s2); b2['extraSources'][0]['rows'] = 2
+ok(topics_seed.check_agency(b2), 'agency seed check refuses an extra-source row count mismatch')
 ok(not re.search(r'jebb|denver|\b310[-. ]|peekai|dmca-1|[\u2013\u2014]', json.dumps(s2, ensure_ascii=False).lower()), 'agency seed: no private names, contacts or dashes')
 for mut, why in ((lambda t: t.update(govNonAffiliation=False), 'govNonAffiliation false'), (lambda t: t.update(status='active'), 'a non-hidden row'),
                  (lambda t: t.update(posts14d=2), 'non-zero stats'), (lambda t: t.update(slug='interior-design'), 'a wave-1 slug'),
@@ -121,8 +135,9 @@ for mut, why in ((lambda t: t.update(govNonAffiliation=False), 'govNonAffiliatio
     b2 = copy.deepcopy(s2); mut(b2['topics'][0])
     ok(topics_seed.check_agency(b2), 'agency seed check refuses %s' % why)
 if os.path.isfile('/workspace/subx-hub/AGENCY_TOPICS_DRAFT_2026-11-03.md'):
-    ok(topics_seed.dump(topics_seed.build_agency('/workspace/subx-hub/AGENCY_TOPICS_DRAFT_2026-11-03.md')) == open(topics_seed.AGENCY_SEED).read(),
-       'agency seed is what --from-agency-md builds')
+    ok(topics_seed.dump(topics_seed.build_agency('/workspace/subx-hub/AGENCY_TOPICS_DRAFT_2026-11-03.md',
+                                                 ['/workspace/subx-hub/FTP_TOPIC_DRAFT_2026-11-03.md'])) == open(topics_seed.AGENCY_SEED).read(),
+       'wave-2 seed is what --from-agency-md --from-topic-md builds')
 bad = plus({'domain': 'unknownexample.com', 'govAgency': True})
 ok(any('only for doorways' in x for x in SR.resolve(bad)[1]), 'govAgency on a parked domain is refused')
 bad = plus({'domain': 'unknownexample.com', 'mode': 'doorway', 'topic': 'russia-watch', 'govAgency': 'yes'})
@@ -138,12 +153,14 @@ with tempfile.TemporaryDirectory() as tr:
     R = brand_render.Renderer(os.path.join(ROOT, 'hub', 'src'), os.path.join(ROOT, 'brand', 'brand.json'), os.path.join(tr, 'o'))
     if R is not None and hasattr(R, 'run'):
         R.run()
-        for t in s2['topics']:
+        for t in gov2:
             html = R.render_topic(t)
             h1 = html.index('<h1>'); g = html.find(brand_render.html_attr(GOV)); ft = html.rfind('<footer')
             ok(g > h1 and 'class="topic-gov" data-gov="title"' in html[h1:html.index('</header>')]
                and 'legal-footer-gov' in html[ft:] and html.count(brand_render.html_attr(GOV)) == 2 and '<!--' not in html,
                'topic page %s shows nonAffiliationGov under the title and in the footer' % t['slug'])
+        hf = R.render_topic(ftp[0])
+        ok(brand_render.html_attr(GOV) not in hf and 'topic-gov' not in hf and 'Fight the Power' in hf, 'fight-the-power page renders with no government line')
         w1 = json.load(open(os.path.join(ROOT, 'topics', 'seed_wave1.json')))['topics']
         hw = R.render_topic([t for t in w1 if t['slug'] == 'interior-design'][0])
         ok(brand_render.html_attr(GOV) not in hw and 'topic-gov' not in hw, 'a wave-1 page (interior-design) has no government line')
@@ -297,7 +314,7 @@ ok(SR.output_errors('f', 'Visit ' + brand['name'], brand), 'guard catches a lite
 # ---- redirects: config only, 302 while hidden or unseeded, 301 after 60 days active ----
 lines = SR.redirects(entries, '2026-11-03T00:00:00Z')
 dl = [l for l in lines if not l.startswith('#')]
-ok(len(dl) == 87 and all(l.endswith(' 302') for l in dl), 'every doorway plans 302 today (no topic active 60 days)')
+ok(len(dl) == 88 and all(l.endswith(' 302') for l in dl), 'every doorway plans 302 today (no topic active 60 days)')
 ok(all('{{brand.primaryDomain}}{{brand.topicPathPrefix}}' in l for l in dl), 'redirect targets use brand placeholders')
 seed = {'topics': [{'slug': 'seattle', 'status': 'active', 'activatedAt': '2026-08-01T00:00:00Z', 'doorwayDomains': []}]}
 one = [e for e in entries if e['domain'] == '206chat.com']

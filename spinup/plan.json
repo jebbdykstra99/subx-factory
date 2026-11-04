@@ -5,8 +5,8 @@
   "excluded": 54,
   "byMode": {
     "room": 0,
-    "doorway": 87,
-    "parked": 10
+    "doorway": 88,
+    "parked": 9
   },
   "doorwaysNeedingTopicRow": 51,
   "govAgency": [
@@ -413,7 +413,9 @@
     },
     {
       "domain": "ftpchat.com",
-      "mode": "parked"
+      "mode": "doorway",
+      "topic": "fight-the-power",
+      "topicSeeded": true
     },
     {
       "domain": "ftwchat.com",
