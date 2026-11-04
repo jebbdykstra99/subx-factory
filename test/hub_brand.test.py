@@ -166,8 +166,23 @@ ok(all(x['name'] and x['domain'] for x in rooms['rooms']), 'rooms keep name + li
 ok(not [it['postId'] for it in src_hl['items'] if BH.quotes_bad_tagline(it['text'], bad_tags)], 'highlights.json: no item quotes a failing tagline')
 ok("(r.tagline ? '<p>' + esc(r.tagline) + '</p>' : '')" in read(os.path.join(SITE, 'hub.js')), 'hub.js: a room with no tagline renders no empty tagline line')
 # Key 1 edit E2: sign-up consent wording
-ok('(preview stubs, not final counsel)' not in idx and idx.count('Privacy Policy</a> (preview drafts).') == 2,
-   'index.html: both sign-up consent lines say "(preview drafts)"')
+ok('(preview stubs, not final counsel)' not in idx and '(preview drafts)' not in idx and idx.count('Privacy Policy</a>.</span>') == 2,
+   'index.html: both sign-up consent lines link Terms + Privacy with no preview/draft qualifier')
+ok('Sign-in opens soon. Guest is browse-only.' in idx and 'Sign-in is closed while the hub is in preview' not in idx and '<span>Read-only</span>' in idx,
+   'index.html: launch wording (sign-in opens soon, read-only), no preview claim')
+# launch copy: no preview / draft wording left in any rendered page (CSS class names like compose-image-preview excepted)
+for p in pages:
+    vis = re.sub(r'<(script|style)\b.*?</\1>', '', read(os.path.join(SITE, p)), flags=re.S)
+    vis = re.sub(r'(class|id)="[^"]*"', '', vis)
+    ok(not re.search(r'\bpreview\b|\bdraft', vis, re.I), '%s: no preview/draft wording' % p)
+for p in ('terms.html', 'privacy.html', 'guidelines.html', 'report.html'):
+    lp = read(os.path.join(SITE, p))
+    ok('<p class="legal-kicker">Effective November 4, 2026. The hub is read-only:' in lp and 'Draft for review' not in lp, '%s: effective November 4, 2026' % p)
+pv = read(os.path.join(SITE, 'privacy.html'))
+ok('The pages are hosted on Firebase Hosting (Google), and sign-in,' in pv and 'hosted on GitHub Pages' not in pv, 'privacy.html: hosting line names Firebase Hosting (Google)')
+for p in ('about.html', 'rooms.html', '404.html'):
+    ok('<p class="legal-kicker">%s</p>' % brand['name'] in read(os.path.join(SITE, p)), '%s: kicker without Preview' % p)
+ok('<p class="legal-kicker">%s · Coming soon</p>' % brand['name'] in read(os.path.join(SITE, topic_index)), 'topic index: kicker without Preview')
 ok(len(rooms['rooms']) > 0 and [x['url'] for x in site['rail']['outbound']] == ['https://%s/' % x['domain'] for x in rooms['rooms']], 'site.json rail.outbound mirrors rooms.json')
 
 # WHOMARK legend: the three final-v4.1 tiers (AI steward posts are AI-made) on about + topic index
@@ -218,12 +233,22 @@ groups = [g for g in re.split(r'\n\s*\n', rt) if 'User-agent' in g]
 star = [g for g in groups if re.search(r'^User-agent: \*$', g, re.M)]
 ok(len(star) == 1 and 'Allow: /' in star[0] and 'Disallow' not in star[0], 'robots.txt: User-agent * may crawl (no Disallow), so noindex metas on topic pages are readable')
 ok(not re.search(r'^Disallow: %s' % re.escape(brand['topicPathPrefix']), rt, re.M), 'robots.txt does not disallow the topic path (crawlers must see the topic noindex)')
-ai = [g for g in groups if 'GPTBot' in g]
-ok(len(ai) == 1 and all(b in ai[0] for b in ('GPTBot', 'ClaudeBot', 'Google-Extended', 'CCBot', 'Applebot-Extended')) and re.search(r'^Disallow: /$', ai[0], re.M),
-   'robots.txt: named AI crawlers and training bots stay fully disallowed')
+TRAIN = ('GPTBot', 'ClaudeBot', 'anthropic-ai', 'Google-Extended', 'Applebot-Extended', 'CCBot', 'Bytespider', 'Meta-ExternalAgent')
+ANSWER = ('OAI-SearchBot', 'ChatGPT-User', 'PerplexityBot', 'Claude-SearchBot')
+ua = lambda g: re.findall(r'^User-agent: (\S+)$', g, re.M)
+ai = [g for g in groups if 'GPTBot' in ua(g)]
+ok(len(ai) == 1 and sorted(ua(ai[0])) == sorted(TRAIN) and re.search(r'^Disallow: /$', ai[0], re.M) and 'Allow' not in ai[0].replace('Disallow', ''),
+   'robots.txt: AI training crawlers stay fully disallowed (%s)' % ', '.join(TRAIN))
+ans = [g for g in groups if 'OAI-SearchBot' in ua(g)]
+ok(len(ans) == 1 and sorted(ua(ans[0])) == sorted(ANSWER) and re.search(r'^Allow: /$', ans[0], re.M) and 'Disallow' not in ans[0],
+   'robots.txt: search/answer agents allowed (%s)' % ', '.join(ANSWER))
+ok(all(len([g for g in groups if b in ua(g)]) == 1 for b in TRAIN + ANSWER), 'robots.txt: every named agent is in exactly one group')
 ok(re.search(r'^Sitemap: https://%s/sitemap\.xml$' % re.escape(brand['primaryDomain']), rt, re.M) is not None, 'robots.txt names the sitemap on the primary domain')
 ll = read(os.path.join(SITE, 'llms.txt'))
 ok('robots.txt disallows all crawling' not in ll and 'pages are marked noindex' not in ll and 'noindex until they are active' in ll, 'llms.txt describes the go-live crawl policy')
+pol = [l for l in ll.splitlines() if l.startswith('- robots.txt allows')]
+ok(len(pol) == 1 and all(b in pol[0].split('disallows')[0] for b in ANSWER) and all(b in pol[0].split('disallows')[1] for b in TRAIN),
+   'llms.txt crawler policy matches robots.txt (answer agents allowed, training crawlers disallowed)')
 # hide-until-active holds through the renderer with today's config (hub-wide noindex off)
 rr_live = BR.Renderer(SRC, BRAND, tempfile.mkdtemp())
 rr_live.run()

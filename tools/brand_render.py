@@ -26,7 +26,7 @@ hub/src/topic-template.html to <topicPathPrefix><slug>/index.html (listed in she
 that template are kept or dropped per topic (status, profile, optional copy) and the markers never reach the output.
 A topic row with govNonAffiliation true (topics/seed_wave2_agency.json) shows brand.nonAffiliationGov under the title
 (if:gov) and as a line inside the footer.
-Robots: "topics.hubNoindex" true = every page noindex,nofollow and an empty sitemap (preview). When it is false, a hub page
+Robots: "topics.hubNoindex" true = every page noindex,nofollow and an empty sitemap (the pre-launch lock, kept as the rollback switch). When it is false, a hub page
 is index,follow unless its config.json "pages" entry sets "robots" (404 and the topic index keep noindex,nofollow), and
 every topic page follows its own status (tools/topic_status.py: only "active" is indexable; hidden, eligible, quiet and
 archived stay noindex,nofollow). sitemap.xml lists the indexable hub pages and the sitemap-eligible topics, nothing else.
