@@ -53,7 +53,11 @@ ok('class="stories-tray' not in idx.split('hub-stories')[0][-200:], 'index.html:
 ok('.hub-story' in css and '.hub-compose' in css, 'hub.css: hub-story / hub-compose styles')
 ok(re.search(r"/stories\.json\?v=[0-9a-f]+", js) is not None, 'hub.js: stories.json is cache-busted')
 ok("'compose=' + encodeURIComponent(text)" in js and "roomHref(r.domain, 'story')" in js, 'hub.js: hand-off goes to https://<room>/#compose= and #story')
-ok(not re.search(r"firestore|firebase|method:\s*'POST'|localStorage|sendBeacon|XMLHttpRequest", js, re.I), 'hub.js: no writes, no storage, no Firebase')
+ok(not re.search(r"firestore|firebase|method:\s*'POST'|sendBeacon|XMLHttpRequest|sessionStorage|document\.cookie|indexedDB", js, re.I), 'hub.js: no writes, no Firebase, no cookies or session storage')
+# 2026-11-04 (hub Following): the ONE browser-storage use is the follows key, read and written only through HUB_STORE
+ls = re.findall(r"localStorage[^;]*", js)
+ok(len(ls) == 2 and all(re.fullmatch(r"localStorage\.(getItem|setItem)\(HUB_STORE[^;]*", x) for x in ls) and "var HUB_STORE = 'hub.follows.v1';" in js,
+   'hub.js: localStorage only for hub.follows.v1 (getItem + setItem), nothing else stored')
 csp = re.search(r"connect-src ([^;\"]+)", read('hub', 'firebase.json') if os.path.exists(os.path.join(ROOT, 'hub', 'firebase.json')) else idx)
 ok(csp is None or csp.group(1).strip() == "'self'", "hub CSP connect-src stays 'self'")
 vis = re.sub(r'<[^>]+>', ' ', re.sub(r'<(script|style)\b.*?</\1>', '', idx, flags=re.S))

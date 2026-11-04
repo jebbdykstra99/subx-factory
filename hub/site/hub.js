@@ -143,4 +143,121 @@
       if (coming) coming.hidden = t !== 'coming';
     });
   });
+
+  // Following / Notifications / Chat (2026-11-04). The hub stays read-only: no sign-in, no database, no writes, nothing
+  // sent. The only state is the rooms you follow and when you last opened Notifications, kept in this browser under the
+  // one key hub.follows.v1. Member replies, mentions, and direct messages stay in each room, under its own sign-in:
+  // the hub links to https://<room>/#notifications and #chat. Hub-owned ids and #hub-* hashes keep the shell's Soon
+  // painting (which keys on #nav-following / #nav-notifications / #nav-chat) off these links.
+  var HUB_STORE = 'hub.follows.v1';
+  var HUB_PAGES = { following: 'page-hub-following', notifications: 'page-hub-notifications', chat: 'page-hub-chat' };
+  function hubLoad() {
+    var v = {};
+    try { v = JSON.parse(window.localStorage.getItem(HUB_STORE) || '{}') || {}; } catch (e) { v = {}; }
+    var rooms = Array.isArray(v.rooms) ? v.rooms.filter(function (x) { return typeof x === 'string' && /^[a-z0-9-]{1,40}$/.test(x); }).slice(0, 200) : [];
+    return { rooms: rooms, seen: typeof v.seen === 'number' && isFinite(v.seen) ? v.seen : 0 };
+  }
+  function hubSave() { try { window.localStorage.setItem(HUB_STORE, JSON.stringify({ rooms: hub.rooms, seen: hub.seen })); } catch (e) {} }
+  var hub = hubLoad(), hubRooms = [], hubItems = [], hubReady = false, notifPrev = null;
+  function follows(room) { return hub.rooms.indexOf(room) !== -1; }
+  function hubView() { var m = /^#hub-(following|notifications|chat)$/.exec(location.hash); return m ? m[1] : ''; }
+  function newest(a, b) { return (msOf(b.createdAt) || 0) - (msOf(a.createdAt) || 0); }
+  function followedItems() { return hubItems.filter(function (it) { return follows(it.room); }).sort(newest); }
+  function unread() { var since = hub.seen; return followedItems().filter(function (it) { return msOf(it.createdAt) > since; }).length; }
+  function paintBadge() {
+    var b = document.getElementById('hub-notif-badge'); if (!b) return;
+    var n = hubView() === 'notifications' ? 0 : unread();
+    b.textContent = n > 9 ? '9+' : String(n); b.hidden = !n; b.classList.toggle('visible', !!n);
+  }
+  function followBtn(r) {
+    var on = follows(r.room);
+    return '<button type="button" class="hub-follow-btn' + (on ? ' is-on' : '') + '" data-follow-room="' + esc(r.room) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+      (on ? 'Following' : 'Follow') + '<span class="visually-hidden"> ' + esc(r.name) + '</span></button>';
+  }
+  function followRow(r) {
+    var url = safeUrl('https://' + r.domain + '/'); if (!url) return '';
+    return '<div class="hub-follow-row"><a href="' + esc(url) + '" rel="noopener"><strong>' + esc(r.name) + '</strong>' +
+      '<span class="hub-room-domain">' + esc(r.domain) + '</span>' + (r.tagline ? '<p>' + esc(r.tagline) + '</p>' : '') + '</a>' + followBtn(r) + '</div>';
+  }
+  function handoffRows(frag, label) {
+    var list = hubRooms.slice().sort(function (a, b) { return (follows(b.room) ? 1 : 0) - (follows(a.room) ? 1 : 0); });
+    return list.map(function (r) {
+      var href = roomHref(r.domain, frag); if (!href) return '';
+      return '<a class="hub-handoff" href="' + esc(href) + '" rel="noopener"><strong>' + esc(r.name) + '</strong>' +
+        (follows(r.room) ? '<span class="hub-feat-tag">Following</span>' : '') +
+        '<span class="hub-room-domain">' + esc(r.domain) + '</span><span class="hub-open">' + esc(label) + ' →</span></a>';
+    }).join('') || '<div class="post-empty">No rooms listed.</div>';
+  }
+  function renderHub(v) {
+    var el;
+    if (!hubReady) return;
+    if (v === 'following') {
+      el = document.getElementById('hub-following-feed');
+      if (el) {
+        var items = followedItems();
+        el.innerHTML = !hub.rooms.length ? '<div class="post-empty">You are not following any rooms yet. Pick some below.</div>' :
+          (items.map(card).join('') || '<div class="post-empty">No highlights yet from the rooms you follow.</div>');
+      }
+      el = document.getElementById('hub-follow-list');
+      if (el) el.innerHTML = hubRooms.map(followRow).join('') || '<div class="post-empty">No rooms listed.</div>';
+    } else if (v === 'notifications') {
+      if (notifPrev === null) { notifPrev = hub.seen; hub.seen = Date.now(); hubSave(); }
+      el = document.getElementById('hub-notif-feed');
+      if (el) {
+        var since = notifPrev, list = followedItems().slice(0, 40);
+        el.innerHTML = !hub.rooms.length ? '<div class="post-empty">Follow rooms in <a href="#hub-following">Following</a> to get their new highlights here.</div>' :
+          (list.map(function (it) {
+            var c = card(it); if (!c) return '';
+            return msOf(it.createdAt) > since ? c.replace('<span class="post-time">', '<span class="hub-new">New</span><span class="post-time">') : c;
+          }).join('') || '<div class="post-empty">Nothing new from the rooms you follow.</div>');
+      }
+      el = document.getElementById('hub-notif-rooms');
+      if (el) el.innerHTML = handoffRows('notifications', 'Open Notifications');
+    } else if (v === 'chat') {
+      el = document.getElementById('hub-chat-rooms');
+      if (el) el.innerHTML = handoffRows('chat', 'Open Chat');
+    }
+  }
+  function showHub() {
+    var v = hubView();
+    if (v !== 'notifications') notifPrev = null;
+    paintBadge();
+    if (!v) return;
+    Array.prototype.forEach.call(document.querySelectorAll('.page'), function (p) {
+      var on = p.id === HUB_PAGES[v];
+      if (p.classList.contains('active') !== on) p.classList.toggle('active', on);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.nav-social-link'), function (l) {
+      var on = l.getAttribute('data-hub-view') === v;
+      if (l.classList.contains('active') !== on) l.classList.toggle('active', on);
+      if (on) l.setAttribute('aria-current', 'page'); else if (l.hasAttribute('data-hub-view')) l.removeAttribute('aria-current');
+    });
+    renderHub(v);
+  }
+  if (document.getElementById('page-hub-following')) {
+    // the shell routes unknown hashes (#hub-*) to the home page after its own init; when it does, put the hub view back
+    var thoughts = document.getElementById('page-thoughts');
+    if (thoughts && window.MutationObserver) {
+      new MutationObserver(function () { if (hubView() && thoughts.classList.contains('active')) showHub(); })
+        .observe(thoughts, { attributes: true, attributeFilter: ['class'] });
+    }
+    window.addEventListener('hashchange', function () { setTimeout(showHub, 0); });
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-follow-room]'); if (!b) return;
+      var room = b.getAttribute('data-follow-room'), i = hub.rooms.indexOf(room);
+      if (i === -1) hub.rooms.push(room); else hub.rooms.splice(i, 1);
+      hubSave(); renderHub('following'); paintBadge();
+      var again = document.querySelector('[data-follow-room="' + room + '"]'); if (again) again.focus();
+    });
+    Promise.all([getJSON('/rooms.json?v=2fcf997cfb'), getJSON('/highlights.json?v=d9dc228224')]).then(function (d) {
+      hubRooms = ((d[0] && d[0].rooms) || []).filter(function (r) { return r && /^[a-z0-9-]{1,40}$/.test(r.room || '') && domainOk(r.domain); });
+      hubItems = (d[1] && d[1].items) || [];
+      hubReady = true; showHub();
+    }).catch(function () {
+      ['hub-following-feed', 'hub-notif-feed', 'hub-chat-rooms'].forEach(function (id) {
+        var el = document.getElementById(id); if (el) el.innerHTML = '<div class="post-empty">This is unavailable right now. Open a room from the list.</div>';
+      });
+    });
+    showHub();
+  }
 })();
