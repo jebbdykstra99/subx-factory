@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="/styles.css?v=58ba24a874">
   <link rel="stylesheet" href="/nests.css?v=a67c57a6bb">
   <link rel="stylesheet" href="/hub.css?v=5d2529a3e2">
-  <link rel="preload" href="/site.json?v=f7ff0a162b" as="fetch" crossorigin="anonymous">
+  <link rel="preload" href="/site.json?v=0d73f65d63" as="fetch" crossorigin="anonymous">
 </head>
 <body class="hub-home">
 
@@ -132,8 +132,6 @@
       <p class="hub-ctas"><a class="hub-cta" href="/rooms.html">Browse rooms</a></p>
       <p class="hub-sub hub-sub-small">Highlights below are recent public posts from live rooms. Each card opens the original post in its room. The hub itself is read-only: write here, then post in the room you pick.</p>
     </div>
-    <!-- Stories row + composer (2026-11-04). The hub still never posts: both hand off to the room you pick
-         (https://<room>/#story or #compose=<text>), where that room's sign-in and rules apply. See shell/STORIES.md. -->
     <section class="hub-stories" id="hub-stories" aria-label="Stories from live rooms">
       <div class="hub-stories-row" id="hub-stories-row">
         <button type="button" class="hub-story is-add" id="hub-story-add" aria-haspopup="dialog"><span class="hub-story-ring"><span class="hub-story-avatar">+</span></span><span class="hub-story-label">Add story</span></button>
@@ -149,7 +147,7 @@
           <select id="hub-compose-room"><option value="">Pick a room</option></select>
           <button type="button" class="hub-compose-go" id="hub-compose-go" disabled>Continue in room</button>
         </div>
-        <p class="hub-compose-note">Posts go to the room you pick, under its rules and its sign-in. The hub does not save or send your text: it opens the room with your words in its composer, and copies them in case that room has not picked up hand-off yet.</p>
+        <p class="hub-compose-note">Posts go to the room you pick, under its rules and its sign-in. The hub does not save or send your text: it opens that room and copies your words so you can paste them there.</p>
       </div>
     </div>
     <div class="hub-pick" id="hub-story-pick" role="dialog" aria-modal="true" aria-labelledby="hub-story-pick-title" hidden>
@@ -419,8 +417,8 @@
   <span class="legal-footer-line legal-footer-nonaff">Not affiliated with, endorsed by, or sponsored by X Corp.</span>
 </footer>
 <script src="/assets/whomark/whomark.js?v=78ce0941f6"></script>
-<script src="/shell/v1.2.6/factory.js" integrity="sha384-cM7IaWgQSt566TAOeQhWb52C9hsLBFOPRSGK1KBMSXDqoz1pmfgcwBWGrzVB90Lu" crossorigin="anonymous" data-site="/site.json?v=f7ff0a162b"></script>
-<script src="/hub.js?v=60eac7bee7" defer></script>
+<script src="/shell/v1.2.6/factory.js" integrity="sha384-cM7IaWgQSt566TAOeQhWb52C9hsLBFOPRSGK1KBMSXDqoz1pmfgcwBWGrzVB90Lu" crossorigin="anonymous" data-site="/site.json?v=0d73f65d63"></script>
+<script src="/hub.js?v=bd0c1d4c88" defer></script>
 <script src="/takedown.js?v=34894c915e" defer></script>
 </body>
 </html>

@@ -9,7 +9,7 @@
   "minAge": 18,
   "dms": false,
   "imageUploads": false,
-  "stories": { "enabled": false, "note": "Hub runs no Stories of its own (read-only). The hub page shows a hub-stories row built from data/stories.json instead." },
+  "stories": { "enabled": false },
   "earlyWelcome": false,
   "composePlaceholder": "The hub is read-only. Post in a {{brand.roomNoun.one}}.",
   "emptyState": "The hub is read-only. Pick a {{brand.roomNoun.one}} to read or post.",

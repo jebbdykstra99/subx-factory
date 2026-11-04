@@ -1,7 +1,6 @@
 {
  "version": 1,
- "generated": "2026-11-04T15:54:38Z",
- "source": "Firestore REST, public reads only (stories, sites) + each room site.json",
+ "generated": "2026-11-04T16:27:22Z",
  "ttlHours": 24,
  "membersShown": false,
  "rooms": [

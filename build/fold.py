@@ -897,8 +897,16 @@ for _a, _b in [("<strong>Following \u2014 Soon.</strong>", "<strong>Following: S
 src = ed(src, "    return !!(storiesCfg().enabled);\n", "    return storiesCfg().enabled !== false;\n")
 src = ed(src, "    storyType = type === 'image' || type === 'video' ? type : 'text';\n",
   "    storyType = (type === 'image' || type === 'video') && site.imageUploads !== false ? type : 'text';\n")
-src = ed(src, "   document.body.appendChild(ov);\n   ov.addEventListener('click', function (e) {\n     if (e.target === ov) closeStoriesComposer();\n",
-  "   document.body.appendChild(ov);\n   if (site.imageUploads === false) ov.querySelectorAll('[data-story-type=image],[data-story-type=video]').forEach(function (b) { b.remove(); });\n   ov.addEventListener('click', function (e) {\n     if (e.target === ov) closeStoriesComposer();\n")
+# imageUploads:false -> the story composer is built text-only: no type buttons, no file inputs, no preview or caption,
+# and its copy promises no photo or clip (Key 1 E2, Key 2 F1). Every lookup of those elements is already null-guarded.
+src = ed(src, "   ov.innerHTML =\n     '<div class=\"stories-composer\" role",
+  "   var nu = site.imageUploads === false;\n   ov.innerHTML =\n     '<div class=\"stories-composer\" role")
+src = ed(src, "Lives 24 hours on this room only. Text, a photo, or a short clip.</p><div class=\"stories-composer-types\">",
+  "Lives 24 hours on this room only. Text' + (nu ? ' only in this room.</p>' : ', a photo, or a short clip.</p><div class=\"stories-composer-types\">")
+src = ed(src, "data-story-type=\"video\">Clip</button></div><textarea", "data-story-type=\"video\">Clip</button></div>') + '<textarea")
+src = ed(src, "'\"></textarea><input class=\"stories-composer-file\"", "'\"></textarea>' + (nu ? '' : '<input class=\"stories-composer-file\"")
+src = ed(src, "placeholder=\"Caption (optional)\" hidden><div class=\"stories-composer-err\"", "placeholder=\"Caption (optional)\" hidden>') + '<div class=\"stories-composer-err\"")
+src = ed(src, "storiesErr('Write a short card, or switch to photo / clip.');", "storiesErr(site.imageUploads === false ? 'Write a short card.' : 'Write a short card, or switch to photo / clip.');")
 src = ed(src, "    if (!fbStorage || !storiesOn()) return Promise.reject(new Error('Storage not ready'));\n",
   "    if (!fbStorage || !storiesOn() || site.imageUploads === false) return Promise.reject(new Error('Storage not ready'));\n")
 src = ed(src, "    try { deepPostId = new URLSearchParams(location.search).get('p') || ''; } catch (e) { deepPostId = ''; }\n    if (!location.hash || location.hash === '#') {\n",

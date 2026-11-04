@@ -79,7 +79,7 @@
   var view = document.getElementById('hub-story-view'), cards = document.getElementById('hub-story-cards');
   var viewTitle = document.getElementById('hub-story-view-title');
   if (row) {
-    getJSON('/stories.json?v=a79f5dfcad').then(function (d) {
+    getJSON('/stories.json?v=0ef72a4fd9').then(function (d) {
       var now = Date.now(), byRoom = {};
       ((d && d.items) || []).forEach(function (it) {
         if (!(msOf(it.expiresAt) > now) || !domainOk(it.domain)) return;

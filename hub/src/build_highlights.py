@@ -267,7 +267,7 @@ def build_stories(cfg, no_live_check=False, allow_members=False):
         time.sleep(0.2)
     items.sort(key=lambda it: it.get('createdAt') or '', reverse=True)
     now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-    json.dump({'version': 1, 'generated': now, 'source': 'Firestore REST, public reads only (stories, sites) + each room site.json',
+    json.dump({'version': 1, 'generated': now,
                'ttlHours': 24, 'membersShown': bool(allow_members), 'rooms': rooms, 'items': items},
               open(os.path.join(DATA, 'stories.json'), 'w'), indent=1, ensure_ascii=False)
     print('stories: %d live items; %d live rooms, %d with Stories on (wrote %s)' % (len(items), len(rooms), sum(1 for x in rooms if x['stories']), DATA))

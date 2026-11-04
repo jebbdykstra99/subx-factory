@@ -122,8 +122,6 @@
       <p class="hub-ctas"><a class="hub-cta" href="/rooms.html">Browse {{brand.roomNoun.many}}</a></p>
       <p class="hub-sub hub-sub-small">Highlights below are recent public posts from live {{brand.roomNoun.many}}. Each card opens the original post in its {{brand.roomNoun.one}}. The hub itself is read-only: write here, then post in the {{brand.roomNoun.one}} you pick.</p>
     </div>
-    <!-- Stories row + composer (2026-11-04). The hub still never posts: both hand off to the room you pick
-         (https://<room>/#story or #compose=<text>), where that room's sign-in and rules apply. See shell/STORIES.md. -->
     <section class="hub-stories" id="hub-stories" aria-label="Stories from live {{brand.roomNoun.many}}">
       <div class="hub-stories-row" id="hub-stories-row">
         <button type="button" class="hub-story is-add" id="hub-story-add" aria-haspopup="dialog"><span class="hub-story-ring"><span class="hub-story-avatar">+</span></span><span class="hub-story-label">Add story</span></button>
@@ -139,7 +137,7 @@
           <select id="hub-compose-room"><option value="">Pick a {{brand.roomNoun.one}}</option></select>
           <button type="button" class="hub-compose-go" id="hub-compose-go" disabled>Continue in {{brand.roomNoun.one}}</button>
         </div>
-        <p class="hub-compose-note">Posts go to the {{brand.roomNoun.one}} you pick, under its rules and its sign-in. The hub does not save or send your text: it opens the {{brand.roomNoun.one}} with your words in its composer, and copies them in case that {{brand.roomNoun.one}} has not picked up hand-off yet.</p>
+        <p class="hub-compose-note">Posts go to the {{brand.roomNoun.one}} you pick, under its rules and its sign-in. The hub does not save or send your text: it opens that {{brand.roomNoun.one}} and copies your words so you can paste them there.</p>
       </div>
     </div>
     <div class="hub-pick" id="hub-story-pick" role="dialog" aria-modal="true" aria-labelledby="hub-story-pick-title" hidden>

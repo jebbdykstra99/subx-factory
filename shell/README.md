@@ -34,7 +34,7 @@ Host: **jsDelivr's GitHub mirror** of this public repo. No new service, no accou
 | Folder | What changed | Rooms on it |
 |---|---|---|
 | `v1.2.6` | Current pinned shell. | rooms stamped so far |
-| `v1.2.7` | Stories as a default shell module: on unless `site.json` sets `stories.enabled: false`; text-only when the room sets `imageUploads: false`; `#story` / `#compose=<text>` hand-off from the hub (fills the composer, never auto-posts). Bytes paid by whitespace-only trims (core 254957 B). See [STORIES.md](STORIES.md). | none yet (draft; re-stamping is a separate decision) |
+| `v1.2.7` | Stories as a default shell module: on unless `site.json` sets `stories.enabled: false`; text-only when the room sets `imageUploads: false` (no photo/clip copy, buttons or file inputs); `#story` / `#compose=<text>` hand-off from the hub (fills the composer, never auto-posts). Bytes paid by whitespace-only trims (core 254973 B). See [STORIES.md](STORIES.md). | none yet (draft; re-stamping is a separate decision) |
 
 ## Release, cache, rollback
 

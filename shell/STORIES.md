@@ -33,13 +33,14 @@ Side finding (gaichat): gaichat sets `imageUploads: false`, but shared v1.2.6 do
 
 1. **Default-on:** `storiesOn()` is `storiesCfg().enabled !== false`. A room opts out with `stories.enabled: false`.
    No live room changes behavior, because every room sets the flag explicitly.
-2. **Text-only gate:** when a room sets `imageUploads: false`, the Stories composer drops the photo/clip buttons, the
-   story type falls back to `text`, and `uploadStoryMedia` refuses. This is what lets gpchat/gaichat get text stories
+2. **Text-only gate:** when a room sets `imageUploads: false`, the Stories composer is built text-only (no type
+   buttons, no file inputs, preview or caption; copy reads "Lives 24 hours on this room only. Text only in this room."
+   and "Write a short card."), the story type falls back to `text`, and `uploadStoryMedia` refuses. This is what lets gpchat/gaichat get text stories
    without reopening uploads (still needs the rule change below for gpchat).
 3. **Hand-off from the hub:** on boot, `https://<room>/#story` opens the Stories composer and
    `https://<room>/#compose=<text>` puts the text (decoded, max 280) in the post composer. Nothing posts by itself; the
    member signs in and taps Post. The text travels in the URL **fragment**, which browsers never send to a server.
-4. Bytes: paid with whitespace-only indent trims; core is 254957 B (budget 255000).
+4. Bytes: paid with whitespace-only indent trims; core is 254973 B (budget 255000).
 
 ## The hub: interim option (this PR, no rules, auth, or CSP change)
 
