@@ -31,3 +31,5 @@ jobs:
         run: python3 build/whomark.py --check --no-png && node test/whomark.test.js
       - name: Shared pinned shell (shell/v*/ match SHELL.json; drift checker tests)
         run: python3 test/shell_pin.test.py
+      - name: Hub (subx.it) renders from brand/brand.json; rename test; strict CSP; shell_drift OK
+        run: python3 tools/brand_render.py --check && python3 test/hub_brand.test.py

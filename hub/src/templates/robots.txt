@@ -1,0 +1,22 @@
+# {{brand.name}} hub robots.txt · PREVIEW LOCK
+# Preview only: do not crawl, index, scrape, or use any content for AI training.
+# Operator: {{brand.legalEntity}} · Contact: {{brand.takedownEmail}}
+
+User-agent: *
+Disallow: /
+
+# Named AI crawlers and training bots: also fully disallowed (redundant with *, listed for clarity)
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
+User-agent: ClaudeBot
+User-agent: anthropic-ai
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: PerplexityBot
+User-agent: CCBot
+User-agent: Bytespider
+User-agent: Meta-ExternalAgent
+Disallow: /
+
+# No Sitemap line during preview.

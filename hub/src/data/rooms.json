@@ -1,0 +1,111 @@
+{
+ "version": 1,
+ "generated": "2026-11-04T03:41:45Z",
+ "rooms": [
+  {
+   "room": "gpchat",
+   "name": "gpchat",
+   "domain": "gpchat.com",
+   "tagline": "Nothing but Grand Prix.",
+   "featured": true
+  },
+  {
+   "room": "popechat",
+   "name": "popechat",
+   "domain": "popechat.com",
+   "tagline": "Urbi et orbi.",
+   "featured": true
+  },
+  {
+   "room": "gaichat",
+   "name": "gaichat",
+   "domain": "gaichat.com",
+   "tagline": "Tools, not oracles.",
+   "featured": true
+  },
+  {
+   "room": "27chat",
+   "name": "27chat",
+   "domain": "27chat.com",
+   "tagline": "The work didn’t stop.",
+   "featured": true
+  },
+  {
+   "room": "415chat",
+   "name": "415chat",
+   "domain": "415chat.com",
+   "tagline": "San Francisco, talking.",
+   "featured": false
+  },
+  {
+   "room": "samochat",
+   "name": "samochat",
+   "domain": "samochat.com",
+   "tagline": "Santa Monica, talking.",
+   "featured": false
+  },
+  {
+   "room": "808chat",
+   "name": "808chat",
+   "domain": "808chat.com",
+   "tagline": "All things Hawaii. Local, not brochure.",
+   "featured": false
+  },
+  {
+   "room": "bartchat",
+   "name": "bartchat",
+   "domain": "bartchat.com",
+   "tagline": "Nothing but BART.",
+   "featured": false
+  },
+  {
+   "room": "buffettchat",
+   "name": "buffettchat",
+   "domain": "buffettchat.com",
+   "tagline": "The Oracle still talks.",
+   "featured": false
+  },
+  {
+   "room": "recruitchat",
+   "name": "recruitchat",
+   "domain": "recruitchat.com",
+   "tagline": "The room, not the funnel.",
+   "featured": false
+  },
+  {
+   "room": "311chat",
+   "name": "311chat",
+   "domain": "311chat.com",
+   "tagline": "Non-emergency city help. Find your 311.",
+   "featured": false
+  },
+  {
+   "room": "boyfriendchat",
+   "name": "boyfriendchat",
+   "domain": "boyfriendchat.com",
+   "tagline": "His stories. Your table.",
+   "featured": false
+  },
+  {
+   "room": "buffetchat",
+   "name": "buffetchat",
+   "domain": "buffetchat.com",
+   "tagline": "The plate never ends.",
+   "featured": false
+  },
+  {
+   "room": "ciachat",
+   "name": "ciachat",
+   "domain": "ciachat.com",
+   "tagline": "FOIA, not fanfic.",
+   "featured": false
+  },
+  {
+   "room": "cobrachat",
+   "name": "cobrachat",
+   "domain": "cobrachat.com",
+   "tagline": "Hoods up.",
+   "featured": false
+  }
+ ]
+}
