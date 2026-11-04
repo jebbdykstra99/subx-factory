@@ -192,6 +192,24 @@ for bad_at, why in (('yesterday', 'not a date'), ('2026-10-05T04:00:00', 'no zon
        'archivedAt malformed (%s) -> not approved, fails closed' % why)
     ok(not TS.approved(dict(rested(archivedAt=bad_at, approvedAt=FRESH_AT), status='quiet'), W, NOW), 'archivedAt malformed (%s) fails closed in any status' % why)
 ok(not TS.approved(rested(archivedAt=TS.iso(now + timedelta(days=1)), approvedAt=FRESH_AT), W, NOW), 'archivedAt in the future -> no approval can be fresh')
+# C1: comparisons are between UTC instants, never strings
+Z_NOW = '2026-12-02T00:00:00Z'
+for arch, appr, want, why in (
+        ('2026-12-01T10:00:00-06:00', '2026-12-01T16:00:00Z', False, 'archivedAt -06:00, approvedAt Z, same instant'),
+        ('2026-12-01T10:00:00-06:00', '2026-12-01T16:00:01Z', True, 'archivedAt -06:00, approvedAt Z one second later'),
+        ('2026-12-01T16:00:00Z', '2026-12-01T10:00:00-06:00', False, 'archivedAt Z, approvedAt -06:00, same instant'),
+        ('2026-12-01T16:00:00Z', '2026-12-01T10:00:01-06:00', True, 'archivedAt Z, approvedAt -06:00 one second later'),
+        ('2026-12-01T16:00:00Z', '2026-12-01T17:00:00+01:00', False, 'archivedAt Z, approvedAt +01:00, same instant (string sorts later)'),
+        ('2026-12-01T16:00:00+00:00', '2026-12-01T16:00:00Z', False, 'archivedAt +00:00, approvedAt Z, same instant'),
+        ('2026-12-01T10:00:00-06:00', '2026-12-01T15:59:59Z', False, 'archivedAt -06:00, approvedAt Z one second earlier')):
+    r0 = rested(archivedAt=arch, approvedAt=appr)
+    st_ = TS.apply(r0, [post('u%d' % (i % 5), i * 0.1 - 27) for i in range(20)], Z_NOW, W)['status']
+    ok(TS.approved(r0, W, Z_NOW) is want and st_ == ('active' if want else 'eligible'), 'C1 UTC compare (%s) -> %s' % (why, 'fresh' if want else 'NOT fresh'))
+mal = rested(archivedAt='yesterday', approvedAt=FRESH_AT)
+for st0 in ('archived', 'quiet', 'active', 'eligible'):
+    m_ = TS.apply(dict(mal, status=st0), [], NOW, W)
+    ok(m_['archivedAt'] == 'yesterday', 'apply(): a malformed archivedAt is never re-stamped (from %s -> %s)' % (st0, m_['status']))
+ok(TS.archived_at_malformed(mal) and not TS.archived_at_malformed(rested()) and not TS.archived_at_malformed(topic()), 'archived_at_malformed(): flags only a present, unparseable archivedAt')
 leg = atopic('archived', activatedAt=act['activatedAt'], stewardOnly=True)
 lg = TS.apply(leg, busy, NOW, W)
 ok(not TS.approved(leg, W, NOW) and lg['status'] == 'eligible' and lg['archivedAt'] == NOW and TS.apply(lg, busy, NOW, W)['status'] == 'eligible',
@@ -314,7 +332,7 @@ ok(not os.path.exists(os.path.join(ROOT, 'hub', 'site', '_redirects')) and '"red
 
 # ---- activity copy matches the quiet rule (Key 2 follow-up) ----
 QUIET = 'A topic with fewer than 3 counted posts in 30 days goes quiet: it stays open, leaves search, and returns once it clears the bar again.'
-REST = 'One that goes 90 days without a counted post rests: it stays readable, and when people return it goes back into search only after a fresh approval.'
+REST = 'One that goes 90 days without a counted post rests: it stays readable, and it goes back into search only after a fresh approval.'
 for f in ('about.html', os.path.join('t', 'index.html')):
     h = open(os.path.join(ROOT, 'hub', 'site', f), encoding='utf-8').read()
     ok(QUIET in h and 'rests: it stays readable, leaves search' not in h and REST in h and 'reopens on its own' not in h,
@@ -325,7 +343,7 @@ for f in ('about.html', os.path.join('t', 'index.html')):
     ok(GATE in h and 'until real conversation is happening: 20 or more' not in h, 'copy (%s): search needs the activity bar and approval for listing' % f)
 tt = open(os.path.join(ROOT, 'hub', 'src', 'topic-template.html'), encoding='utf-8').read()
 ok('It can show up in search once 20 or more posts' in tt and 'It shows up in search once' not in tt, 'copy (topic template): meeting the bar no longer promises search (approval gate)')
-ok('It is out of search for now and can come back once people are posting again and it is approved for listing again.' in tt and 'reopens on its own' not in tt,
+ok('It is out of search for now and can come back once it is approved for listing again.' in tt and 'once people are posting again' not in tt and 'reopens on its own' not in tt,
    'copy (topic template): a resting topic comes back only once approved for listing again')
 ok(not any('reopens on its own' in open(os.path.join(dp, fn), encoding='utf-8', errors='replace').read()
            for base in ('hub', 'topics') for dp, _, fns in os.walk(os.path.join(ROOT, base)) for fn in fns if fn.endswith(('.html', '.md', '.json'))),

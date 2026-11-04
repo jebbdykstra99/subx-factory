@@ -52,8 +52,9 @@ then this PR has no Firestore writer: applying the seed is a separate, reviewed 
 - **archived** (rested): 0 counted posts in 90 days. Read-only, noindex, out of the sitemap. Entering archived stamps
   `archivedAt`; the old approval fields stay on the row (nothing is ever deleted). When it meets the active rule again
   it goes to **eligible**, not active, and waits for a fresh wave approval: only an approval whose `approvedAt` is
-  strictly later than `archivedAt` counts (from archived or, on any later run, from eligible). Then it returns to
-  active with a new `activatedAt`. A malformed `archivedAt`, or an archived row with none, fails closed. Quiet topics
+  strictly later than `archivedAt`, compared in UTC, counts (from archived or, on any later run, from eligible). Then
+  it returns to active with a new `activatedAt`. A missing (on an archived row), malformed or future `archivedAt`
+  fails closed; `apply()` never re-stamps a malformed one (fix it by hand in a reviewed commit). Quiet topics
   never get `archivedAt`, so quiet -> active still uses the existing approval; a topic that went quiet and then
   archived is treated as rested. (Owner decision, 2026-11-04.)
 - **hold**: manual; never rendered, never changed by the rule.
