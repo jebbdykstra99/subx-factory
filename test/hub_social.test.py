@@ -39,7 +39,7 @@ ok(re.search(r'class="page hub-view" id="page-hub-following"', idx) is not None,
 vis = re.sub(r'<[^>]+>', ' ', re.sub(r'<(script|style)\b.*?</\1>', '', idx, flags=re.S))
 ok('saved in this browser only' in vis and 'the hub sends them nowhere' in vis, 'Following copy: follows stay in the browser')
 ok('The hub does not read or store your messages.' in vis, 'Chat copy: the hub does not read or store messages')
-ok('Read-only' in idx, 'footer still says Read-only')
+ok('Read-only' not in idx, 'home page no longer says Read-only (the hub has sign-in; meta description names the one account)')
 
 ok("listedHref(r.domain, frag)" in js and "handoffRows('chat', 'Open Chat')" in js and "handoffRows('notifications', 'Open Notifications')" in js,
    'hub.js: Chat and member Notifications hand off to https://<room>/#chat and #notifications')

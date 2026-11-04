@@ -3,7 +3,7 @@ rules_version = '2';
 // by a Firestore TTL policy on `expireAt` (Admin SDK writes; these client rules don't govern them).
 // TTL deletion is not instant: Firestore typically deletes within ~24 h AFTER expireAt, so a raw row
 // can live ~91 days. Aggregates: up to 13 months (expireAt = periodEnd + 395d) if a rollup is added.
-// GPCHAT LIFT (2026-10-18 rebuild): this file = RULES_PASTE_for_Jebb_v2.txt SECTION A2 (v2: follow/mute fix,
+// GPCHAT LIFT (2026-10-18 rebuild): this file = the v2 rules paste file, SECTION A2 (v2: follow/mute fix,
 // story guard, burst cap) + the gpchat lift deltas U3 (no uploads/stories in gpchat) and R2 (under-18 suspension).
 // The Oct 17 draft was built on v1 SECTION A and dropped the v2 follow/mute/story fixes for all 20 rooms.
 // AUTOHIDE-ON-REPORT (2026-10-22, 4:42 PM MT): amended copy of f93194e3d2175c7149b7201b31553b2b.

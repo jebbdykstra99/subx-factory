@@ -41,3 +41,22 @@ jobs:
         run: python3 tools/topics_seed.py --check && python3 tools/topic_domains.py --check && python3 test/topics.test.py
       - name: Spin-up dry run (site.json for the candidate domains; temp dir only, drift --strict + domain validator)
         run: python3 tools/spinup_render.py --check && python3 test/spinup.test.py
+  rules-hub:
+    # Hub sign-in Firestore rules (rules/firestore.rules.hub-signin.proposed and its .dm-on twin)
+    # against the local Firestore emulator. Demo project id only: no real project, no credentials, no secrets.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - name: Install rules test deps (firebase-tools, rules-unit-testing)
+        working-directory: rules/tests
+        run: npm install --no-audit --no-fund
+      - name: Hub sign-in rules, hub DM toggle OFF (shipped file)
+        working-directory: rules/tests
+        run: npm run test:hub
+      - name: Hub sign-in rules, hub DM toggle ON (.dm-on file)
+        working-directory: rules/tests
+        run: npm run test:hub:dm-on

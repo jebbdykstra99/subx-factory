@@ -3,7 +3,7 @@ rules_version = '2';
 // by a Firestore TTL policy on `expireAt` (Admin SDK writes; these client rules don't govern them).
 // TTL deletion is not instant: Firestore typically deletes within ~24 h AFTER expireAt, so a raw row
 // can live ~91 days. Aggregates: up to 13 months (expireAt = periodEnd + 395d) if a rollup is added.
-// GPCHAT LIFT (2026-10-18 rebuild): this file = RULES_PASTE_for_Jebb_v2.txt SECTION A2 (v2: follow/mute fix,
+// GPCHAT LIFT (2026-10-18 rebuild): this file = the v2 rules paste file, SECTION A2 (v2: follow/mute fix,
 // story guard, burst cap) + the gpchat lift deltas U3 (no uploads/stories in gpchat) and R2 (under-18 suspension).
 // The Oct 17 draft was built on v1 SECTION A and dropped the v2 follow/mute/story fixes for all 20 rooms.
 // AUTOHIDE-ON-REPORT (2026-10-22, 4:42 PM MT): amended copy of f93194e3d2175c7149b7201b31553b2b.
@@ -14,8 +14,11 @@ rules_version = '2';
 // HUB SIGN-IN (2026-11-04, draft, NOT published): amended copy of firestore.rules.proposed.
 // Lets the subx.it hub (siteId 'subx') hold accounts WITHOUT making it a posting room.
 // 'subx' is accepted ONLY for: users/{uid} profile, blocks, following, mutes, follow notifications,
-// and factory DMs (conversations + messages). posts, stories, reports, hides, bookmarks, hidden,
-// memberNests stay factorySite() only, so the hub stays read-only for posts.
+// and (only when hubDmOn() returns true) DMs whose conversation siteId is 'subx'. posts, stories, reports,
+// hides, bookmarks, hidden, memberNests stay factorySite() only, so the hub stays read-only for posts.
+// HUB DM TOGGLE (2026-11-04): hubDmOn() is a single-line switch: false (OFF) in firestore.rules.hub-signin.proposed,
+// true (ON) in firestore.rules.hub-signin.proposed.dm-on. It only gates conversations/messages docs with siteId 'subx'.
+// Room DMs (siteId in factorySite()) are allowed by factorySite() alone in both files, so they do not change.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
@@ -44,12 +47,18 @@ service cloud.firestore {
         'behindtheblackwall', 'btbw'
       ];
     }
-    // HUB SIGN-IN: the subx.it hub. Accounts, follows and DMs only; never posts or stories.
+    // HUB SIGN-IN: the subx.it hub. Accounts and follows; DMs only behind hubDmOn(); never posts or stories.
     function hubSite(data) {
       return data.siteId == 'subx';
     }
     function memberSite(data) {
       return factorySite(data) || hubSite(data);
+    }
+    // HUB DM TOGGLE: the ONLY line that differs from the .dm-on file. false = hub ('subx') DMs off; true = on.
+    function hubDmOn() { return false; }
+    // DM site check: room DMs always; hub ('subx') DMs only while hubDmOn() is true.
+    function dmSite(data) {
+      return factorySite(data) || (hubDmOn() && hubSite(data));
     }
     function nestSlugOk(slug) {
       return slug is string
@@ -611,16 +620,16 @@ service cloud.firestore {
     match /conversations/{convId} {
       allow read: if signedIn()
         && (!exists(/databases/$(database)/documents/conversations/$(convId))
-            || (memberSite(resource.data)                          // HUB SIGN-IN
+            || (dmSite(resource.data)                             // HUB DM TOGGLE
                 && request.auth.uid in resource.data.participants));
       allow create: if emailVerified()
-        && memberSite(request.resource.data)                       // HUB SIGN-IN
+        && dmSite(request.resource.data)                          // HUB DM TOGGLE
         && notKilled(request.resource.data.siteId)
         && request.auth.uid in request.resource.data.participants
         && twoParticipants(request.resource.data)
         && !blockedEitherWay(request.resource.data.participants[0], request.resource.data.participants[1]);
       allow update: if emailVerified()
-        && memberSite(resource.data)                               // HUB SIGN-IN
+        && dmSite(resource.data)                                  // HUB DM TOGGLE
         && request.auth.uid in resource.data.participants
         && dmUnreadUpdate()
         && !blockedEitherWay(resource.data.participants[0], resource.data.participants[1]);
@@ -635,7 +644,7 @@ service cloud.firestore {
         }
         allow read: if signedIn()
           && (!exists(/databases/$(database)/documents/conversations/$(convId))
-              || (request.auth.uid in conv().participants && memberSite(conv())));  // HUB SIGN-IN
+              || (request.auth.uid in conv().participants && dmSite(conv())));  // HUB DM TOGGLE
         allow create: if emailVerified()
           && request.resource.data.fromUid == request.auth.uid
           && authorTypeOk(request.resource.data)                   // GROWTH CONSOLE
@@ -644,10 +653,10 @@ service cloud.firestore {
           && request.resource.data.text.size() <= 1000
           && (isAdmin() || spamFree(request.resource.data.text))   // PREVIEW-LIFT GUARD
           && msgThrottled(request.resource.data.siteId)            // PREVIEW-LIFT GUARD
-          && memberSite(request.resource.data)                     // HUB SIGN-IN
+          && dmSite(request.resource.data)                        // HUB DM TOGGLE
           && notKilled(request.resource.data.siteId)
           && request.auth.uid in convAfter().participants
-          && memberSite(convAfter())                               // HUB SIGN-IN
+          && dmSite(convAfter())                                  // HUB DM TOGGLE
           && request.resource.data.siteId == convAfter().siteId
           && !blockedEitherWay(convAfter().participants[0], convAfter().participants[1]);
         allow update, delete: if false;

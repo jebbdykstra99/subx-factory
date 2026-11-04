@@ -120,7 +120,7 @@
   "pages": {
     "index.html": {
       "title": "{{brand.name}}: {{brand.tagline}}",
-      "description": "{{brand.name}} is a home for small, single-topic {{brand.roomNoun.many}}. Highlights from live {{brand.roomNoun.many}}, each linking back to its {{brand.roomNoun.one}}. Read-only."
+      "description": "{{brand.name}} is a home for small, single-topic {{brand.roomNoun.many}}. Highlights from live {{brand.roomNoun.many}}, each linking back to its {{brand.roomNoun.one}}. One {{brand.name}} account works on the hub and in every {{brand.roomNoun.one}}."
     },
     "rooms.html": {
       "title": "{{brand.roomNoun.Many}}, {{brand.name}}",

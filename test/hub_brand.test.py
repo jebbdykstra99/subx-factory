@@ -129,7 +129,8 @@ ok(not any('jsdelivr' in open(os.path.join(SITE, f), encoding='utf-8', errors='r
 leg = json.load(open(os.path.join(ROOT, 'tools', 'csp_legacy_rooms.json')))['rooms']
 ok('subx' not in leg and 'hub' not in leg, 'the hub is not on the CSP legacy list')
 ok(sh.get('recaptcha') is True and sh.get('googleSignIn') is True, 'site.json shell: recaptcha and googleSignIn opt-ins set (App Check reCAPTCHA v3, Google popup gapi)')
-ok(not [p for p in pages if p != 'index.html' and 'recaptcha' in read(os.path.join(SITE, p)).lower()], 'no static page mentions reCAPTCHA (only the shell page CSP lists it)')
+ok(not [p for p in pages if p != 'index.html' and re.search(r'(google|gstatic)\.com/recaptcha', read(os.path.join(SITE, p)))], 'no static page loads reCAPTCHA (only the shell page CSP lists it)')
+ok(not [p for p in pages if p not in ('index.html', 'privacy.html') and 'recaptcha' in read(os.path.join(SITE, p)).lower()], 'no static page but privacy mentions reCAPTCHA (privacy names it under abuse prevention)')
 ok('index.html' not in no_shell and no_shell == set(pages) - {'index.html'}, 'index.html runs the shell; every other page is a declared noShell static page')
 
 HEAD_RE = re.compile(r'^<!DOCTYPE html>\s*<html lang="en">\s*<head>\s*<meta charset="UTF-8">\s*<meta http-equiv="Content-Security-Policy" content="([^"]*)">', re.I)
@@ -280,13 +281,22 @@ _bn = brand['name']
 for _need in ('<li><strong>Hub accounts</strong>: signing in on the hub uses the same %s account as the rooms.' % _bn,
               'we store your account ID (<code>uid</code>), your display name,',
               'the basic profile fields your sign-in provider shares with us (for Google: your name, email address, and profile photo link).',
-              'Follows and direct messages you make with that account are stored with your account, the same way as in the rooms.',
+              'Follows and direct messages you make with that account in a room are stored with your account. Follows you make on the hub stay in your browser only (see Hub follows below).',
+              'password (our sign-in provider stores it only as a hash)',
+              'For abuse prevention, App Check uses Google reCAPTCHA, which runs on the pages where you can sign in',
+              '<p id="hub-account-delete"><strong>Deleting your hub account:</strong> there is no in-app delete button. Email <a data-takedown href="mailto:%s">' % brand['takedownEmail'],
               'Hub account data, including follows and messages made with a hub account, is kept the same way as room account data.',
               'the 25-month visitor-ID limit above applies.',
               'Your public handle is something you choose. We do not make it from your email address, and we do not show your email address to other users.',
               '<p>You must be at least 18 to have an account on %s. The Service is not directed to children, and we do not knowingly collect personal information from anyone under 18, including children under 13. If we learn that we have, we close the account and delete the information, except what the law requires us to keep. If you believe we have information about someone under 18, contact us at <a data-takedown href="mailto:%s">%s</a>.</p>' % (_bn, brand['takedownEmail'], brand['takedownEmail'])):
     ok(pv.count(_need) == 1, 'privacy.html (hub sign-in): %r' % _need[:70])
 ok('not directed to anyone under 18' not in pv and 'read-only index' not in pv, 'privacy.html: old age line and read-only claim gone')
+ok('the same way as in the rooms.' not in pv and 'auth provider' not in pv, 'privacy.html: old hub DM line and "auth provider" wording gone')
+_ix = read(os.path.join(SITE, 'index.html'))
+ok(('<meta name="description" content="%s is a home for small, single-topic %s. Highlights from live %s, each linking back to its %s. One %s account works on the hub and in every %s.">'
+    % (_bn, brand['roomNoun']['many'], brand['roomNoun']['many'], brand['roomNoun']['one'], _bn, brand['roomNoun']['one'])) in _ix and 'Read-only.' not in _ix,
+   'index.html: meta description names the one account, no "Read-only."')
+ok(('id="hub-compose-text" rows="2" maxlength="280" placeholder="Post in a %s."' % brand['roomNoun']['one']) in _ix, 'index.html: hub composer placeholder is "Post in a %s."' % brand['roomNoun']['one'])
 ok(not re.search('[\u2013\u2014]', re.sub(r'<[^>]+>', '', pv.split('Hub accounts', 1)[1].split('</li>', 1)[0])), 'privacy.html: no em or en dash in the hub accounts bullet')
 # HUB SIGN-IN (replaces CLO note (a)): only the shell page loads the Firebase SDK; static pages cannot
 ok(not [p for p in pages if p != 'index.html' and re.search(r'<script[^>]+(gstatic|firebase|googleapis|apis\.google)', read(os.path.join(SITE, p)), re.I)], 'no static page loads the Firebase / Google auth SDK')
