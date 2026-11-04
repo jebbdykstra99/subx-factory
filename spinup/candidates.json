@@ -1,0 +1,836 @@
+{
+  "notes": "CONFIG ONLY: the spin-up candidate domains (step 3 prep). tools/spinup_render.py renders one site.json per candidate into a dry-run dir that is never served; nothing here touches DNS, a registrar, a room repo or hub/. Source: the owned-domain inventory in the 2026-11-03 topic-rooms plan (151 names = 37 place + 79 topic + 33 hold + 2 brand reserve; live rooms and personal names were already left out). Excluded names are listed only by sha256 of the domain, so the generator can refuse them without naming them in the repo.",
+  "source": {
+    "plan": "topic-rooms plan 2026-11-03, section 12-13 domain map",
+    "inventory": 151
+  },
+  "defaults": {
+    "mode": "parked",
+    "brand": "default",
+    "doorway": {
+      "style": "redirect",
+      "keepQuery": false
+    }
+  },
+  "candidates": [
+    {
+      "domain": "202chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "washington-dc"
+    },
+    {
+      "domain": "206chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "seattle"
+    },
+    {
+      "domain": "210chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "san-antonio"
+    },
+    {
+      "domain": "212chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "new-york-city"
+    },
+    {
+      "domain": "213chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "los-angeles"
+    },
+    {
+      "domain": "214chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "dallas"
+    },
+    {
+      "domain": "215chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "philadelphia"
+    },
+    {
+      "domain": "224chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "chicago-suburbs"
+    },
+    {
+      "domain": "303chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "denver"
+    },
+    {
+      "domain": "305chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "miami"
+    },
+    {
+      "domain": "310chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "los-angeles"
+    },
+    {
+      "domain": "31chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "netherlands"
+    },
+    {
+      "domain": "32chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "belgium"
+    },
+    {
+      "domain": "34chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "spain"
+    },
+    {
+      "domain": "39chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "italy"
+    },
+    {
+      "domain": "404chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "atlanta"
+    },
+    {
+      "domain": "408chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "san-jose"
+    },
+    {
+      "domain": "41chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "switzerland"
+    },
+    {
+      "domain": "43chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "austria"
+    },
+    {
+      "domain": "47chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "norway"
+    },
+    {
+      "domain": "48chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "poland"
+    },
+    {
+      "domain": "49chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "germany"
+    },
+    {
+      "domain": "512chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "austin"
+    },
+    {
+      "domain": "54chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "argentina"
+    },
+    {
+      "domain": "602chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "phoenix"
+    },
+    {
+      "domain": "612chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "minneapolis"
+    },
+    {
+      "domain": "617chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "boston"
+    },
+    {
+      "domain": "61chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "australia"
+    },
+    {
+      "domain": "62chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "indonesia"
+    },
+    {
+      "domain": "63chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "philippines"
+    },
+    {
+      "domain": "650chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "silicon-valley"
+    },
+    {
+      "domain": "702chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "las-vegas"
+    },
+    {
+      "domain": "713chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "houston"
+    },
+    {
+      "domain": "81chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "japan"
+    },
+    {
+      "domain": "82chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "south-korea"
+    },
+    {
+      "domain": "84chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "vietnam"
+    },
+    {
+      "domain": "858chat.com",
+      "group": "place",
+      "mode": "doorway",
+      "topic": "san-diego"
+    },
+    {
+      "domain": "222chat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "73chat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "agachat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "aga-cooking"
+    },
+    {
+      "domain": "awolchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "military-life"
+    },
+    {
+      "domain": "awwchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "cute-animals"
+    },
+    {
+      "domain": "birderschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "birding"
+    },
+    {
+      "domain": "blmchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "public-lands"
+    },
+    {
+      "domain": "bnchat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "boneschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "bone-health"
+    },
+    {
+      "domain": "briechat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "cheese"
+    },
+    {
+      "domain": "byobchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "byob-dining"
+    },
+    {
+      "domain": "cambridgechat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "cambridge"
+    },
+    {
+      "domain": "cancelchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "culture-debates"
+    },
+    {
+      "domain": "carnavalchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "carnival-festivals"
+    },
+    {
+      "domain": "cfpbchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "consumer-finance"
+    },
+    {
+      "domain": "complaintchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "complaints"
+    },
+    {
+      "domain": "cribschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "home-tours"
+    },
+    {
+      "domain": "crunkchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "hip-hop"
+    },
+    {
+      "domain": "dibschat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "dittychat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "songwriting"
+    },
+    {
+      "domain": "dobchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "birthdays"
+    },
+    {
+      "domain": "doichat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "public-lands-policy"
+    },
+    {
+      "domain": "dojchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "justice-system"
+    },
+    {
+      "domain": "dpchat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "envychat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "envy"
+    },
+    {
+      "domain": "epachat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "environment-policy"
+    },
+    {
+      "domain": "etachat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "travel-delays"
+    },
+    {
+      "domain": "faachat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "aviation-safety"
+    },
+    {
+      "domain": "fdchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "firefighters"
+    },
+    {
+      "domain": "fibberman.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "fibschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "white-lies"
+    },
+    {
+      "domain": "fohchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "restaurant-work"
+    },
+    {
+      "domain": "forgivechat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "forgiveness"
+    },
+    {
+      "domain": "fsbchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "russia-watch"
+    },
+    {
+      "domain": "ftpchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "file-transfer"
+    },
+    {
+      "domain": "ftwchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "wins"
+    },
+    {
+      "domain": "g7chat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "world-economy"
+    },
+    {
+      "domain": "gfiex.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "gmochat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "food-science"
+    },
+    {
+      "domain": "greedchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "money-and-greed"
+    },
+    {
+      "domain": "hahachat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "jokes",
+      "ownership": "unverified"
+    },
+    {
+      "domain": "hmuchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "meetups"
+    },
+    {
+      "domain": "interiorchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "interior-design"
+    },
+    {
+      "domain": "intervalchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "interval-training"
+    },
+    {
+      "domain": "iouchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "personal-debt"
+    },
+    {
+      "domain": "lacchat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "ladderschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "career-ladders"
+    },
+    {
+      "domain": "marineschat.com",
+      "group": "topic",
+      "note": "topic follows topics/domains.json (plan proposed marines)",
+      "mode": "doorway",
+      "topic": "military-life"
+    },
+    {
+      "domain": "meetrix.us",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "nglchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "honest-takes"
+    },
+    {
+      "domain": "nibschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "cacao-nibs"
+    },
+    {
+      "domain": "nmfchat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "orchidchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "orchids"
+    },
+    {
+      "domain": "praychat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "prayer"
+    },
+    {
+      "domain": "recallchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "product-recalls"
+    },
+    {
+      "domain": "repentchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "faith-and-redemption"
+    },
+    {
+      "domain": "retirechat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "retirement"
+    },
+    {
+      "domain": "ribschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "barbecue"
+    },
+    {
+      "domain": "salmonchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "salmon-fishing"
+    },
+    {
+      "domain": "sandchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "beaches"
+    },
+    {
+      "domain": "scramblechat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "word-games"
+    },
+    {
+      "domain": "startupschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "startups"
+    },
+    {
+      "domain": "svrchat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "taxeschat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "taxes"
+    },
+    {
+      "domain": "tbachat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    },
+    {
+      "domain": "tgifchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "weekends"
+    },
+    {
+      "domain": "tiredchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "sleep"
+    },
+    {
+      "domain": "tldrchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "summaries"
+    },
+    {
+      "domain": "treasurychat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "public-finance"
+    },
+    {
+      "domain": "ubetchat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)",
+      "ownership": "unverified"
+    },
+    {
+      "domain": "upsetchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "venting"
+    },
+    {
+      "domain": "varietychat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "variety"
+    },
+    {
+      "domain": "votingchat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "voting"
+    },
+    {
+      "domain": "wokechat.com",
+      "group": "topic",
+      "mode": "doorway",
+      "topic": "culture-debates"
+    },
+    {
+      "domain": "xiochat.com",
+      "group": "topic",
+      "note": "slug: owner picks (no mode, so the default applies)"
+    }
+  ],
+  "excluded": [
+    {
+      "sha256": "a8137afbeee5efed86d9dc9b89ce49bb5d1945845bd14c4e2b8cde29a11034dc",
+      "reason": "hold: brand reserve, mark not cleared (Trademark Agent knock-out pending)"
+    },
+    {
+      "sha256": "ee9f8bae7252e5ecfb9dab51a64edb1b428cba1c84b0ad798e62a5dbaac599e5",
+      "reason": "hold: brand reserve, mark not cleared (Trademark Agent knock-out pending)"
+    },
+    {
+      "sha256": "76f0f22009cd2d7c69e5df3214aa04899e2caa595be687b9e924b9aca2eb2f52",
+      "reason": "hold: cannabis"
+    },
+    {
+      "sha256": "166869267022acc26f2eb2cba4d5f9631d04b1af6e931b100425b782a9d44a56",
+      "reason": "hold: character mark"
+    },
+    {
+      "sha256": "8274025521352574a376d83e8b00b98ce03b42eecf8b5a1c09aaec0c4ffeca31",
+      "reason": "hold: character mark"
+    },
+    {
+      "sha256": "bacbffa4b7d1bea8796b60a1c55c93564dfc99d00ffee123e8387bddc91fd8fc",
+      "reason": "hold: character mark"
+    },
+    {
+      "sha256": "e7eea63f97d6b42fa6a36d6070869e6286631cb3b93f7ae136ee0ad4c68bee8a",
+      "reason": "hold: character mark"
+    },
+    {
+      "sha256": "e63cfafa5cd3ba32e1afa29d8ece6dd6bfe0e532fb202dd56bb94e1734eac583",
+      "reason": "hold: drug association"
+    },
+    {
+      "sha256": "cc002ad8a8acede2d58a074cae11d7e8d75d871ee1563e97433a1721ca7e7c79",
+      "reason": "hold: drug slang"
+    },
+    {
+      "sha256": "5fcc851527053f0c6651b4d6c9ccd40bd99e938fcbedb297079b73da0791c890",
+      "reason": "hold: event mark"
+    },
+    {
+      "sha256": "b2725c24fb7bc7dd91c6bf20849e0e120b563921cf5d55fe776fdcb784e685fe",
+      "reason": "hold: possible personal name"
+    },
+    {
+      "sha256": "eb3079f7979954a3481c57ce539b7a3ab86487be1d4cc11f08441fb751575948",
+      "reason": "hold: possible personal name"
+    },
+    {
+      "sha256": "5098aa721810b23fd909145d3886e69c4fd0ff53b03ccbcd036d2fd2ad0c73e4",
+      "reason": "hold: possible personal name (common given name; no slug proposed)"
+    },
+    {
+      "sha256": "d12d6a7858409ab939f5d3be488115ba024c39bfaf35f003504c17c4266fbe07",
+      "reason": "hold: possible personal name (real person: philosopher surname; same rule as the held surname domains)"
+    },
+    {
+      "sha256": "8c5cbcfdc1ea2a73da466b471f46d54971d41eff4e43ed912f9711e94024f31a",
+      "reason": "hold: possible personal name (surname / character name; same rule as the held surname and character domains)"
+    },
+    {
+      "sha256": "1680eb91ffe8bbf452554bf942bc4c98c9be5f580ec09aa7bf265b529abdacf6",
+      "reason": "hold: profanity"
+    },
+    {
+      "sha256": "6b7eea5a7e41464131ae79348a50ba134cc073e2dffd8d979f90839ac6597060",
+      "reason": "hold: profanity"
+    },
+    {
+      "sha256": "83a4f49408375e5487c83d40b7b07853cbf8ef9fd1607b0767da7a626084d0ff",
+      "reason": "hold: profanity"
+    },
+    {
+      "sha256": "8c0be47077676527086b8dd1d9ddc08b68460dead092fbeb981dcb7f50be365c",
+      "reason": "hold: profanity"
+    },
+    {
+      "sha256": "9fe9bb73f9130fb92e597a9199f08bbceadf71b440494d41a835ba25f851271c",
+      "reason": "hold: profanity"
+    },
+    {
+      "sha256": "16769a38d637b45b91c3bbec6fb64195bc1f35875486c6ac8ebb077243ddfa30",
+      "reason": "hold: real person"
+    },
+    {
+      "sha256": "2abb8b539d9cb7dcc689c77682aa07cbdc8047f7bea8c6cdbbc3dd10a41ab583",
+      "reason": "hold: real person"
+    },
+    {
+      "sha256": "5001aef60d5acde63f9f30637b4b78893c4b010e838902f3db7bfa796f87328a",
+      "reason": "hold: real person"
+    },
+    {
+      "sha256": "6fe8e2d3b552482ce0c666fd52b490df35c1ff35adf51f9d022748c736d3625b",
+      "reason": "hold: real person"
+    },
+    {
+      "sha256": "b15cfdf6f906fa8403067f82afce41475e4e5e6e55dcc359f8b1124a88b7fc5f",
+      "reason": "hold: real person"
+    },
+    {
+      "sha256": "c2baee24ff9345725916e399e5e6c73f2916bd40950d234fd9b5e19b3ffac95c",
+      "reason": "hold: real-person association"
+    },
+    {
+      "sha256": "e8515983897d23cf6c1866ead8a4ecbaf6411f922c303de56e793834b1730145",
+      "reason": "hold: team mark"
+    },
+    {
+      "sha256": "1d6eedb94497bab2a5cc8f9eb932898b1a926b8c9e2195fa77a7ca155110ae00",
+      "reason": "hold: third-party mark"
+    },
+    {
+      "sha256": "4e00e688392bfef6922bfaea966374b9b5fa8de0d5a27853006b57ae17a45830",
+      "reason": "hold: third-party mark"
+    },
+    {
+      "sha256": "79595652eae68b9dd98910f99d19b6c1e2c2d8be40342be46d68207944772604",
+      "reason": "hold: third-party mark"
+    },
+    {
+      "sha256": "97948bb8710bdf843fa600e1334c441db303169977871aa710850e526eb61975",
+      "reason": "hold: third-party mark"
+    },
+    {
+      "sha256": "a5d3f9d31b86e8304db9d849cdb6a397dacda5849bd38e6179c5616dd741f6b4",
+      "reason": "hold: third-party mark"
+    },
+    {
+      "sha256": "b009468c981a2b6753ff29604713454ee1a851586ae01dfd5739e0b82fe7ab6e",
+      "reason": "hold: third-party mark"
+    },
+    {
+      "sha256": "bbad3e9317fe1e78c455b023e08c96169f8788c5eaf3223934ba2e83735c923d",
+      "reason": "hold: third-party mark"
+    },
+    {
+      "sha256": "bc93f090017484f57bfb6a9b826e50c05b60b03f6c8c20af91c36ab5380793bb",
+      "reason": "hold: third-party mark"
+    },
+    {
+      "sha256": "c7c080f9129e2367fb990e709e28d19bde85d82a6b820e567bc40deb233220d9",
+      "reason": "hold: third-party mark"
+    },
+    {
+      "sha256": "d1c7fd9b88c7ad96bdc18211c5a8c04b0d8eb38238bb729f825a7633319fc871",
+      "reason": "hold: third-party mark"
+    },
+    {
+      "sha256": "f2f16011dba6ab8ed9a18188eb98fbeed6fff6dd63bc910e17cdcd74eed71ce3",
+      "reason": "hold: third-party mark"
+    },
+    {
+      "sha256": "15223c819d2070a2aeb6beb9615f1db807b3fd20f7e4ac40cda9fe95c68c69f0",
+      "reason": "hold: topic on hold (grief is HOLD in topics/seed_wave1.json; stays parked in topics/domains.json)"
+    }
+  ]
+}
