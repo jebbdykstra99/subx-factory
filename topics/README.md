@@ -25,7 +25,8 @@ legal-entity name, primary-domain labels and their `-official` forms, all genera
 
 `slug, title, description, status (hidden|eligible|active|quiet|archived|hold), createdAt, activatedAt, posts14d,
 distinctPosters14d, posts30d, lastCountedPostAt, doorwayDomains[], stewardOnly`, optional `legalProfile` and the
-optional approval record `approvedWave, approvedBy, approvedAt` (seed rows never carry one).
+optional approval record `approvedWave, approvedBy, approvedAt` (seed rows never carry one) and the optional
+`archivedAt` (set when the topic rests).
 Counters hold counted posts only. `stewardOnly` is true while members cannot post (archived, hold).
 
 Wave 1: 52 topics, all with zero stats; 51 `hidden`, 1 `hold` (grief, waiting on the steward plan: crisis resources
@@ -48,8 +49,14 @@ then this PR has no Firestore writer: applying the seed is a separate, reviewed 
 - **quiet**: an active topic with fewer than 3 counted posts in 30 days. Back out of search (noindex, out of the
   sitemap), still open to read and post, badge "Quiet lately. New posts welcome." It returns to active only by meeting
   the active rule again, re-gated by its existing approval (no new wave approval).
-- **archived**: 0 counted posts in 90 days. Read-only, noindex, out of the sitemap; reopens on its own when it meets
-  the active rule again, same existing approval (new `activatedAt`). Nothing is ever deleted.
+- **archived** (rested): 0 counted posts in 90 days. Read-only, noindex, out of the sitemap. Entering archived stamps
+  `archivedAt`; the old approval fields stay on the row (nothing is ever deleted). When it meets the active rule again
+  it goes to **eligible**, not active, and waits for a fresh wave approval: only an approval whose `approvedAt` is
+  strictly later than `archivedAt`, compared in UTC, counts (from archived or, on any later run, from eligible). Then
+  it returns to active with a new `activatedAt`. A missing (on an archived row), malformed or future `archivedAt`
+  fails closed; `apply()` never re-stamps a malformed one (fix it by hand in a reviewed commit). Quiet topics
+  never get `archivedAt`, so quiet -> active still uses the existing approval; a topic that went quiet and then
+  archived is treated as rested. (Owner decision, 2026-11-04.)
 - **hold**: manual; never rendered, never changed by the rule.
 - Only **active** is indexable and sitemap-eligible, and only after the hub-wide noindex is lifted
   (`hub/src/config.json` `topics.hubNoindex`). Hidden, eligible, quiet, archived and hold are `noindex,nofollow`.
