@@ -53,7 +53,13 @@ ok('class="stories-tray' not in idx.split('hub-stories')[0][-200:], 'index.html:
 ok('.hub-story' in css and '.hub-compose' in css, 'hub.css: hub-story / hub-compose styles')
 ok(re.search(r"/stories\.json\?v=[0-9a-f]+", js) is not None, 'hub.js: stories.json is cache-busted')
 ok("'compose=' + encodeURIComponent(text)" in js and "roomHref(r.domain, 'story')" in js, 'hub.js: hand-off goes to https://<room>/#compose= and #story')
-ok(not re.search(r"firestore|firebase|method:\s*'POST'|localStorage|sendBeacon|XMLHttpRequest", js, re.I), 'hub.js: no writes, no storage, no Firebase')
+ok(not re.search(r"firestore|firebase|method:\s*'POST'|sendBeacon|XMLHttpRequest|sessionStorage|document\.cookie|indexedDB", js, re.I), 'hub.js: no writes, no Firebase, no cookies or session storage')
+# 2026-11-04 (hub Following): the ONE browser-storage use is the follows key (test/hub_storage_guard.py, which also
+# refuses bracket access, built names, and other indirect routes to storage)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import hub_storage_guard  # noqa: E402
+probs = hub_storage_guard.problems(js)
+ok(not probs, 'hub.js: storage only via window.localStorage get/setItem(HUB_STORE = hub.follows.v1), no indirect access (%s)' % probs)
 csp = re.search(r"connect-src ([^;\"]+)", read('hub', 'firebase.json') if os.path.exists(os.path.join(ROOT, 'hub', 'firebase.json')) else idx)
 # HUB SIGN-IN (2026-11-04): connect-src adds only the Firebase Auth / App Check / Firestore origins the shell's
 # sign-in needs (pinned in test/hub_brand.test.py); hub.js itself still writes nothing (checked above).

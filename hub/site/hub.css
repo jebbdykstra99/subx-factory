@@ -123,6 +123,8 @@ body { padding-bottom: 46px; }
 .hub-compose-go:disabled { opacity: 0.45; cursor: default; }
 .hub-compose-note { margin: 0.45rem 0 0; font-size: 0.75rem; color: var(--text-light); }
 .hub-pick[hidden] { display: none !important; }
+/* the hidden notif-overlay stub stays hidden even when the shell's openNotif() adds .active (.notif-overlay.active is display:flex) */
+.notif-overlay[hidden] { display: none !important; }
 .hub-pick { position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center; padding: 1rem; }
 .hub-pick-box { background: var(--bg); color: var(--text); border-radius: 14px; width: min(26rem, 100%); max-height: 85vh; overflow: auto; padding: 1rem 1.1rem; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); }
 .hub-pick-box h2 { margin: 0 0 0.3rem; font-size: 1.1rem; }
@@ -132,3 +134,19 @@ body { padding-bottom: 46px; }
 .hub-pick-room:hover strong { color: var(--accent); }
 .hub-pick-close { margin-top: 0.8rem; padding: 0.4rem 1rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); cursor: pointer; font: inherit; }
 .hub-story-card { padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+
+/* Following / Notifications / Chat views (2026-11-04): rendered by hub.js from the public build-time files */
+.hub-view { background: var(--bg); }
+.hub-follow-row { display: flex; align-items: center; gap: 0.8rem; padding: 0.85rem 1.3rem; border-bottom: 1px solid var(--border); }
+.hub-follow-row > a { flex: 1 1 auto; min-width: 0; color: inherit; text-decoration: none; }
+.hub-follow-row > a:hover strong { text-decoration: underline; }
+.hub-follow-row p { margin: 0.2rem 0 0; color: var(--text-muted); font-size: 0.88rem; }
+.hub-follow-row .hub-room-domain, .hub-handoff .hub-room-domain { color: var(--text-light); font-size: 0.8rem; margin-left: 0.4rem; }
+.hub-follow-btn { flex: 0 0 auto; min-width: 6.2rem; padding: 0.4rem 0.9rem; border-radius: 999px; border: 1px solid var(--text); background: var(--text); color: var(--surface); font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+.hub-follow-btn.is-on { background: transparent; color: var(--text); }
+.hub-follow-btn:focus-visible, .hub-handoff:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hub-handoff { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.4rem; padding: 0.85rem 1.3rem; border-bottom: 1px solid var(--border); color: inherit; text-decoration: none; }
+.hub-handoff:hover { background: rgba(255,255,255,0.6); }
+.hub-handoff .hub-open { margin-left: auto; font-size: 0.85rem; }
+.hub-new { display: inline-block; margin: 0 0.35rem; padding: 0 0.4rem; border-radius: 999px; background: var(--accent); color: #fff; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

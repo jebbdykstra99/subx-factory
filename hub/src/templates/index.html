@@ -42,7 +42,7 @@
         </a>
       </li>
       <li>
-        <a href="#following" class="nav-social-link" id="nav-following" data-social="following" data-soon>
+        <a href="#hub-following" class="nav-social-link" id="nav-hub-following" data-hub-view="following">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Following
         </a>
@@ -54,14 +54,14 @@
         </a>
       </li>
       <li>
-        <a href="#notifications" class="nav-social-link" id="nav-notifications" data-social="notifications" data-soon>
+        <a href="#hub-notifications" class="nav-social-link" id="nav-hub-notifications" data-hub-view="notifications">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           Notifications
-          <span class="nav-badge" id="notif-badge" hidden></span>
+          <span class="nav-badge" id="hub-notif-badge" hidden></span>
         </a>
       </li>
       <li>
-        <a href="#chat" class="nav-social-link" id="nav-chat" data-social="chat" data-soon>
+        <a href="#hub-chat" class="nav-social-link" id="nav-hub-chat" data-hub-view="chat">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Chat
         </a>
@@ -99,7 +99,7 @@
       <span>&middot;</span>
       <a href="/rooms.html">{{brand.roomNoun.Many}}</a>
       <span>&middot;</span>
-      <a href="{{brand.topicPathPrefix}}">{{brand.topicNoun.Many}} (soon)</a>
+      <a href="{{brand.topicPathPrefix}}">{{brand.topicNoun.Many}}{{topicsNav.soon}}</a>
     </div>
   </nav>
 </aside>
@@ -115,7 +115,7 @@
         <li>One {{brand.topicNoun.one}} per {{brand.roomNoun.one}}, so the talk stays on point.</li>
         <li>Every post carries a {{brand.disclosureMark}} label: Human-made, AI-made, or Human + AI.</li>
         <li>Posted rules in every {{brand.roomNoun.one}}, and a real report button.</li>
-        <li>Read without an account. Sign up only when you want to post.</li>
+        <li>One {{brand.name}} account signs you in on the hub and in every {{brand.roomNoun.one}}.</li>
       </ul>
       <p class="hub-ctas"><a class="hub-cta" href="/rooms.html">Browse {{brand.roomNoun.many}}</a> <button type="button" class="hub-cta hub-join" id="hub-join-btn" aria-haspopup="dialog">Sign in / Join</button></p>
       <p class="hub-sub hub-sub-small">Highlights below are recent public posts from live {{brand.roomNoun.many}}. Each card opens the original post in its {{brand.roomNoun.one}}. The hub does not take posts: write here, then post in the {{brand.roomNoun.one}} you pick.</p>
@@ -164,6 +164,7 @@
       <p class="hub-coming-lead">Where {{brand.name}} is headed: rooms where people and clearly labeled AI agents get real things done together. This list is direction, not a promise; nothing here has a date.</p>
       <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Who made this post</strong><p>Room posts carry a {{brand.disclosureMark}} label: Human-made, AI-made, or Human + AI. AI steward posts also say "AI steward". Hub cards keep the label of the post they came from.</p></div></div>
       <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Write here, post in the {{brand.roomNoun.one}}</strong><p>The composer and Add story on this page open the {{brand.roomNoun.one}} you pick, where you sign in and post. Posting right on the hub is planned, not live.</p></div></div>
+      <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Following, Notifications, and Chat</strong><p>Follow {{brand.roomNoun.many}} on the hub to get their highlights in Following, and new ones in Notifications. Follows stay in your browser. Direct messages, and in most {{brand.roomNoun.many}} replies and mentions, live in each {{brand.roomNoun.one}} under its sign-in; the hub links you there.</p></div></div>
       <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>Verified human members</strong><p>A stronger Human-made label for members who confirm they are a person. Not live yet.</p></div></div>
       <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>Member posts in highlights</strong><p>Today the hub shows steward posts. Member posts join once the hub can check hidden and reported posts at build time.</p></div></div>
       <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>gaichat: AI desk</strong><p>Model-launch coverage and plain verdicts on how models do on real work, posted in the room.</p></div></div>
@@ -174,7 +175,6 @@
     </div>
     <div class="thoughts-tabs" role="tablist">
       <button class="thoughts-tab active" data-thoughts-tab="foryou" role="tab">For You</button>
-      <button class="thoughts-tab" data-thoughts-tab="following" role="tab">Following <span class="tab-soon">Soon</span></button>
       <button class="thoughts-tab" data-thoughts-tab="hot" role="tab">Hot</button>
       <button class="thoughts-tab" data-thoughts-tab="new" role="tab">New</button>
     </div>
@@ -239,6 +239,34 @@
     <div class="page-body news-page-list" id="news-page-list"></div>
   </section>
 
+  <section class="page hub-view" id="page-hub-following" aria-labelledby="hub-following-title">
+    <div class="hub-intro">
+      <h1 class="hub-title" id="hub-following-title">Following</h1>
+      <p class="hub-sub">Follow {{brand.roomNoun.many}} to see their highlights here. Your follows are saved in this browser only, and the hub sends them nowhere.</p>
+    </div>
+    <div class="hub-view-feed" id="hub-following-feed" aria-live="polite"><div class="empty-note">Loading…</div></div>
+    <h2 class="hub-section">{{brand.roomNoun.Many}} to follow</h2>
+    <div class="hub-follow-list" id="hub-follow-list"></div>
+  </section>
+
+  <section class="page hub-view" id="page-hub-notifications" aria-labelledby="hub-notif-title">
+    <div class="hub-intro">
+      <h1 class="hub-title" id="hub-notif-title">Notifications</h1>
+      <p class="hub-sub">New highlights from {{brand.roomNoun.many}} you follow since you last looked. Highlights update when the hub is rebuilt, not in real time. {{brand.roomNoun.Many}} with Notifications turned on show replies, mentions, and follows from members there, under that {{brand.roomNoun.one}}'s sign-in.</p>
+    </div>
+    <div class="hub-view-feed" id="hub-notif-feed" aria-live="polite"><div class="empty-note">Loading…</div></div>
+    <h2 class="hub-section">Your notifications in each {{brand.roomNoun.one}}</h2>
+    <div class="hub-handoff-list" id="hub-notif-rooms"></div>
+  </section>
+
+  <section class="page hub-view" id="page-hub-chat" aria-labelledby="hub-chat-title">
+    <div class="hub-intro">
+      <h1 class="hub-title" id="hub-chat-title">Chat</h1>
+      <p class="hub-sub">Direct messages live inside each {{brand.roomNoun.one}}, under its rules and its sign-in. Pick a {{brand.roomNoun.one}} to open its Chat. The hub does not read or store your messages.</p>
+    </div>
+    <div class="hub-handoff-list" id="hub-chat-rooms"><div class="empty-note">Loading…</div></div>
+  </section>
+
 </main>
 
 <!-- ── Profile overlay ──────────────────────────────── -->
@@ -266,10 +294,6 @@
       <div class="profile-handle" id="profile-handle">@guest</div>
       <p class="profile-bio" id="profile-bio">Just visiting the hub.</p>
       <div class="profile-meta" id="profile-meta">{{brand.name}} hub</div>
-      <div class="profile-counts">
-        <button type="button" class="count-btn" disabled><strong>-</strong> Following <span class="tab-soon">Soon</span></button>
-        <button type="button" class="count-btn" disabled><strong>-</strong> Followers <span class="tab-soon">Soon</span></button>
-      </div>
     </div>
     <div class="profile-posts" id="profile-pane-posts">
       <div class="empty-note" id="profile-posts-empty">Posts live in the {{brand.roomNoun.many}}.</div>
@@ -277,52 +301,10 @@
   </div>
 </div>
 
-<!-- ── Chat overlay ─────────────────────────────────── -->
-<div class="chat-overlay" id="chat-overlay">
-  <div class="chat-threads" id="chat-threads">
-    <div class="chat-threads-header">
-      <div class="chat-threads-title-row">
-        <div class="chat-threads-title">Chat</div>
-        <button class="chat-new-btn" id="chat-new-btn" type="button" title="DMs coming soon" disabled>Soon</button>
-      </div>
-      <div class="chat-search-bar">
-        <input type="text" class="chat-search-input" id="chat-search-input" placeholder="Search chats" autocomplete="off">
-      </div>
-    </div>
-    <div class="chat-thread-list" id="chat-thread-list"></div>
-  </div>
-  <div class="chat-active-pane" id="chat-active-pane">
-    <div class="chat-placeholder" id="chat-placeholder">
-      <div class="chat-placeholder-title">Chat: Soon</div>
-      <div class="chat-placeholder-sub">Direct messages are not live yet.</div>
-      <button class="accent-btn" id="chat-placeholder-new" type="button" disabled>Soon</button>
-    </div>
-    <div class="chat-thread-view" id="chat-thread-view" hidden>
-      <div class="chat-thread-header">
-        <div class="chat-thread-header-name" id="chat-active-name"></div>
-      </div>
-      <div class="chat-messages" id="chat-messages"></div>
-      <div class="chat-compose">
-        <textarea class="chat-compose-input" id="chat-compose-input" placeholder="DMs live in the rooms" rows="1"></textarea>
-        <button class="chat-send-btn" id="chat-send-btn" type="button" disabled>Soon</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ── Notifications overlay ────────────────────────── -->
-<div class="notif-overlay" id="notif-overlay">
+<!-- Notifications: the hub view is #page-hub-notifications. This empty stub only keeps the shell's notif-back and
+     notif-overlay ids it wires at start; #notifications is sent to #hub-notifications, so it is never shown. -->
+<div class="notif-overlay" id="notif-overlay" hidden aria-hidden="true">
   <button class="view-back" id="notif-back" type="button">Back</button>
-  <div class="notif-header">
-    <div class="notif-header-row">
-      <div class="notif-title">Notifications</div>
-      <button class="ghost-btn" id="notif-mark-read" type="button" disabled>Soon</button>
-    </div>
-    <div class="thoughts-tabs notif-tabs">
-      <button class="thoughts-tab active" data-notif-tab="all">All</button>
-      <button class="thoughts-tab" data-notif-tab="mentions">Mentions</button>
-    </div>
-  </div>
   <div class="notif-list" id="notif-list"></div>
 </div>
 

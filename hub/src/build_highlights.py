@@ -303,7 +303,8 @@ def main():
         rep = report.setdefault(room, {'siteId': sid, 'fetched': 0, 'kept': 0, 'dropped': {}})
         if room in PAUSED or r.get('status') != 'live':
             rep['skipped'] = 'paused'; continue
-        live = True if a.no_live_check else live_check(r['domain'])
+        site_doc = None if a.no_live_check else live_site(r['domain'])
+        live = True if a.no_live_check else site_doc is not None
         if not live:
             rep['skipped'] = 'not live (site.json unreachable)'; continue
         try:
@@ -312,7 +313,11 @@ def main():
         except Exception as e:
             rep['skipped'] = 'kill check failed: %s' % e; continue
         if r.get('suggest'):
-            suggest.append({'room': room, 'name': r['name'], 'domain': r['domain'], 'tagline': safe_tagline(r.get('tagline')), 'featured': room in featured})
+            # notifs (2026-11-04, hub Notifications): the room's own site.json turns member Notifications on
+            # (features.notifs true); the hub shows an "Open Notifications" link only for those rooms
+            notifs = isinstance(site_doc, dict) and isinstance(site_doc.get('features'), dict) and site_doc['features'].get('notifs') is True
+            suggest.append({'room': room, 'name': r['name'], 'domain': r['domain'], 'tagline': safe_tagline(r.get('tagline')), 'featured': room in featured,
+                            'notifs': notifs})
         per_room = f_per if room in featured else o_per
         if not r.get('highlights') or per_room <= 0:
             rep['skipped'] = 'held: ' + (r.get('hold') or 'highlights off') if not r.get('highlights') else 'suggestion only (otherPerRoom 0)'; continue

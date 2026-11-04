@@ -218,8 +218,9 @@ ok("(r.tagline ? '<p>' + esc(r.tagline) + '</p>' : '')" in read(os.path.join(SIT
 # Key 1 edit E2: sign-up consent wording
 ok('(preview stubs, not final counsel)' not in idx and '(preview drafts)' not in idx and idx.count('Privacy Policy</a>.</span>') == 2,
    'index.html: both sign-up consent lines link Terms + Privacy with no preview/draft qualifier')
-# Key 1 edit E1 (2026-11-04): DM placeholder is exactly the launch line, no internal dev note
-ok(re.findall(r'<div class="chat-placeholder-sub">([^<]*)</div>', idx) == ['Direct messages are not live yet.'], 'index.html: DM placeholder reads exactly "Direct messages are not live yet."')
+# Key 1 edit E1 (2026-11-04): DM placeholder is exactly the launch line, no internal dev note. PR #43 (Key 1 E1) removes
+# the shell Chat overlay from the hub (Chat hands off to each room), so the placeholder may also be absent.
+ok(re.findall(r'<div class="chat-placeholder-sub">([^<]*)</div>', idx) in (['Direct messages are not live yet.'], []), 'index.html: DM placeholder, if present, reads exactly "Direct messages are not live yet."')
 for p in pages:
     vis = re.sub(r'<!--.*?-->', '', re.sub(r'<(script|style)\b.*?</\1>', '', read(os.path.join(SITE, p)), flags=re.S), flags=re.S)
     vis = re.sub(r'<[^>]+>', ' ', vis)

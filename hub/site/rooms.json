@@ -7,105 +7,120 @@
    "name": "gpchat",
    "domain": "gpchat.com",
    "tagline": "Nothing but Grand Prix.",
-   "featured": true
+   "featured": true,
+   "notifs": false
   },
   {
    "room": "popechat",
    "name": "popechat",
    "domain": "popechat.com",
    "tagline": "Pray. Sing. Meditate.",
-   "featured": true
+   "featured": true,
+   "notifs": false
   },
   {
    "room": "gaichat",
    "name": "gaichat",
    "domain": "gaichat.com",
    "tagline": "Tools, not oracles.",
-   "featured": true
+   "featured": true,
+   "notifs": true
   },
   {
    "room": "27chat",
    "name": "27chat",
    "domain": "27chat.com",
    "tagline": "The work didn’t stop.",
-   "featured": true
+   "featured": true,
+   "notifs": true
   },
   {
    "room": "415chat",
    "name": "415chat",
    "domain": "415chat.com",
    "tagline": "San Francisco, talking.",
-   "featured": false
+   "featured": false,
+   "notifs": true
   },
   {
    "room": "samochat",
    "name": "samochat",
    "domain": "samochat.com",
    "tagline": "Santa Monica, talking.",
-   "featured": false
+   "featured": false,
+   "notifs": true
   },
   {
    "room": "808chat",
    "name": "808chat",
    "domain": "808chat.com",
    "tagline": "All things Hawaii. Local, not brochure.",
-   "featured": false
+   "featured": false,
+   "notifs": true
   },
   {
    "room": "bartchat",
    "name": "bartchat",
    "domain": "bartchat.com",
    "tagline": "Nothing but BART.",
-   "featured": false
+   "featured": false,
+   "notifs": true
   },
   {
    "room": "buffettchat",
    "name": "buffettchat",
    "domain": "buffettchat.com",
    "tagline": "The Oracle still talks.",
-   "featured": false
+   "featured": false,
+   "notifs": true
   },
   {
    "room": "recruitchat",
    "name": "recruitchat",
    "domain": "recruitchat.com",
    "tagline": "The room, not the funnel.",
-   "featured": false
+   "featured": false,
+   "notifs": true
   },
   {
    "room": "311chat",
    "name": "311chat",
    "domain": "311chat.com",
    "tagline": "Non-emergency city help. Find your 311.",
-   "featured": false
+   "featured": false,
+   "notifs": false
   },
   {
    "room": "boyfriendchat",
    "name": "boyfriendchat",
    "domain": "boyfriendchat.com",
    "tagline": "His stories. Your table.",
-   "featured": false
+   "featured": false,
+   "notifs": true
   },
   {
    "room": "buffetchat",
    "name": "buffetchat",
    "domain": "buffetchat.com",
    "tagline": "The plate never ends.",
-   "featured": false
+   "featured": false,
+   "notifs": true
   },
   {
    "room": "ciachat",
    "name": "ciachat",
    "domain": "ciachat.com",
    "tagline": "FOIA, not fanfic.",
-   "featured": false
+   "featured": false,
+   "notifs": true
   },
   {
    "room": "cobrachat",
    "name": "cobrachat",
    "domain": "cobrachat.com",
    "tagline": "Hoods up.",
-   "featured": false
+   "featured": false,
+   "notifs": true
   }
  ]
 }
