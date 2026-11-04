@@ -78,7 +78,28 @@ ok(TS.apply(atopic(), busy, NOW)['status'] == 'eligible', 'approval record whose
 ok(TS.apply(atopic(), busy, NOW, W)['status'] == 'active', 'hidden -> active when the wave was approved ahead of time')
 ok(TS.apply(atopic(), busy, NOW, W)['activatedAt'] == NOW, 'activatedAt is set on activation')
 ok(TS.apply(atopic('eligible'), busy, NOW, W)['status'] == 'active', 'eligible -> active once the row has a valid approval')
-ok(TS.apply(atopic('eligible'), [post('a', 1), post('b', 2), post('c', 3)], NOW, W)['status'] == 'active', 'an approved eligible topic goes active even below the rule (it met it)')
+# N2: approval alone never activates; the bar is re-checked at the moment of activation
+stale3 = [post('a', 1), post('b', 2), post('c', 3)]
+st = TS.apply(atopic('eligible'), stale3, NOW, W)
+ok(st['status'] == 'eligible' and st['activatedAt'] is None and TS.robots(st['status'], hub_noindex=False) == 'noindex,nofollow'
+   and not TS.sitemap_eligible(st['status'], hub_noindex=False), 'N2: approved eligible topic below the bar (3 posts) stays eligible, noindex, not in the sitemap')
+ok(TS.apply(atopic('eligible'), [post('a', 1), post('b', 2)], NOW, W)['status'] == 'hidden', 'N2: approved eligible topic with < 3 posts in 30 days -> hidden, not active')
+ok(TS.apply(atopic('eligible'), [], NOW, W)['status'] == 'hidden', 'N2: approved eligible topic with no posts -> hidden')
+ok(TS.apply(atopic('eligible'), [post('u%d' % (i % 5), 14 + i * 0.1) for i in range(20)], NOW, W)['status'] == 'eligible', 'N2: approved eligible topic whose 20 posts are older than 14 days stays eligible')
+ok(TS.apply(atopic('eligible'), busy[:19], NOW, W)['status'] == 'eligible', 'N2: approved eligible topic with 19 counted posts stays eligible')
+ok(TS.apply(atopic('eligible'), [post('u%d' % (i % 4), i * 0.5) for i in range(25)], NOW, W)['status'] == 'eligible', 'N2: approved eligible topic with only 4 people stays eligible')
+for kw, why in ((dict(steward=True), 'steward'), (dict(ai=True), 'AI'), (dict(authorVerifiedHuman=False), 'unverified')):
+    ok(TS.apply(atopic('eligible'), [dict(p, **kw) for p in busy], NOW, W)['status'] == 'hidden', 'N2: approved eligible topic carried only by %s posts (none count) -> hidden, not active' % why)
+ok(TS.apply(atopic('eligible'), [dict(p, authorCreatedAt=TS.iso(TS.parse_ts(p['createdAt']) - timedelta(days=6))) for p in busy], NOW, W)['status'] == 'hidden',
+   'N2: approved eligible topic carried only by accounts under 7 days old (none count) -> hidden, not active')
+row, seen = atopic('eligible'), []
+for day in range(0, 20):  # one cycle per day: posts thin out; never active/indexed in any cycle while below the bar
+    t_now = TS.iso(now + timedelta(days=day))
+    row = TS.apply(row, [post('u%d' % (i % 5), 15 + i * 0.1 - day) for i in range(20)] if day == 0 else stale3, t_now, W)
+    seen.append(row['status'])
+ok('active' not in seen and all(TS.robots(s, hub_noindex=False) == 'noindex,nofollow' for s in seen), 'N2: a stale approved topic is not active/indexed for even one cycle (%s)' % sorted(set(seen)))
+ok(TS.next_status('eligible', TS.counts(stale3, NOW), NOW, True) == 'eligible' and TS.next_status('eligible', TS.counts(busy, NOW), NOW, True) == 'active',
+   'N2: next_status(eligible, approved) is active only when the bar is met')
 ok(TS.apply(topic('eligible'), busy, NOW, W)['status'] == 'eligible', 'eligible stays eligible while waiting on approval')
 ok(TS.apply(topic('eligible'), [post('a', 1), post('b', 2), post('c', 3)], NOW, W)['status'] == 'eligible', 'unapproved eligible with 3 posts in 30 days stays eligible')
 ok(TS.apply(topic('eligible'), [post('a', 1), post('b', 2)], NOW, W)['status'] == 'hidden', 'unapproved eligible with < 3 posts in 30 days -> back to hidden')
@@ -88,6 +109,17 @@ for k, v, why in (('approvedBy', '', 'empty approvedBy'), ('approvedBy', None, '
                   ('approvedWave', 2, 'wave not on the list')):
     ok(not TS.approved(atopic(**{k: v}), W, NOW) and TS.apply(atopic(**{k: v}), busy, NOW, W)['status'] == 'eligible', 'incomplete approval (%s) is refused: eligible' % why)
 ok(TS.approved(atopic(), W, NOW) and not TS.approved(atopic(), [], NOW) and not TS.approved(topic(), W, NOW), 'approved(): needs the full record and a listed wave')
+# N1: approvedWave must be a strict int; anything else is "not approved" with no exception
+for v, why in (([1], 'list'), ({'1': 1}, 'dict'), ({1}, 'set'), ((1,), 'tuple'), (1.0, 'float 1.0'), (1.5, 'float 1.5'), ('1', 'string'),
+               (True, 'bool True'), (False, 'bool False'), (None, 'None')):
+    try:
+        res, st_ = TS.approved(atopic(approvedWave=v), W, NOW), TS.apply(atopic(approvedWave=v), busy, NOW, W)['status']
+        ok(res is False and st_ == 'eligible', 'N1: non-int wave (%s) -> not approved, eligible' % why)
+    except Exception as ex:  # noqa: BLE001
+        ok(False, 'N1: non-int wave (%s) raised %r' % (why, ex))
+ok(not TS.approved(atopic(), [1.0], NOW) and not TS.approved(atopic(), [True], NOW) and not TS.approved(atopic(), ['1'], NOW)
+   and TS.approved(atopic(), [[1], {'a': 1}, 1], NOW), 'N1: only strict-int entries in the approved wave list count (and odd entries do not crash)')
+ok(not TS.approved(atopic(approvedWave=True), [True, 1], NOW) and not TS.approved(atopic(approvedWave=1.0), [1.0, 1], NOW), 'N1: True / 1.0 never match wave 1')
 ok(TS.apply(atopic(), busy[:19], NOW, W)['status'] == 'hidden', '19 posts stays hidden')
 four = [post('u%d' % (i % 4), i * 0.5) for i in range(25)]
 ok(TS.apply(atopic(), four, NOW, W)['status'] == 'hidden', '25 posts by only 4 people stays hidden')
