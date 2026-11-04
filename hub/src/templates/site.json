@@ -78,7 +78,7 @@
       {
         "file": "assets/whomark/whomark.js",
         "sha256": "",
-        "reason": "{{brand.disclosureMark}} disclosure badges (vendored byte copy of subx-factory assets/whomark, re-branded only when brand.json changes)",
+        "reason": "{{brand.disclosureMark}} disclosure marks, final-v4.1 art (vendored from hub/src/whomark, re-branded only when brand.json changes)",
         "noShellOk": true
       },
       {

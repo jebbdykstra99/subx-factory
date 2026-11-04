@@ -183,13 +183,13 @@
     "keep": [
       {
         "file": "assets/whomark/whomark.js",
-        "sha256": "393b84f5bf5f46d3c1f0c05237b5d2c17985cfcf8b9d1aab2211adb91cfedf3e",
-        "reason": "WHOMARK™ disclosure badges (vendored byte copy of subx-factory assets/whomark, re-branded only when brand.json changes)",
+        "sha256": "78ce0941f6ff8385b0831fdef2ddcac315b5099f27c587dc65392ffbd0a6348f",
+        "reason": "WHOMARK™ disclosure marks, final-v4.1 art (vendored from hub/src/whomark, re-branded only when brand.json changes)",
         "noShellOk": true
       },
       {
         "file": "hub.js",
-        "sha256": "328dd6645df8ec2d44c8af1dcf50ecb061affeda25f7ca6e94b6d2249b0312b2",
+        "sha256": "5cf3ffa4d07d0f9f0d674a824634035c7e5273a73ccbd270926c54fedecb0da2",
         "reason": "hub: renders highlights.json + rooms.json (read-only, no auth, no writes)",
         "noShellOk": true
       },

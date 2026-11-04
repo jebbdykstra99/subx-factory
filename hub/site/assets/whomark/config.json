@@ -1,59 +1,51 @@
 {
-  "family": "placeholder-ring",
-  "placeholder": true,
-  "sprite": "/assets/whomark/sprite.svg",
-  "accentVar": "--wm-accent",
-  "accentDefault": "#8a5cf6",
+  "family": "final-v4.1",
+  "placeholder": false,
+  "palette": "color",
+  "assetBase": "/assets/whomark/",
   "defaultSizePx": 16,
-  "smallBelowPx": 20,
   "minSizePx": {
     "human": 14,
     "ai": 14,
     "hybrid": 16
   },
   "labelRequiredAtOrBelowPx": 14,
+  "clearSpaceRatio": 0.25,
   "badges": {
     "og": {
       "px": 128,
-      "bg": "#0f1419",
-      "fg": "#ffffff"
+      "file": "whomark-{tier}-lg-color-128px.png"
     },
     "corner": {
       "px": 48,
-      "bg": "#0f1419",
-      "fg": "#ffffff"
+      "file": "whomark-{tier}-lg-color-48px.png"
     }
   },
   "tiers": {
     "human": {
-      "symbolId": "wm-human",
-      "symbolIdSmall": "wm-human-sm",
       "textLabel": "Human-made",
-      "ariaLabel": "Human-made",
-      "title": "Human-made",
+      "title": "WHOMARK: Human-made",
       "plainText": "Human-made",
-      "ogBadge": "/assets/whomark/og-human.png",
-      "cornerBadge": "/assets/whomark/corner-human.png"
+      "color": "#1E7B34",
+      "ogBadge": "/assets/whomark/whomark-human-lg-color-128px.png",
+      "cornerBadge": "/assets/whomark/whomark-human-lg-color-48px.png"
     },
     "ai": {
-      "symbolId": "wm-ai",
-      "symbolIdSmall": "wm-ai-sm",
-      "textLabel": "AI steward · SubX",
-      "ariaLabel": "AI steward · SubX",
-      "title": "Operated by SubX using AI tools. Not a real person.",
-      "plainText": "AI steward · SubX",
-      "ogBadge": "/assets/whomark/og-ai.png",
-      "cornerBadge": "/assets/whomark/corner-ai.png"
+      "textLabel": "AI-made",
+      "stewardLabel": "AI-made · AI steward",
+      "title": "WHOMARK: AI-made",
+      "plainText": "AI-made",
+      "color": "#000000",
+      "ogBadge": "/assets/whomark/whomark-ai-lg-color-128px.png",
+      "cornerBadge": "/assets/whomark/whomark-ai-lg-color-48px.png"
     },
     "hybrid": {
-      "symbolId": "wm-hybrid",
-      "symbolIdSmall": "wm-hybrid-sm",
       "textLabel": "Human + AI",
-      "ariaLabel": "Human + AI: {names}",
-      "title": "Human + AI: {names}",
+      "title": "WHOMARK: Human + AI",
       "plainText": "Human + AI: {names}",
-      "ogBadge": "/assets/whomark/og-hybrid.png",
-      "cornerBadge": "/assets/whomark/corner-hybrid.png"
+      "color": "#9A6700",
+      "ogBadge": "/assets/whomark/whomark-hybrid-lg-color-128px.png",
+      "cornerBadge": "/assets/whomark/whomark-hybrid-lg-color-48px.png"
     }
   }
 }

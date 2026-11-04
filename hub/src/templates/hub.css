@@ -84,3 +84,14 @@ body.nav-collapsed .hub-intro { padding-left: 3.7rem; }
 .legal-footer-nonaff { font-size: 11px; opacity: 0.85; }
 body { padding-bottom: 46px; }
 @media (max-width: 900px) { .legal-footer { display: block !important; transform: none !important; } }
+
+/* Disclosure mark final-v4.1 (palette C, light background). Spec section 7; marks are never recoloured. Clear space 4px. */
+.whomark { display: inline-flex; align-items: center; gap: .25em; margin-left: .25em; padding: 0 4px; vertical-align: -.125em; white-space: nowrap; line-height: 1; }
+.whomark-icon, .whomark-icon img { width: 16px; height: 16px; display: block; flex-shrink: 0; }
+.whomark--s14 .whomark-icon, .whomark--s14 .whomark-icon img { width: 14px; height: 14px; }
+.whomark--lg .whomark-icon, .whomark--lg .whomark-icon img { width: 24px; height: 24px; }
+.whomark-label { font: 600 .8125em/1 Inter, system-ui, sans-serif; color: #5B5B66; }
+.whomark--color.whomark--human .whomark-label { color: #1E7B34; }
+.whomark--color.whomark--hybrid .whomark-label { color: #9A6700; }
+.whomark--color.whomark--ai .whomark-label { color: #000000; }
+.hub-legend .whomark { margin-left: 0; }

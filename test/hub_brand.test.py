@@ -163,15 +163,15 @@ ok('(preview stubs, not final counsel)' not in idx and idx.count('Privacy Policy
    'index.html: both sign-up consent lines say "(preview drafts)"')
 ok(len(rooms['rooms']) > 0 and [x['url'] for x in site['rail']['outbound']] == ['https://%s/' % x['domain'] for x in rooms['rooms']], 'site.json rail.outbound mirrors rooms.json')
 
-# WHOMARK legend: both AI rows (AI steward + AI-made) on about + topic index
+# WHOMARK legend: the three final-v4.1 tiers (AI steward posts are AI-made) on about + topic index
 for p in ('about.html', topic_index):
     h = read(os.path.join(SITE, p))
     rows = re.findall(r'<tr>\s*<th scope="row">(.*?)</th>', h, re.S)
     labels = [re.sub(r'<[^>]+>', '', x).strip() for x in rows]
-    ok(labels == ['Human-made', 'AI steward', 'AI-made', 'Human + AI'], '%s: WHOMARK legend rows (%s)' % (p, labels))
+    ok(labels == ['Human-made', 'AI-made', 'Human + AI'], '%s: WHOMARK legend rows (%s)' % (p, labels))
 tiers = set(json.load(open(os.path.join(SITE, 'assets', 'whomark', 'config.json')))['tiers'])
-used = set(re.findall(r'data-whomark="([a-z]+)"', read(os.path.join(SITE, 'about.html'))))
-ok(used <= tiers, 'legend uses only real whomark tiers (%s of %s)' % (sorted(used), sorted(tiers)))
+used = set(re.findall(r'whomark--(human|ai|hybrid)\b', read(os.path.join(SITE, 'about.html'))))
+ok(used == tiers, 'legend uses only real whomark tiers (%s of %s)' % (sorted(used), sorted(tiers)))
 
 # topics held for the topic-layer PR
 tdir_ = os.path.join(SITE, brand['topicPathPrefix'].strip('/'))
@@ -331,10 +331,10 @@ with tempfile.TemporaryDirectory() as t:
     s_ = json.load(open(os.path.join(out, 'site.json')))
     ok(s_['name'] == 'Quillnest' and s_['domain'] == 'quillnest.example' and 'z/index.html' in s_['shell']['noShell'][2], 'rename: site.json name, domain and noShell path follow brand.json')
     cfgj = read(os.path.join(out, 'assets', 'whomark', 'config.json'))
-    ok('AI steward · Quill' in cfgj and 'Operated by Quill' in cfgj, 'rename: vendored whomark config is re-branded (steward label)')
-    ok('Operated by Quillnest Labs, Inc. using AI tools' in read(os.path.join(out, 'hub.js')) and
+    ok('AI-made · AI steward' in cfgj and 'Quill' not in cfgj and 'Sub' + 'X' not in cfgj, 'rename: vendored whomark config carries no brand (steward label is "AI-made · AI steward")')
+    ok('data-whomark-steward="true">AI-made · AI steward' in read(os.path.join(out, 'hub.js')) and
        '.post-steward-pill[title^="Operated by Quill"]' in read(os.path.join(out, 'assets', 'whomark', 'whomark.js')),
-       'rename: hub.js steward pill and whomark.js pill selector still match')
+       'rename: hub.js steward label and the whomark.js shell-pill selector follow the brand')
     d2 = os.path.join(t, 'drift', 'site'); shutil.copytree(out, d2)
     r = drift(d2)
     ok(r['status'] == 'OK' and not r['findings'] and not r['warnings'], 'rename: shell_drift still OK (%s)' % r['findings'][:3])
