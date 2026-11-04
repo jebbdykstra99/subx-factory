@@ -402,12 +402,37 @@ def csp_policies(text, single=False):
     for pol in ([text or ''] if single else (text or '').split(',')):
         d = {}
         for part in pol.split(';'):
-            toks = part.split()
-            if toks and toks[0].lower() not in d:  # first occurrence of a directive wins
-                d[toks[0].lower()] = toks[1:]
+            toks = [x for x in CSP_WS_RE.split(part) if x]  # ASCII whitespace only, as browsers split (B1)
+            if toks and _ascii_lower(toks[0]) not in d:  # first occurrence of a directive wins
+                d[_ascii_lower(toks[0])] = toks[1:]
         if d:
             out.append(d)
     return out
+
+
+CSP_WS_RE = re.compile(r'[\t\n\f\r ]+')
+CSP_BAD_CHAR_RE = re.compile(r'[^\t\n\f\r\x21-\x7e ]')
+
+
+def _ascii_lower(x):
+    return x.translate({c: c + 32 for c in range(65, 91)})
+
+
+def csp_syntax_bad(text):
+    """B1: why a CSP value is not plain CSP syntax (None = fine). Browsers split only on TAB, LF, FF, CR and SPACE, so
+    NBSP, U+2028, \\v or \\x1f glue a directive name to its sources and the browser drops it (a later weak duplicate
+    then wins). Any character outside printable ASCII plus those five, or a directive name outside [a-z0-9-], is
+    DRIFT."""
+    m = CSP_BAD_CHAR_RE.search(text or '')
+    if m:
+        return ('the CSP value has character U+%04X: only printable ASCII and tab/LF/FF/CR/space are allowed (browsers '
+                'do not split on other whitespace, so the directive is dropped)' % ord(m.group(0)))
+    for pol in (text or '').split(','):
+        for part in pol.split(';'):
+            toks = [x for x in CSP_WS_RE.split(part) if x]
+            if toks and not re.match(r'^[a-z0-9-]+$', _ascii_lower(toks[0])):
+                return 'the CSP has an invalid directive name %r (browsers drop it)' % toks[0][:40]
+    return None
 
 
 def csp_allows_pin(policy, url, integrity, nonce):
@@ -590,6 +615,8 @@ def meta_csps(pg):
             elif ',' in content:
                 bad = ('the meta CSP contains a comma: a <meta> delivers one policy, so a browser reads the comma and '
                        'what follows as more sources of the same directive')
+            elif csp_syntax_bad(content):
+                bad = csp_syntax_bad(content)
             out.append((_ln(raw, t['pos']), csp_policies(content, single=True), bad))
             continue
         if not prefix_ok:
@@ -747,6 +774,23 @@ def hosting_redirects(room):
                 for e in site.get(key) or []:
                     if isinstance(e, dict):
                         ext('%s %s' % (fn_, key), e.get('source') or e.get('regex'), e.get('destination'))
+    if os.path.isfile(os.path.join(room, 'vercel.json')):
+        try:
+            j = json.load(open(os.path.join(room, 'vercel.json')))
+        except Exception:
+            j = {}
+        # vercel legacy routes[]: dest (proxy or redirect) and a Location header; a Location in headers[] too
+        for e in (j.get('routes') or []) if isinstance(j, dict) else []:
+            if isinstance(e, dict):
+                ext('vercel.json routes', e.get('src'), e.get('dest'))
+                h = e.get('headers')
+                for k, v in (h.items() if isinstance(h, dict) else []):
+                    if str(k).strip().lower() == 'location':
+                        ext('vercel.json routes Location', e.get('src'), v)
+        for e in (j.get('headers') or []) if isinstance(j, dict) else []:
+            for h in (e.get('headers') or []) if isinstance(e, dict) else []:
+                if isinstance(h, dict) and str(h.get('key') or '').strip().lower() == 'location':
+                    ext('vercel.json headers Location', e.get('source'), h.get('value'))
     p = os.path.join(room, 'netlify.toml')
     if os.path.isfile(p):
         try:
@@ -1657,15 +1701,21 @@ def check(room, mans, legacy=None):
     pin_pages = {p_ for p_, pg_ in page_objs.items()
                  if any(PIN_RE.match(norm_url(s_['attrs'].get('src'))) for s_ in pg_.out)}
     room_pin_dirs = pin_dirs_of(page_objs['index.html']) if 'index.html' in page_objs else set()
-    missing, weak, strict_pols = [], {}, {}
+    missing, weak, strict_pols, hdr_bad = [], {}, {}, {}
     csp_pages = [p_ for p_ in all_pages if p_.lower().endswith(CSP_PAGE_EXTS)]
     for page in csp_pages:
         pg = page_objs[page]
         pols = [(pol, bad) for ln_, mp, bad in meta_csps(pg) for pol in (mp or [{}])]
+        for ln_, mp, bad in meta_csps(pg):
+            if bad and bad.startswith(('the CSP value has character', 'the CSP has an invalid directive name')):
+                hdr_bad.setdefault('%s:%d <meta> CSP: %s' % (page, ln_, bad), None)
         dirs = pin_dirs_of(pg) or room_pin_dirs
         for fn_, pat, rx, val in hdr_rules:
             if rx is None or any(rx.match(u) for u in page_urls(page)):
-                pols += [(pol, None) for pol in csp_policies(val)]
+                sb = csp_syntax_bad(val)
+                if sb:
+                    hdr_bad.setdefault('%s header CSP for %s: %s' % (fn_, pat, sb), None)
+                pols += [(pol, sb) for pol in csp_policies(val)]
         if not pols:
             missing.append(page)
             continue
@@ -1693,6 +1743,7 @@ def check(room, mans, legacy=None):
                         'header CSP' % (len(missing), len(csp_pages), _pl(missing)))
     for why, pgs in sorted(weak.items()):
         csp_msgs.append('CSP is not strict on %s: %s' % (_pl(pgs), why))
+    csp_msgs.extend(hdr_bad)  # B1: a malformed header value is drift even when another policy on the page is strict
     for m_ in csp_msgs:
         if csp_soft:
             w.append('CSP rule (legacy room on tools/csp_legacy_rooms.json, WARN until its migration PR): ' + m_)
