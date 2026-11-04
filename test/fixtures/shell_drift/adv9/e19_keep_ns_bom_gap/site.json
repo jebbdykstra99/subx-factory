@@ -1,0 +1,1 @@
+{"siteId": "e19_keep_ns_bom_gap", "shell": {"base": "v1.2.6", "fork": false, "keep": [{"file": "app.js", "sha256": "148cd8fcc5d74b45bdf079b10ab89fc18a8f02470a5802b27477957d8c36049c", "reason": "r"}], "noShell": ["terms.html"]}}

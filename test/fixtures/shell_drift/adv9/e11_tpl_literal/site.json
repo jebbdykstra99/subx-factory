@@ -1,0 +1,1 @@
+{"siteId": "e11_tpl_literal", "shell": {"base": "v1.2.6", "fork": false, "overrides": {"inline": [{"page": "index.html", "sha256": "5e20aa4b6225320b374fcbfdea3510810b8e149781e597d18a76dd779303ceda", "reason": "r"}]}}}

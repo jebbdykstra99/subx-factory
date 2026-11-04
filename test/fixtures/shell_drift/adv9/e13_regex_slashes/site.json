@@ -1,0 +1,1 @@
+{"siteId": "e13_regex_slashes", "shell": {"base": "v1.2.6", "fork": false, "overrides": {"inline": [{"page": "index.html", "sha256": "63412dde74897d7e57f3112816931ab81d5d3cdf24423563184f191808e34288", "reason": "r"}]}}}
