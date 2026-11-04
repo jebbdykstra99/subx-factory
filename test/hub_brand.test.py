@@ -65,8 +65,11 @@ for v in cfg['vendor']:
 # ---- pages ----
 pages = [f for f in files(SITE) if f.endswith('.html')]
 topic_index = brand['topicPathPrefix'].strip('/') + '/index.html'
-ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', '404.html']),
-   'hub pages: home, rooms, about, topic index stub, 4 legal, 404 (%s)' % pages)
+SEED = json.load(open(os.path.join(ROOT, 'topics', 'seed_wave1.json')))
+LIVE_TOPICS = [t for t in SEED['topics'] if t['status'] != 'hold']
+TOPIC_PAGES = [brand['topicPathPrefix'].strip('/') + '/' + t['slug'] + '/index.html' for t in LIVE_TOPICS]
+ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', '404.html'] + TOPIC_PAGES),
+   'hub pages: home, rooms, about, topic index, 4 legal, 404 + %d topic pages (%d pages)' % (len(TOPIC_PAGES), len(pages)))
 site = json.load(open(os.path.join(SITE, 'site.json')))
 sh = site['shell']
 no_shell = set(x.lstrip('/') for x in sh.get('noShell', []))
@@ -171,7 +174,32 @@ used = set(re.findall(r'data-whomark="([a-z]+)"', read(os.path.join(SITE, 'about
 ok(used <= tiers, 'legend uses only real whomark tiers (%s of %s)' % (sorted(used), sorted(tiers)))
 
 # topics held for the topic-layer PR
-ok(files(os.path.join(SITE, brand['topicPathPrefix'].strip('/'))) == ['index.html'], 'no topic pages seeded (topic folder holds only the index stub)')
+tdir_ = os.path.join(SITE, brand['topicPathPrefix'].strip('/'))
+ok(files(tdir_) == sorted(['index.html'] + [t['slug'] + '/index.html' for t in LIVE_TOPICS]), 'topic folder = index + one page per non-HOLD seed topic')
+ok(len(SEED['topics']) == 52 and len(LIVE_TOPICS) == 51 and [t['slug'] for t in SEED['topics'] if t['status'] == 'hold'] == ['grief'], 'seed: 52 topics, 51 rendered, grief is the only HOLD')
+ok(not os.path.exists(os.path.join(tdir_, 'grief')), 'HOLD topic grief is not rendered')
+ok(all(t['status'] == 'hidden' for t in LIVE_TOPICS), 'every rendered topic is hidden tonight')
+for t in LIVE_TOPICS:
+    pg = brand['topicPathPrefix'].strip('/') + '/' + t['slug'] + '/index.html'
+    h = read(os.path.join(SITE, pg))
+    ok('<meta name="robots" content="noindex,nofollow">' in h, '%s: noindex,nofollow' % pg)
+    ok('<!--' not in h and '{{' not in h, '%s: no HTML comments or tokens left' % pg)
+    ok('data-topic-state="not-live"' in h and 'Not live yet.' in h and 'Start the first thread' not in h and 'open to read and post' not in h,
+       '%s: shows the not-live-yet state only' % pg)
+    ok('Also reachable at' not in h and not any(d in h for d in t['doorwayDomains']), '%s: no doorway line or legacy domain tonight' % pg)
+    ok(('21+ only.' in h) == (t.get('legalProfile') == 'alcohol-21') and (brand['notAdvice'] in h) == (t.get('legalProfile') in ('sensitive-18', 'alcohol-21')),
+       '%s: legal-profile lines match %s' % (pg, t.get('legalProfile')))
+    ok('<title>%s · %s</title>' % (BR.html_attr(t['title']), brand['name']) in h and BR.html_attr(t['description']) in h, '%s: title and description from the seed' % pg)
+    ok(pg in site['shell']['noShell'], '%s is listed in shell.noShell' % pg)
+    wh = re.search(r'<p class="topic-where">([^<]*)', h)
+    ok(wh is not None and wh.group(1).startswith('A %s %s ' % (brand['name'], brand['topicNoun']['one'])) and brand['roomNoun']['one'] not in wh.group(1).lower(),
+       '%s: header calls it a %s, not a %s' % (pg, brand['topicNoun']['one'], brand['roomNoun']['one']))
+    ok(('About this %s' % brand['roomNoun']['one']) not in h, '%s: no "About this %s"' % (pg, brand['roomNoun']['one']))
+    ok(('Browse %s' % brand['roomNoun']['many']) in h, '%s: live-rooms link keeps %s' % (pg, brand['roomNoun']['many']))
+sm = read(os.path.join(SITE, 'sitemap.xml'))
+ok('<urlset' in sm and '<url>' not in sm, 'sitemap.xml lists 0 topics while the hub-wide noindex is on')
+ok(all('<meta name="robots" content="noindex,nofollow">' in read(os.path.join(SITE, f)) for f in pages), 'hub-wide noindex,nofollow on every page')
+ok('Preview only. Not public and not indexed.' in read(os.path.join(SITE, TOPIC_PAGES[0])), 'preview banner on topic pages')
 ok(not any('topics_wave1' in f for f in BR.files_under(ROOT) if not f.startswith(('.git/', 'node_modules/'))), 'topics_wave1.csv is not in this PR')
 
 # ---- hard rules: private strings never appear; phone + mailing address only on About ----
@@ -310,18 +338,39 @@ with tempfile.TemporaryDirectory() as t:
     d2 = os.path.join(t, 'drift', 'site'); shutil.copytree(out, d2)
     r = drift(d2)
     ok(r['status'] == 'OK' and not r['findings'] and not r['warnings'], 'rename: shell_drift still OK (%s)' % r['findings'][:3])
-    # topic template (HUB_COPY 4a-4e) renders with a dummy topic; topic text is escaped and never token-expanded
+    # topic template (HUB_COPY 4a-4e) renders every state with a dummy topic; topic text is escaped and never token-expanded
     rr = BR.Renderer(SRC, bp, os.path.join(t, 'tt')).run()
-    th = rr.render_topic({'slug': 'tide-pools', 'name': 'Tide <Pools>', 'description': 'Rock pools {{brand.name}}', 'longDescription': 'All about pools.',
-                          'goodPosts': 'Photos.', 'offTopic': 'Surfing.', 'rulesShort': 'Be kind.'})
-    ok('<h1>Tide &lt;Pools&gt;</h1>' in th and '&#123;&#123;brand.name&#125;&#125;' in th and '{{' not in th, 'topic template: escaped, no token expansion, no leftovers')
-    ok(HEAD_RE.match(th) is not None and 'quillnest.example/z/tide-pools/' in th and 'Quillnest Labs, Inc.' in th, 'topic template: strict CSP first, topic URL under the prefix, footer')
-    ok(re.search(r'data-topic-state="hidden" hidden', th) and re.search(r'data-profile="[^"]*" hidden', th), 'topic template: empty-state and profile-gated blocks render hidden')
-    try:
-        rr.render_topic({'slug': 'Bad Slug', 'name': 'x', 'description': 'x', 'longDescription': 'x', 'goodPosts': 'x', 'offTopic': 'x', 'rulesShort': 'x'})
-        ok(False, 'topic template: a bad slug is refused')
-    except BR.RenderError:
-        ok(True, 'topic template: a bad slug is refused')
+    full = {'slug': 'tide-pools', 'name': 'Tide <Pools>', 'description': 'Rock pools {{brand.name}}', 'longDescription': 'All about pools.',
+            'goodPosts': 'Photos.', 'offTopic': 'Surfing.', 'rulesShort': 'Be kind.', 'status': 'hidden', 'legalProfile': 'alcohol-21'}
+    th = rr.render_topic(full)
+    ok('<h1>Tide &lt;Pools&gt;</h1>' in th and '&#123;&#123;brand.name&#125;&#125;' in th and '{{' not in th and '<!--' not in th, 'topic template: escaped, no token expansion, no leftovers or comments')
+    ok(HEAD_RE.match(th) is not None and 'quillnest.example/z/tide-pools/' in th and 'Quillnest Labs, Inc.' in th and 'href="/z/"' in th, 'topic template: strict CSP first, topic URL under the renamed prefix, footer')
+    ok('Not live yet.' in th and 'All about pools.' in th and 'Be kind.' in th and 'community guidelines' not in th and '21+ only.' in th, 'topic template: hidden + closed = not-live state; optional copy shows when present')
+    ok('A Quillnest theme ·' in th and '<h2>About this theme</h2>' in th and 'A Quillnest table' not in th and 'About this table' not in th and 'Browse tables' in th,
+       'topic template: header and About heading use topicNoun (theme); the live-rooms link keeps roomNoun (tables)')
+    rr.cfg['topics'] = dict(rr.cfg.get('topics', {}), open=True, showDoorways=True)
+    th = rr.render_topic(dict(full, legacyDomain='tidepoolchat.example'))
+    ok('just getting started' in th and 'Not live yet.' not in th and 'Also reachable at tidepoolchat.example.' in th, 'topic template: open hidden state and gated doorway line')
+    th = rr.render_topic(dict(full, status='quiet'))
+    ok('Quiet lately. New posts welcome.' in th and 'just getting started' not in th, 'topic template: quiet badge')
+    th = rr.render_topic(dict(full, status='archived'))
+    ok('is resting.' in th and 'Quiet lately' not in th and 'content="noindex,nofollow"' in th, 'topic template: archived = resting, noindex')
+    rr.cfg['topics']['hubNoindex'] = False
+    ok('content="index,follow"' in rr.render_topic(dict(full, status='active')) and 'content="noindex,nofollow"' in rr.render_topic(dict(full, status='hidden')),
+       'topic template: robots follow the status once the hub-wide noindex is lifted')
+    th = rr.render_topic({'slug': 'tide-pools', 'title': 'Tide Pools', 'description': 'd', 'status': 'hidden'})
+    ok('community guidelines' in th and 'About this' not in th and '21+ only.' not in th and 'not medical' not in th, 'topic template: seed row without long copy = default rules line, no about block, no profile lines')
+    for bad_t, why in (({'slug': 'Bad Slug', 'name': 'x', 'description': 'x'}, 'a bad slug'), ({'slug': 'about', 'name': 'x', 'description': 'x'}, 'a reserved slug'),
+                       ({'slug': 'quillnest', 'name': 'x', 'description': 'x'}, 'the brand name as a slug'),
+                       ({'slug': 'tide-pools', 'name': 'x', 'description': 'x', 'status': 'hold'}, 'a HOLD topic')):
+        try:
+            rr.render_topic(bad_t); ok(False, 'topic template: %s is refused' % why)
+        except BR.RenderError:
+            ok(True, 'topic template: %s is refused' % why)
+    zt = [f for f in names if f.startswith('z/') and f != 'z/index.html']
+    ok(len(zt) == len(LIVE_TOPICS) and not any(f.startswith('t/') for f in names), 'rename: all %d topic pages move to /z/<slug>/' % len(zt))
+    ok(all('quillnest.example/z/' in read(os.path.join(out, f)) and 'subx' not in read(os.path.join(out, f)).replace(ALLOW[0], '').lower() for f in zt), 'rename: topic pages carry the new domain and prefix, no old brand')
+    ok(all(f in s_['shell']['noShell'] for f in zt), 'rename: topic pages listed in noShell under /z/')
 
 # renderer refuses gaps
 with tempfile.TemporaryDirectory() as t:

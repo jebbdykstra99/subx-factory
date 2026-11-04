@@ -1,0 +1,884 @@
+{
+  "collection": "topics",
+  "wave": 1,
+  "source": {
+    "file": "topics_wave1.csv",
+    "md5": "0954c611f47ddbd3417b1557e94fd489",
+    "rows": 52
+  },
+  "generatedBy": "tools/topics_seed.py --from-csv",
+  "topics": [
+    {
+      "slug": "grand-prix-racing",
+      "title": "Grand Prix Racing",
+      "description": "Race weekends, strategy calls, and the long season of open wheel racing, talked through lap by lap.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "gpchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "papacy-and-church",
+      "title": "Papacy and Church",
+      "description": "News, history, and everyday questions about the papacy and the wider Catholic Church, shared with respect.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "popechat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "generative-ai",
+      "title": "Generative AI",
+      "description": "Hands on notes about AI tools: what works, what breaks, and how people actually use them.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "gaichat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "music-history",
+      "title": "Music History",
+      "description": "The recorded and written work of artists who left early, discussed as work, not myth.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "27chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "santa-monica",
+      "title": "Santa Monica",
+      "description": "Neighborhood talk for Santa Monica: beaches, food, getting around, and what is happening this week.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "samochat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "san-francisco",
+      "title": "San Francisco",
+      "description": "City talk for San Francisco: neighborhoods, food, events, and the small stuff that makes the place.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "415chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "bay-area-transit",
+      "title": "Bay Area Transit",
+      "description": "Rider talk about trains, buses, and ferries around the Bay: delays, tips, and better commutes.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "bartchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "value-investing",
+      "title": "Value Investing",
+      "description": "Patient investing ideas, annual letters, and how people think about price versus value.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "buffettchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "hawaii",
+      "title": "Hawaii",
+      "description": "Island life, local food, travel questions, and news from across Hawaii, local voice first.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "808chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "recruiting",
+      "title": "Recruiting",
+      "description": "How hiring really works, from both sides of the table: searches, interviews, offers, and fees.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "recruitchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "cocktails-and-spirits",
+      "title": "Cocktails and Spirits",
+      "description": "Recipes, bottles worth a try, and bar craft, for adults of legal drinking age.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "boozechat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "alcohol-21"
+    },
+    {
+      "slug": "buffets",
+      "title": "Buffets",
+      "description": "All you can eat spots, strategy, value, and the plate you went back for twice.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "buffetchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "foia-and-intelligence",
+      "title": "FOIA and Intelligence",
+      "description": "Public records requests, declassified files, and intelligence history, sourced and checked.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "ciachat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "reptiles",
+      "title": "Reptiles",
+      "description": "Snakes, lizards, and turtles: ID help, behavior, and staying safe around them outdoors, for learning only.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "cobrachat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "relationships",
+      "title": "Relationships",
+      "description": "Real stories about dating and partners, with kind and honest takes from people who have been there.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "boyfriendchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "city-services",
+      "title": "City Services",
+      "description": "Non emergency city help: potholes, permits, trash, and how to reach the right office. Emergencies call 911.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "311chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "air-travel",
+      "title": "Air Travel",
+      "description": "Flying tips, airport know how, delays, and seat talk from people who fly a lot.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "airlineschat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "cash-and-atms",
+      "title": "Cash and ATMs",
+      "description": "Fees, cash access, and getting money while traveling, compared by people who use them.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "atmchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "los-angeles",
+      "title": "Los Angeles",
+      "description": "City talk for Los Angeles: neighborhoods, traffic, food, and what is on this weekend.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "213chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "new-york-city",
+      "title": "New York City",
+      "description": "Five boroughs of talk: subways, food, neighborhoods, and city life day to day.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "212chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "seattle",
+      "title": "Seattle",
+      "description": "Seattle talk: neighborhoods, rain, ferries, food, and the local scene.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "206chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "boston",
+      "title": "Boston",
+      "description": "Boston talk: neighborhoods, the T, sports nights, and local news.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "617chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "austin",
+      "title": "Austin",
+      "description": "Austin talk: live music, food, growth, and getting around town.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "512chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "silicon-valley",
+      "title": "Silicon Valley",
+      "description": "Life and work across the South Bay and Peninsula: tech, housing, commutes, and food.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "650chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "san-diego",
+      "title": "San Diego",
+      "description": "San Diego talk: beaches, neighborhoods, food, and weekend plans.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "858chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "japan",
+      "title": "Japan",
+      "description": "Travel, food, language, and daily life in Japan, from visitors and residents alike.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "81chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "italy",
+      "title": "Italy",
+      "description": "Italian food, travel, language, and culture, region by region.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "39chat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "startups",
+      "title": "Startups",
+      "description": "Building a company from zero: ideas, first customers, tools, and lessons learned.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "startupschat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "taxes",
+      "title": "Taxes",
+      "description": "Plain talk about filing, deadlines, and record keeping, with pointers to official sources.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "taxeschat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "retirement",
+      "title": "Retirement",
+      "description": "Planning for and living in retirement: timing, budgets, moves, and how people spend their days.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "retirechat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "birding",
+      "title": "Birding",
+      "description": "Sightings, ID help, gear, and good spots for watching birds.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "birderschat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "barbecue",
+      "title": "Barbecue",
+      "description": "Smokers, rubs, cook times, and regional styles, one brisket at a time.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "ribschat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "cheese",
+      "title": "Cheese",
+      "description": "Cheeses worth trying, pairings, boards, and how it is made.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "briechat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "cute-animals",
+      "title": "Cute Animals",
+      "description": "Photos and short stories of animals being adorable, original posts only.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "awwchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "jokes",
+      "title": "Jokes",
+      "description": "Clean jokes, puns, and one liners, rated by groans.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "hahachat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "songwriting",
+      "title": "Songwriting",
+      "description": "Lyrics, melodies, and the craft of finishing a song, with feedback from other writers.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "dittychat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "interior-design",
+      "title": "Interior Design",
+      "description": "Room makeovers, layouts, color, and small space ideas, before and after.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "interiorchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "orchids",
+      "title": "Orchids",
+      "description": "Growing, repotting, and reblooming orchids, with help for struggling plants.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "orchidchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "sleep",
+      "title": "Sleep",
+      "description": "Routines, bedrooms, and habits people use to rest better. Not medical advice.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "tiredchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "grief",
+      "title": "Grief",
+      "description": "A quiet place to share loss and remember people, with support resources pinned.",
+      "status": "hold",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "mournchat.com"
+      ],
+      "stewardOnly": true,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "voting",
+      "title": "Voting",
+      "description": "How to register, find a polling place, and read a ballot, with links to official sources.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "votingchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "product-recalls",
+      "title": "Product Recalls",
+      "description": "Recall notices and what to do next, linked to official recall sources.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "recallchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "salmon-fishing",
+      "title": "Salmon Fishing",
+      "description": "Runs, rigs, rivers, and rules for salmon anglers.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "salmonchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "word-games",
+      "title": "Word Games",
+      "description": "Daily puzzles, anagrams, crosswords, and the joy of a perfect word.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "scramblechat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "military-life",
+      "title": "Military Life",
+      "description": "Service members, veterans, and families talking about service life, moves, and transitions.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "marineschat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "sensitive-18"
+    },
+    {
+      "slug": "beaches",
+      "title": "Beaches",
+      "description": "Favorite beaches, conditions, and tips for a good day by the water.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [
+        "sandchat.com"
+      ],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "home-cooking",
+      "title": "Home Cooking",
+      "description": "Weeknight meals, recipes that work, and kitchen questions from home cooks.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "gardening",
+      "title": "Gardening",
+      "description": "Vegetables, flowers, soil, and seasons, from balcony pots to backyard beds.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "dogs",
+      "title": "Dogs",
+      "description": "Dog photos, training wins, and everyday questions from dog people.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "board-games",
+      "title": "Board Games",
+      "description": "Game nights, rules questions, and what to play next.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "photography",
+      "title": "Photography",
+      "description": "Cameras, phones, technique, and feedback on photos you took.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "books",
+      "title": "Books",
+      "description": "What you are reading, what to read next, and honest takes on both.",
+      "status": "hidden",
+      "createdAt": "2026-11-03T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    }
+  ]
+}

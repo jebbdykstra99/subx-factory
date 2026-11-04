@@ -3,41 +3,70 @@
 <head>
 {{> head}}
 </head>
-<body class="legal-page hub-topic" data-topic="{{topic.slug}}">
+<body class="legal-page hub-topic" data-topic="{{topic.slug}}" data-topic-status="{{topic.status}}">
 {{> banner}}
-<!-- Topic page template (HUB_COPY 4a-4e). Rendered only by tests with a dummy topic until the topic-layer PR. -->
   <article class="legal-doc">
     <header class="topic-header">
       <h1>{{topic.name}}</h1>
       <p class="topic-desc">{{topic.description}}</p>
-      <p class="topic-where">A {{brand.name}} {{brand.roomNoun.one}} · <code>{{brand.primaryDomain}}{{brand.topicPathPrefix}}{{topic.slug}}/</code></p>
-      <p class="topic-doorway" data-if="topic.legacyDomain" hidden>Also reachable at {{topic.legacyDomain}}.</p>
+      <p class="topic-where">A {{brand.name}} {{brand.topicNoun.one}} · <code>{{brand.primaryDomain}}{{brand.topicPathPrefix}}{{topic.slug}}/</code></p>
+<!--if:doorway-->
+      <p class="topic-doorway">Also reachable at {{topic.legacyDomain}}.</p>
+<!--/if:doorway-->
     </header>
 
-    <section class="topic-state" data-topic-state="hidden" hidden>
+<!--if:not-live-->
+    <section class="topic-state" data-topic-state="not-live">
+      <p class="hub-soon"><strong>Not live yet.</strong> {{topic.name}} is not open yet, so there is nothing to read or post here today. Until it opens, the live {{brand.roomNoun.many}} are the place to read and talk.</p>
+      <p class="hub-ctas"><a class="hub-cta" href="/rooms.html">Browse {{brand.roomNoun.many}}</a> <a href="{{brand.topicPathPrefix}}">How {{brand.topicNoun.many}} will open</a></p>
+    </section>
+<!--/if:not-live-->
+<!--if:state-hidden-->
+    <section class="topic-state" data-topic-state="hidden">
       <h2>{{topic.name}} is just getting started.</h2>
       <p>This {{brand.topicNoun.one}} is open to read and post, but it is not listed in search yet. It shows up in search once 20 or more posts from at least 5 different people land here within 14 days.</p>
-      <p class="topic-state-seeding" data-topic-state="seeding" hidden>The first posts here are from the AI steward and carry the AI steward label. Posts from verified people are what move this {{brand.topicNoun.one}} into search.</p>
-      <p><a class="hub-cta" href="#compose" data-topic-action="first-thread">Start the first thread</a></p>
+      <p class="topic-state-seeding">The first posts here are from the AI steward and carry the AI steward label. Posts from verified people are what move this {{brand.topicNoun.one}} into search.</p>
     </section>
-    <section class="topic-state" data-topic-state="archived" hidden>
+<!--/if:state-hidden-->
+<!--if:state-archived-->
+    <section class="topic-state" data-topic-state="archived">
       <p><strong>{{topic.name}} is resting.</strong> Everything here stays readable and nothing has been deleted. It is out of search for now and reopens on its own once people are posting again.</p>
     </section>
-    <p class="topic-badge" data-topic-state="quiet" hidden>Quiet lately. New posts welcome.</p>
-    <p class="topic-badge" data-topic-state="active-new" hidden>{{topic.name}} is now listed in search. Thanks to everyone who got the conversation going.</p>
+<!--/if:state-archived-->
+<!--if:state-quiet-->
+    <p class="topic-badge" data-topic-state="quiet">Quiet lately. New posts welcome.</p>
+<!--/if:state-quiet-->
+<!--if:state-active-new-->
+    <p class="topic-badge" data-topic-state="active-new">{{topic.name}} is now listed in search. Thanks to everyone who got the conversation going.</p>
+<!--/if:state-active-new-->
 
+<!--if:about-->
     <section class="topic-about">
-      <h2>About this {{brand.roomNoun.one}}</h2>
+      <h2>About this {{brand.topicNoun.one}}</h2>
       <p>{{topic.longDescription}}</p>
+<!--if:goodPosts-->
       <p><strong>Good posts here:</strong> {{topic.goodPosts}}</p>
+<!--/if:goodPosts-->
+<!--if:offTopic-->
       <p><strong>Off topic here:</strong> {{topic.offTopic}}</p>
+<!--/if:offTopic-->
     </section>
+<!--/if:about-->
 
     <section class="topic-rules">
+<!--if:rulesShort-->
       <p><strong>{{topic.name}} rules:</strong> {{topic.rulesShort}}</p>
+<!--/if:rulesShort-->
+<!--if:rules-default-->
+      <p><strong>{{topic.name}} rules:</strong> the <a href="/guidelines.html">community guidelines</a> apply.</p>
+<!--/if:rules-default-->
       <p>Every post carries a {{brand.disclosureMark}} label. Report a post with the Report link; appeals go to {{brand.reviewerLine}}. Notices: <a data-takedown href="mailto:{{brand.takedownEmail}}">{{brand.takedownEmail}}</a>.</p>
-      <p data-profile="sensitive-18 alcohol-21" hidden>{{brand.notAdvice}}</p>
-      <p data-profile="alcohol-21" hidden>21+ only.</p>
+<!--if:profile-not-advice-->
+      <p data-profile="sensitive-18 alcohol-21">{{brand.notAdvice}}</p>
+<!--/if:profile-not-advice-->
+<!--if:profile-21-->
+      <p data-profile="alcohol-21">21+ only.</p>
+<!--/if:profile-21-->
     </section>
 
 {{> legend}}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "topics/schema.json",
+  "title": "Topic row (Firestore collection `topics`, one document per topic, document id = slug)",
+  "description": "Counters hold COUNTED posts only: verified human accounts at least 7 days old; steward and AI posts never count. Status changes come from tools/topic_status.py. Nothing is ever deleted: a topic that goes quiet or rests changes status only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["slug", "title", "description", "status", "createdAt", "activatedAt", "posts14d", "distinctPosters14d", "posts30d", "lastCountedPostAt", "doorwayDomains", "stewardOnly"],
+  "properties": {
+    "slug": {"type": "string", "pattern": "^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){2,47}$", "description": "3-48 chars; also checked against the reserved list by tools/topic_slug.py"},
+    "title": {"type": "string", "minLength": 1, "maxLength": 80},
+    "description": {"type": "string", "minLength": 1, "maxLength": 300},
+    "status": {"enum": ["hidden", "active", "quiet", "archived", "hold"]},
+    "createdAt": {"type": "string", "format": "date-time"},
+    "activatedAt": {"type": ["string", "null"], "format": "date-time", "description": "set when the topic (re)enters active; drives the doorway 302 -> 301 switch after 60 days"},
+    "posts14d": {"type": "integer", "minimum": 0},
+    "distinctPosters14d": {"type": "integer", "minimum": 0},
+    "posts30d": {"type": "integer", "minimum": 0},
+    "lastCountedPostAt": {"type": ["string", "null"], "format": "date-time"},
+    "doorwayDomains": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"}},
+    "stewardOnly": {"type": "boolean", "description": "true while members cannot post (archived = read-only, hold = not open); stewards only"},
+    "legalProfile": {"enum": ["standard-18", "sensitive-18", "alcohol-21"], "description": "optional; drives the not-advice and 21+ lines on the topic page"}
+  }
+}

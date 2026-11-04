@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "topics/site_mode.schema.json",
+  "title": "Optional hybrid fields in a room's site.json (and one entry of topics/domains.json)",
+  "description": "All optional. A site.json without `mode` is a room, exactly as today. Config only: nothing in this PR writes these fields into any room repo or serves a redirect.",
+  "type": "object",
+  "properties": {
+    "domain": {"type": "string", "pattern": "^[a-z0-9-]+(\\.[a-z0-9-]+)+$"},
+    "mode": {"enum": ["room", "doorway", "parked"], "description": "room = its own site (today's default); doorway = redirects to the hub topic; parked = no room, no redirect (holding page or registrar parking)"},
+    "topic": {"type": "string", "pattern": "^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){2,47}$", "description": "slug in topics/seed_wave1.json; required for doorway"},
+    "brand": {"enum": ["default"], "description": "which brand file names the hub: default = brand/brand.json (never a literal brand name)"},
+    "doorway": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "style": {"enum": ["redirect"]},
+        "status": {"enum": [302, 301], "description": "computed by tools/topic_status.py doorway_status(): 302 until the topic has been active 60 days, then 301"},
+        "keepQuery": {"type": "boolean"}
+      }
+    }
+  }
+}
