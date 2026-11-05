@@ -2,11 +2,11 @@
   "version": "v1.2.8",
   "immutable": true,
   "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.8 (?auth=join/register deep-link deferred via authQ until onAuthStateChanged). Never edit files in this folder; a change is a new shell/vX.Y.Z/ folder.",
-  "sourceCommit": "acb348b4c791976898fbe4bed77faa45cdbcd611",
+  "sourceCommit": "9e5672ec224f0c1478e70c78cf695dc3121c30b8",
   "sourcePath": "factory/",
   "url": {
     "pinned": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@<MERGE_SHA>/shell/v1.2.8/<file>",
-    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@acb348b4c791976898fbe4bed77faa45cdbcd611/factory/<file>",
+    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@9e5672ec224f0c1478e70c78cf695dc3121c30b8/factory/<file>",
     "rule": "Pin by full 40-char commit SHA only. Never @main, @latest, a branch, or a semver range."
   },
   "files": {
