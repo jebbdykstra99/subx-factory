@@ -6,6 +6,8 @@ every tier, and banned names never ship under hub/. Offline; stdlib + node."""
 import hashlib, json, os, re, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, 'tools'))
+import byline_allow as BYLINE  # noqa: E402
 SITE = os.path.join(ROOT, 'hub', 'site')
 SRC = os.path.join(ROOT, 'hub', 'src')
 WM = os.path.join(SITE, 'assets', 'whomark')
@@ -181,6 +183,8 @@ for p in list(walk(os.path.join(ROOT, 'hub'))) + [os.path.join(SRC, 'topic-templ
     except UnicodeDecodeError:
         t = b.decode('latin-1')
     t2 = t.replace('jebbdykstra99/subx-factory', '')
+    # Decision 2026-11-05: mask allowed author bylines before the jebb|dykstra ban.
+    t2 = BYLINE.mask_allowed_bylines(t2)
     if banned(t) or re.search(r'jebb|dykstra', t2, re.I):
         hits.append(os.path.relpath(p, ROOT))
 ok(not hits, 'no PEEKAI / VokaDots / private name or Denver street address under hub/ or the topic template (%s)' % hits)
@@ -188,6 +192,10 @@ ok(not hits, 'no PEEKAI / VokaDots / private name or Denver street address under
 ok(not banned('/t/denver/') and not banned('Denver') and not banned('denver'), 'bare "denver" slug/word passes')
 ok(banned('1234 Example St, Suite 100, Denver, CO 80202') and banned('55 N. Main Street Denver Colorado') and banned('Denver, CO 80203'), 'Denver street-address pattern is blocked')
 ok(BANNED.search('PeekAI') and BANNED.search('vokadots') and BANNED.search('PEEKAI'), 'banned-name grep matches any case')
+# Decision 2026-11-05: byline allowlist sides
+ok(BYLINE.is_name_clean('<p class="byline">By Jebb Dykstra</p>'), 'whomark_hub byline allowlist: byline passes')
+ok(not BYLINE.is_name_clean('<meta name="author" content="Jebb Dykstra">'), 'whomark_hub byline allowlist: meta author fails')
+ok(not BYLINE.is_name_clean('{"publisher":{"name":"Jebb Dykstra"}}'), 'whomark_hub byline allowlist: JSON-LD publisher fails')
 
 if fails:
     print('FAILED %d: %s' % (len(fails), fails[:5]))
