@@ -193,9 +193,9 @@ ok(not banned('/t/denver/') and not banned('Denver') and not banned('denver'), '
 ok(banned('1234 Example St, Suite 100, Denver, CO 80202') and banned('55 N. Main Street Denver Colorado') and banned('Denver, CO 80203'), 'Denver street-address pattern is blocked')
 ok(BANNED.search('PeekAI') and BANNED.search('vokadots') and BANNED.search('PEEKAI'), 'banned-name grep matches any case')
 # Decision 2026-11-05: byline allowlist sides
-ok(BYLINE.is_clean('<p class="byline">By Jebb Dykstra</p>'), 'whomark_hub byline allowlist: byline passes')
-ok(not BYLINE.is_clean('<meta name="author" content="Jebb Dykstra">'), 'whomark_hub byline allowlist: meta author fails')
-ok(not BYLINE.is_clean('{"publisher":{"name":"Jebb Dykstra"}}'), 'whomark_hub byline allowlist: JSON-LD publisher fails')
+ok(BYLINE.is_name_clean('<p class="byline">By Jebb Dykstra</p>'), 'whomark_hub byline allowlist: byline passes')
+ok(not BYLINE.is_name_clean('<meta name="author" content="Jebb Dykstra">'), 'whomark_hub byline allowlist: meta author fails')
+ok(not BYLINE.is_name_clean('{"publisher":{"name":"Jebb Dykstra"}}'), 'whomark_hub byline allowlist: JSON-LD publisher fails')
 
 if fails:
     print('FAILED %d: %s' % (len(fails), fails[:5]))
