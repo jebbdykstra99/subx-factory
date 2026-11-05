@@ -1,6 +1,4 @@
-/* SubX factory.js (subx-factory master). DO NOT EDIT IN A ROOM REPO.
- * Source: github.com/jebbdykstra99/subx-factory  (version + sha256 in the room's FACTORY.lock)
- * Room differences belong in site.json (features, skin, rail, nests, minAge) or in EXCEPTIONS.md. */
+/* SubX factory.js. DO NOT EDIT IN A ROOM REPO. See FACTORY.lock / EXCEPTIONS.md. */
 (function () {
   'use strict';
 
@@ -973,7 +971,7 @@
     } catch (e) { return fallback; }
   }
   function saveJSON(key, val) {
-    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { /* private mode */ }
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { }
   }
 
   function renderFollowBtn() { // factory-gp.js
@@ -1048,6 +1046,7 @@
   }
 
   var deepPostId = '';
+  var authQ = '';
   var deepPostDone = false;
   var shareSheetPostId = null;
 
@@ -1484,7 +1483,7 @@
   function dismissEarlyWelcome() {
     var uid = liveUid();
     if (uid) {
-      try { localStorage.setItem(earlyWelcomeKey(uid), '1'); } catch (e) { /* private mode */ }
+      try { localStorage.setItem(earlyWelcomeKey(uid), '1'); } catch (e) { }
     }
     var el = document.getElementById('early-welcome');
     if (el) el.hidden = true;
@@ -2048,7 +2047,7 @@
       sessionStorage.removeItem('subx.restorePath');
       if (raw.charAt(0) !== '/' || raw.indexOf('//') !== -1) return;
       history.replaceState(null, '', raw);
-    } catch (e) { /* private mode */ }
+    } catch (e) { }
   }
 
   function mergeNests() {
@@ -2959,7 +2958,7 @@
   }
 
   function markOverlaySeen() {
-    try { sessionStorage.setItem(overlayStorageKey(), '1'); } catch (e) { /* private mode */ }
+    try { sessionStorage.setItem(overlayStorageKey(), '1'); } catch (e) { }
   }
 
   function railOfficialUrls() {
@@ -3273,7 +3272,7 @@
   }
 
   function markPorchDwellDone() {
-    try { sessionStorage.setItem(porchDwellSessionKey(), '1'); } catch (e) { /* private mode */ }
+    try { sessionStorage.setItem(porchDwellSessionKey(), '1'); } catch (e) { }
   }
 
   function porchEnabled() {
@@ -3471,7 +3470,7 @@
   function rememberPorchPick(option) {
     var opt = String(option || '').trim();
     if (!opt) return;
-    try { sessionStorage.setItem(porchPickStorageKey(), opt); } catch (e) { /* private mode */ }
+    try { sessionStorage.setItem(porchPickStorageKey(), opt); } catch (e) { }
   }
 
   function porchLine(option) {
@@ -4554,7 +4553,7 @@
     }
   }
   function markAuthLand() {
-    try { sessionStorage.setItem('subx.authLand', '1'); } catch (e) { /* private mode */ }
+    try { sessionStorage.setItem('subx.authLand', '1'); } catch (e) { }
   }
   function consumeAuthLand() {
     try {
@@ -4562,7 +4561,7 @@
         sessionStorage.removeItem('subx.authLand');
         return true;
       }
-    } catch (e) { /* private mode */ }
+    } catch (e) { }
     return false;
   }
   function landInFeedCompose() {
@@ -5703,7 +5702,7 @@
   function markStoriesSeen(ids) {
     var map = storiesSeenMap();
     (ids || []).forEach(function (id) { if (id) map[id] = 1; });
-    try { sessionStorage.setItem(storiesSeenKey(), JSON.stringify(map)); } catch (e) { /* private mode */ }
+    try { sessionStorage.setItem(storiesSeenKey(), JSON.stringify(map)); } catch (e) { }
   }
   function groupHasUnseen(stories) {
     var seen = storiesSeenMap();
@@ -5720,7 +5719,7 @@
   }
   function bumpStoriesQuota() {
     try { localStorage.setItem(storiesQuotaKey(), String(storiesPostedToday() + 1)); }
-    catch (e) { /* private mode */ }
+    catch (e) { }
   }
   function findStory(id) {
     if (hiddenIds['story:' + id] || hiddenIds[id]) return null;
@@ -6498,7 +6497,10 @@
     restoreBouncedPath();
     window.addEventListener('hashchange', applyRoute);
     window.addEventListener('popstate', applyRoute);
-    try { deepPostId = new URLSearchParams(location.search).get('p') || ''; } catch (e) { deepPostId = ''; }
+    try { var sp = new URLSearchParams(location.search); deepPostId = sp.get('p') || ''; var a = sp.get('auth');
+      if (a) { authQ = a === 'register' ? 'register' : 'join'; sp.delete('auth');
+        var q = sp.toString(); history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + location.hash); }
+    } catch (e) {}
     var hand = /^#(compose|story)(?:=(.*))?$/.exec(location.hash) || [];
     if (!location.hash || location.hash === '#' || hand[1]) {
       history.replaceState(null, '', location.pathname + location.search + '#home');
@@ -6528,6 +6530,7 @@
           }
         }).catch(function () {});
         fbAuth.onAuthStateChanged(function (user) {
+          var q=authQ;authQ='';if(!user&&q)openAuth(q);
           if (user) applyFbUser(user);
           else {
             stopPreviewLift();

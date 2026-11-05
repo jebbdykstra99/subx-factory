@@ -272,9 +272,7 @@ src = ed(src, "  const LS_USER = '311chat.user';\n  const LS_LIKES = '311chat.li
 """)
 src = ed(src, "  let site = null;\n", "  let site = null;\n  const LS_TOPIC_FOLLOWS = 'subx.topicFollows';\n  let dmSendInFlight = false;\n  let focusedTopicId = '';\n  let watchlistPickerOpen = false;\n  let watchlistQuery = '';\n")
 src = ed(src, "  let SITE_ID = '311chat';", "  let SITE_ID = '';  // set from site.json siteId in boot()")
-banner = """/* SubX factory.js (subx-factory master). DO NOT EDIT IN A ROOM REPO.
- * Source: github.com/jebbdykstra99/subx-factory  (version + sha256 in the room's FACTORY.lock)
- * Room differences belong in site.json (features, skin, rail, nests, minAge) or in EXCEPTIONS.md. */
+banner = """/* SubX factory.js. DO NOT EDIT IN A ROOM REPO. See FACTORY.lock / EXCEPTIONS.md. */
 """
 src = ed(src, 'boot({ siteId: "311chat", name: "311chat", tagline: "Non-emergency city help. Find your 311." });',
   "boot({ siteId: (location.hostname || 'room').replace(/^www\\./, '').replace(/\\.[a-z]+$/, ''), name: (location.hostname || 'SubX').replace(/^www\\./, ''), tagline: '', imageUploads: false });")
@@ -909,8 +907,8 @@ src = ed(src, "placeholder=\"Caption (optional)\" hidden><div class=\"stories-co
 src = ed(src, "storiesErr('Write a short card, or switch to photo / clip.');", "storiesErr(site.imageUploads === false ? 'Write a short card.' : 'Write a short card, or switch to photo / clip.');")
 src = ed(src, "    if (!fbStorage || !storiesOn()) return Promise.reject(new Error('Storage not ready'));\n",
   "    if (!fbStorage || !storiesOn() || site.imageUploads === false) return Promise.reject(new Error('Storage not ready'));\n")
-src = ed(src, "    try { deepPostId = new URLSearchParams(location.search).get('p') || ''; } catch (e) { deepPostId = ''; }\n    if (!location.hash || location.hash === '#') {\n",
-  "    try { deepPostId = new URLSearchParams(location.search).get('p') || ''; } catch (e) { deepPostId = ''; }\n    var hand = /^#(compose|story)(?:=(.*))?$/.exec(location.hash) || [];\n    if (!location.hash || location.hash === '#' || hand[1]) {\n")
+src = ed(src, "    try { var sp = new URLSearchParams(location.search); deepPostId = sp.get('p') || ''; var a = sp.get('auth');\n      if (a) { authQ = a === 'register' ? 'register' : 'join'; sp.delete('auth');\n        var q = sp.toString(); history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + location.hash); }\n    } catch (e) {}\n    if (!location.hash || location.hash === '#') {\n",
+  "    try { var sp = new URLSearchParams(location.search); deepPostId = sp.get('p') || ''; var a = sp.get('auth');\n      if (a) { authQ = a === 'register' ? 'register' : 'join'; sp.delete('auth');\n        var q = sp.toString(); history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + location.hash); }\n    } catch (e) {}\n    var hand = /^#(compose|story)(?:=(.*))?$/.exec(location.hash) || [];\n    if (!location.hash || location.hash === '#' || hand[1]) {\n")
 src = ed(src, "    syncHamburgerAria();\n    try { if (!sessionStorage.getItem('subx.hit.'+SITE_ID))",
   "    if (hand[1] === 'story') openStoriesComposer();\n    if (hand[1] === 'compose') { try { restoreCompose(decodeURIComponent(hand[2] || '').slice(0, 280)); } catch (e) {} }\n    syncHamburgerAria();\n    try { if (!sessionStorage.getItem('subx.hit.'+SITE_ID))")
 src = banner + src

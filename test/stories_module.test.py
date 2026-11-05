@@ -30,10 +30,13 @@ ok(re.search(r"restoreCompose\(decodeURIComponent\(hand\[2\] \|\| ''\)\.slice\(0
 ok(not re.search(r"hand\[2\][^;]*submit|hand\[2\][^;]*addDoc", fx), 'factory.js: hand-off text is never submitted automatically')
 ok("requireVerified('add a story')" in fx, 'factory.js: adding a story still needs a verified sign-in')
 rel = json.loads(read('FACTORY_RELEASE.json')); rooms = json.loads(read('rooms.json'))
-ok(rel['version'] == rooms['version'] == 'v1.2.7', 'release v1.2.7 matches root rooms.json')
-sj = json.loads(read('shell', 'v1.2.7', 'SHELL.json'))
-ok(sj.get('version') == 'v1.2.7', 'shell/v1.2.7/SHELL.json version')
-ok(read('shell', 'v1.2.7', 'factory.js') == fx, 'shell/v1.2.7/factory.js equals factory/factory.js')
+ok(rel['version'] == rooms['version'] == 'v1.2.8', 'release v1.2.8 matches root rooms.json')
+sj7 = json.loads(read('shell', 'v1.2.7', 'SHELL.json'))
+ok(sj7.get('version') == 'v1.2.7', 'shell/v1.2.7/SHELL.json version (immutable Stories baseline)')
+ok(read('shell', 'v1.2.7', 'factory.js') != fx, 'shell/v1.2.7/factory.js stays frozen (not equal to current factory.js)')
+sj = json.loads(read('shell', 'v1.2.8', 'SHELL.json'))
+ok(sj.get('version') == 'v1.2.8', 'shell/v1.2.8/SHELL.json version')
+ok(read('shell', 'v1.2.8', 'factory.js') == fx, 'shell/v1.2.8/factory.js equals factory/factory.js')
 
 # hub
 st = json.loads(read('hub', 'site', 'stories.json'))
