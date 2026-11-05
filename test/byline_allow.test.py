@@ -36,6 +36,10 @@ PASS = [
     ('strong-byline', '<header><strong>By Jebb Dykstra</strong></header>'),
     ('byline-with-date', '<p class="byline"><em>By Jebb Dykstra</em> · Nov 5, 2026</p>'),
     ('byline-split-markup', '<p class="byline">By <strong>Jebb Dykstra</strong></p>'),
+    ('nbsp-entities', '<p class="byline">By&nbsp;Jebb&#160;Dykstra</p>'),
+    ('nbsp-co-byline', '<p class="byline"><em>By&nbsp;Jebb&nbsp;Dykstra,&#160;Juno, Vesta&nbsp;and&nbsp;Iris</em></p>'),
+    ('nbsp-hex-and-char', '<p>By&#xA0;Jebb\u00a0Dykstra</p>'),
+    ('visible-style-ok', '<p class="byline" style="color: #555">By Jebb Dykstra</p>'),
     ('27chat-story-shape-subx-pill', '<p><em>By Jebb Dykstra, Juno, Vesta and Iris</em>'
         '<span class="whomark-slot" data-whomark="hybrid" hidden></span> '
         '<span class="post-steward-pill" title="Human + AI. Operated by SubX, LLC.">Human + AI</span></p>'),
@@ -90,6 +94,17 @@ FAIL = [
     ('byline-plus-role', '<p class="byline">By Jebb Dykstra, operator of SubX</p>'),
     ('hidden-byline-span', '<span class="byline" hidden>By Jebb Dykstra</span>'),
     ('script-byline', '<script>document.write("<p>By Jebb Dykstra</p>")</script>'),
+    # Iris G1, G2, G4 (2026-11-05): inline-style and class hiding
+    ('style-display-none', '<p class="byline" style="display:none">By Jebb Dykstra</p>'),
+    ('style-display-none-spaced', '<p class="byline" style="color:red; display : none">By Jebb Dykstra</p>'),
+    ('style-visibility-hidden', '<span class="byline" style="visibility:hidden">By Jebb Dykstra</span>'),
+    ('style-hidden-inner-em', '<p class="byline"><em style="display:none">By Jebb Dykstra</em></p>'),
+    ('style-hidden-ancestor', '<div style="display:none"><p class="byline">By Jebb Dykstra</p></div>'),
+    ('class-hidden', '<p class="byline hidden">By Jebb Dykstra</p>'),
+    ('class-sr-only', '<span class="byline sr-only">By Jebb Dykstra</span>'),
+    ('class-hidden-ancestor', '<div class="hidden"><p class="byline">By Jebb Dykstra</p></div>'),
+    ('class-sr-only-ancestor', '<section class="sr-only"><p>By Jebb Dykstra</p></section>'),
+    ('class-sr-only-inner-em', '<p><em class="sr-only">By Jebb Dykstra</em></p>'),
     ('llms-markdown-byline', '# By Jebb Dykstra, Juno, Vesta and Iris\n'),
 ]
 for name, html in FAIL:
@@ -142,5 +157,6 @@ ok('Juno, Vesta and Irisfoo' in m_iris and 'Jebb' not in m_iris, 'co-byline need
 two = '<p>By Jebb Dykstra. By Jebb Dykstra</p>'
 ok(BA.mask_allowed_bylines(two).count('Jebb') == 1, 'at most one phrase masked per qualifying element')
 
-print('\n%d failure(s)' % len(fails))
+print('\nPASS fixtures: %d, FAIL fixtures: %d' % (len(PASS), len(FAIL)))
+print('%d failure(s)' % len(fails))
 sys.exit(1 if fails else 0)

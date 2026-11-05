@@ -21,13 +21,16 @@ What may be masked (Key 1 E1-E4, tightened 2026-11-05):
     reviewer, legal, agent, provider, publisher, appeal, contact, owner...),
     and at most ONE phrase is masked per qualifying element.
   * Every element that holds any part of the phrase must be p/span/em/strong,
-    must not be hidden, and if it has a class attribute that attribute must
+    must not be hidden (hidden attribute, aria-hidden, inline display:none or
+    visibility:hidden, or class hidden / sr-only / visually-hidden, on the
+    element or any ancestor), and if it has a class attribute that attribute must
     contain the exact whitespace-separated token "byline".
   * No ancestor may be footer, address, head, title, a, button, label,
     select, option or textarea.
   * The phrase is "By Jebb Dykstra" or "By Jebb Dykstra, Juno, Vesta and
     Iris" with a capital B and a word boundary after the last name, so
-    "Dykstrafoo" and mid-sentence "Made by Jebb Dykstra" never match.
+    "Dykstrafoo" and mid-sentence "Made by Jebb Dykstra" never match. Spaces
+    in the phrase may be plain whitespace, &nbsp;, &#160; or &#xA0;.
 
 Everything else that matches jebb|dykstra (after stripping the
 jebbdykstra99/subx-factory repo path) is a hit.
@@ -52,8 +55,12 @@ VOID_TAGS = frozenset(
 )
 
 # Capital-B "By" only, word boundary on both ends (E4).
+# Whitespace inside the phrase may also be written as &nbsp;, &#160; or &#xA0; (G3).
+_WS = r"(?:\s|&nbsp;|&#160;|&#[xX][aA]0;)"
 BYLINE_PHRASE = re.compile(
-    r"(?<![\w])By\s+Jebb\s+Dykstra(?:\s*,\s*Juno\s*,\s*Vesta\s+and\s+Iris)?(?![\w])"
+    r"(?<![\w])By" + _WS + r"+Jebb" + _WS + r"+Dykstra"
+    r"(?:" + _WS + r"*," + _WS + r"*Juno" + _WS + r"*," + _WS + r"*Vesta" + _WS + r"+and" + _WS + r"+Iris)?"
+    r"(?![\w])"
 )
 
 ROLE_WORDS = re.compile(
@@ -74,7 +81,15 @@ TOKEN = re.compile(
     re.S | re.I,
 )
 CLASS_ATTR = re.compile(r"""(?:^|\s)class\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))""", re.I)
-HIDDEN_ATTR = re.compile(r"""(?:^|\s)(?:hidden(?:\s|=|/|$)|aria-hidden\s*=\s*["']?true)""", re.I)
+# Hidden: the hidden attribute, aria-hidden="true", or inline style display:none /
+# visibility:hidden (G1). Class tokens below also count as hidden (G4). Checked on the
+# qualifying element, every element holding the phrase, and every ancestor.
+HIDDEN_ATTR = re.compile(
+    r"""(?:^|\s)(?:hidden(?:\s|=|/|$)|aria-hidden\s*=\s*["']?true"""
+    r"""|style\s*=\s*["'][^"']*(?:display\s*:\s*none|visibility\s*:\s*hidden))""",
+    re.I,
+)
+HIDDEN_CLASSES = frozenset({"hidden", "sr-only", "visually-hidden"})
 
 
 class _El:
@@ -88,7 +103,8 @@ class _El:
         self.close_start = None
         m = CLASS_ATTR.search(attrs)
         self.classes = None if m is None else (m.group(1) or m.group(2) or m.group(3) or "").split()
-        self.hidden = bool(HIDDEN_ATTR.search(attrs))
+        self.hidden = bool(HIDDEN_ATTR.search(attrs)) or bool(
+            self.classes and HIDDEN_CLASSES.intersection(c.lower() for c in self.classes))
 
 
 def _parse(text: str):
@@ -280,6 +296,12 @@ def assert_fixture_matrix() -> None:
     assert not clean('<p>By Jebb Dykstra <span title="' + "x" * 130 + ' By Jebb Dykstra">i</span></p>')
     assert not clean("<p>By Jebb Dykstra<!-- By Jebb Dykstra --></p>")
     assert not clean("<p>By Jebb Dykstrafoo</p>")
+    # Iris G1-G4 (2026-11-05)
+    assert not clean('<p class="byline" style="display:none">By Jebb Dykstra</p>')
+    assert not clean('<div style="visibility: hidden"><p class="byline">By Jebb Dykstra</p></div>')
+    assert not clean('<p class="byline hidden">By Jebb Dykstra</p>')
+    assert not clean('<div class="sr-only"><p>By Jebb Dykstra</p></div>')
+    assert clean('<p class="byline">By&nbsp;Jebb&#160;Dykstra</p>')
 
 
 if __name__ == "__main__":
