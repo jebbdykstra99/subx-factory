@@ -1,18 +1,19 @@
 {
   "version": "v1.2.7",
   "immutable": true,
-  "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.7. Draft cursor/auth-join-query-2026-11-05 adds ?auth=join handler; folder bytes match factory/ on this branch. A merged change normally is a new shell/vX.Y.Z/ folder.",
+  "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.7 (Stories default-on module, text-only Stories when imageUploads is false, hub hand-off #compose/#story). Never edit files in this folder; a change is a new shell/vX.Y.Z/ folder.",
   "sourceCommit": "eb6aba9e931716d9a654eddff06b3a351629d217",
   "sourcePath": "factory/",
   "url": {
     "pinned": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@<MERGE_SHA>/shell/v1.2.7/<file>",
-    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@eb6aba9e931716d9a654eddff06b3a351629d217/factory/<file>"
+    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@eb6aba9e931716d9a654eddff06b3a351629d217/factory/<file>",
+    "rule": "Pin by full 40-char commit SHA only. Never @main, @latest, a branch, or a semver range."
   },
   "files": {
     "factory.js": {
-      "bytes": 254863,
-      "sha256": "d33ab6e28094f49056e70b850f91c3f34e98654e50a43327a3b04d6fe10a697c",
-      "integrity": "sha384-Pjhc9ZEtRP/xGM9/plk2pgzcXa09e68udGnAG3hBnJVmVcpG+ed7Z8IR9rFoyALi"
+      "bytes": 254973,
+      "sha256": "a4bc4a12273c43705b00bf68e7777d5d4340f240e0a7daf32bebf2cfc4305bf1",
+      "integrity": "sha384-iBNSY9mNEZ6f/x2C3aStjIaUcQyEdPw/N41C+a9LPnesfRDlbRfB79qgoa8fWoSC"
     },
     "factory-gp.js": {
       "bytes": 34934,

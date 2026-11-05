@@ -1,8 +1,8 @@
 {
-  "version": "v1.2.7",
+  "version": "v1.2.8",
   "factory.js": {
-    "sha256": "d33ab6e28094f49056e70b850f91c3f34e98654e50a43327a3b04d6fe10a697c",
-    "bytes": 254863
+    "sha256": "8cf2d04a0323c6fcc0a684c8861ce3100af68b90a9a7d0350f475d68e0fed853",
+    "bytes": 254900
   },
   "sources": {
     "template": "build/sources/template_factory_660144d1886e.js (T0 pin, nest-feed query edited in place)",
@@ -10,20 +10,20 @@
     "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)",
     "split": "build/split.mjs (opt-in files out of the folded single-file build: gp, rail, reports)"
   },
-  "built": "2026-11-05 (MT) cursor/auth-join-query-2026-11-05 draft",
+  "built": "2026-11-05 (MT) cursor/auth-join-query-2026-11-05 draft (Iris Key 1 authQ)",
   "optIn": {
     "factory-gp.js": {
-      "sha256": "fd8f924fa1c633c46954a9e828da77fd4f7a7bb98ac3e1e73f08841034543ddc",
+      "sha256": "1e13456022b2184e7525403e3a8fbe6ed6324b1b340f548303a1c385ef4373aa",
       "bytes": 34934,
       "loadWhen": "site.json features.watchlist|topicFollow|sessionSeeds true, or rail.kind f1-calendar (gpchat only today)"
     },
     "factory-rail.js": {
-      "sha256": "a63ff670377e547d5dd17afa602377ed7ff3de9dca0cb0a2a654778165651785",
+      "sha256": "6e6a593e2009ed7318e36a1d2987b0e153f918141efcf288b36523bf69adb5ba",
       "bytes": 10235,
       "loadWhen": "site.json rail.kind nws-forecast|nws-cwf|bart-bsa, or rail.forecastUrl / rail.lat+lon (415, 808, samo, bart)"
     },
     "factory-reports.js": {
-      "sha256": "9fc4f98bed224140fdd3379a211df36ac718063f273a6ef789a6222ca6281e54",
+      "sha256": "271bb2a774cc42276f002cc7f01896434814a422e22ba3ae9f4535c0f342a583",
       "bytes": 9369,
       "loadWhen": "site.json features.reportLoop true (A9 report loop; airlineschat/amachat first once unkilled)"
     }

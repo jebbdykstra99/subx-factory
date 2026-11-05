@@ -35,6 +35,7 @@ Host: **jsDelivr's GitHub mirror** of this public repo. No new service, no accou
 |---|---|---|
 | `v1.2.6` | Current pinned shell. | rooms stamped so far |
 | `v1.2.7` | Stories as a default shell module: on unless `site.json` sets `stories.enabled: false`; text-only when the room sets `imageUploads: false` (no photo/clip copy, buttons or file inputs); `#story` / `#compose=<text>` hand-off from the hub (fills the composer, never auto-posts). Bytes paid by whitespace-only trims (core 254973 B). See [STORIES.md](STORIES.md). | none yet (draft; re-stamping is a separate decision) |
+| `v1.2.8` | `?auth=join` / `?auth=register` deep-link: store `authQ` at boot, call `openAuth` from `onAuthStateChanged` only when still signed out (no sign-in flash while Firebase restores). Parse `?p` before the auth branch so a failure there leaves `deepPostId` intact. Core 254900 B. | none yet (draft; Key 1 room PRs use a temporary lock hash, not this pin) |
 
 ## Release, cache, rollback
 
