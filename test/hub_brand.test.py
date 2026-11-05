@@ -7,6 +7,7 @@ import base64, hashlib, json, os, re, shutil, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import brand_render as BR  # noqa: E402
+import byline_allow as BYLINE  # noqa: E402
 
 SITE = os.path.join(ROOT, 'hub', 'site')
 SRC = os.path.join(ROOT, 'hub', 'src')
@@ -417,10 +418,22 @@ for p in scan_files():
     if os.path.abspath(p) in (os.path.abspath(__file__), SELF_SHELL):
         continue
     t = read(p) if not p.endswith('.png') else ''
+    # Decision 2026-11-05: author bylines ("By Jebb Dykstra") are allowed; mask them
+    # before the private-name FORBID so operator/meta/JSON-LD hits still fail.
+    t = BYLINE.mask_allowed_bylines(t)
     for rx in FORBID:
         for m in rx.finditer(t):
             hits.append('%s: %s' % (os.path.relpath(p, ROOT), m.group(0)))
 ok(not hits, 'no private names, emails, 310 numbers, registered-agent city or internal codes in the hub, brand or renderer (%s)' % hits[:5])
+# Decision 2026-11-05: byline allowlist — byline passes, operator/meta still fail
+ok(BYLINE.is_clean('<p class="byline"><em>By Jebb Dykstra, Juno, Vesta and Iris</em></p>'),
+   'byline allowlist: class=byline "By Jebb Dykstra, Juno, Vesta and Iris" passes')
+ok(not BYLINE.is_clean('<meta name="author" content="Jebb Dykstra">'),
+   'byline allowlist: meta author with Jebb still fails')
+ok(not BYLINE.is_clean('{"publisher":{"name":"Jebb Dykstra"}}'),
+   'byline allowlist: JSON-LD publisher with Jebb still fails')
+ok(not BYLINE.is_clean('<p>operated by Jebb Dykstra</p>'),
+   'byline allowlist: operator line with Jebb still fails')
 # the self-hosted hub fork keeps upstream code: its only owner-handle string is the functional reserved-handle regex "jebb"
 _sh = [m.group(0) for rx in FORBID[:1] + [re.compile('jebbdykstra99')] for m in rx.finditer(read(SELF_SHELL))]
 ok(_sh == ['jebb'] and '(admin|moderator|official|subx|jebb)' in read(SELF_SHELL) and not [m for rx in FORBID[1:] for m in rx.finditer(read(SELF_SHELL))],
