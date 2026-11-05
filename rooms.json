@@ -13,7 +13,8 @@
       "accountsOpen": true,
       "waitFor": [],
       "keepFiles": [
-        "gate.js"
+        "gate.js",
+        "takedown.js"
       ],
       "features": {},
       "skin": {
@@ -25,9 +26,12 @@
         "redditCrosspost": false,
         "_dropKeys": [
           "redditSr"
-        ]
+        ],
+        "imageUploads": false
       },
-      "allowLoss": [],
+      "allowLoss": [
+        "uploadsOn"
+      ],
       "notes": ""
     },
     {
@@ -89,7 +93,9 @@
       "status": "ready",
       "accountsOpen": true,
       "waitFor": [],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {
         "avatarInitials": "CO",
@@ -117,7 +123,9 @@
       "waitFor": [
         "boyfriendchat PR #8 (18+ age gate, sets minAge 18) merged"
       ],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {
         "avatarInitials": "BF",
@@ -145,7 +153,9 @@
       "status": "ready",
       "accountsOpen": true,
       "waitFor": [],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {},
       "sitePatch": {
@@ -167,7 +177,9 @@
       "status": "ready",
       "accountsOpen": true,
       "waitFor": [],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {},
       "sitePatch": {
@@ -193,7 +205,9 @@
       "status": "ready",
       "accountsOpen": true,
       "waitFor": [],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {
         "avatarInitials": "CI",
@@ -226,7 +240,9 @@
       "status": "ready",
       "accountsOpen": true,
       "waitFor": [],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {
         "keepBrandTitle": "true"
@@ -236,9 +252,12 @@
         "redditCrosspost": false,
         "_dropKeys": [
           "redditSr"
-        ]
+        ],
+        "imageUploads": false
       },
-      "allowLoss": [],
+      "allowLoss": [
+        "uploadsOn"
+      ],
       "notes": "21+ was hardcoded text; now site.json minAge 21 (EXCEPTIONS: policy, not code)."
     },
     {
@@ -251,7 +270,9 @@
       "status": "ready",
       "accountsOpen": true,
       "waitFor": [],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {},
       "sitePatch": {
@@ -274,7 +295,9 @@
       "status": "ready",
       "accountsOpen": true,
       "waitFor": [],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {},
       "sitePatch": {
@@ -297,7 +320,9 @@
       "status": "ready",
       "accountsOpen": true,
       "waitFor": [],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {},
       "sitePatch": {
@@ -320,7 +345,9 @@
       "status": "ready",
       "accountsOpen": true,
       "waitFor": [],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {},
       "sitePatch": {
@@ -343,7 +370,9 @@
       "status": "ready",
       "accountsOpen": true,
       "waitFor": [],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {},
       "sitePatch": {
@@ -366,7 +395,9 @@
       "status": "ready",
       "accountsOpen": true,
       "waitFor": [],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {
         "avatarInitials": "415",
@@ -389,7 +420,9 @@
       "status": "ready",
       "accountsOpen": true,
       "waitFor": [],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {},
       "skin": {
         "bioDefault": "Talking about the city.",
@@ -418,7 +451,8 @@
         "airlineschat PR #3 (gate) decided"
       ],
       "keepFiles": [
-        "gate.js"
+        "gate.js",
+        "takedown.js"
       ],
       "features": {},
       "skin": {},
@@ -462,12 +496,12 @@
       "siteId": "popechat",
       "cluster": "F-pope",
       "order": 19,
-      "status": "blocked",
+      "status": "ready",
       "accountsOpen": true,
-      "waitFor": [
-        "Nest Listen (Kokoro TTS, ~30 room-only functions) moved to a factory flag or plugin file"
+      "waitFor": [],
+      "keepFiles": [
+        "takedown.js"
       ],
-      "keepFiles": [],
       "features": {},
       "skin": {},
       "sitePatch": {
@@ -475,10 +509,13 @@
         "redditCrosspost": false,
         "_dropKeys": [
           "redditSr"
-        ]
+        ],
+        "imageUploads": false
       },
-      "allowLoss": [],
-      "notes": "No visit pixel today: pixel:false until CLO privacy v1.1 names the beacon."
+      "allowLoss": [
+        "uploadsOn"
+      ],
+      "notes": "No visit pixel today: pixel:false until CLO privacy v1.1 names the beacon. Nest Listen (E3) left factory.js in gate2 reconcile dfcc7a3 (2026-10-22); unblocked 2026-11-05 for the v1.2.8 restamp."
     },
     {
       "room": "gpchat",
@@ -495,7 +532,9 @@
         "rules step 1 + step 3 published",
         "privacy v1.1 (visit pixel line) before removing pixel:false"
       ],
-      "keepFiles": [],
+      "keepFiles": [
+        "takedown.js"
+      ],
       "features": {
         "watchlist": true,
         "following": true,
