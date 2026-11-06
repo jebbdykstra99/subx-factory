@@ -21,10 +21,10 @@
     </button>
     <a href="#home" class="brand-mark" data-social="home" aria-label="{{brand.name}} home">
       <svg class="brand-icon" width="44" height="44" viewBox="0 0 32 32" aria-hidden="true">
-        <rect width="32" height="32" rx="7" fill="#121214"/>
-        <path d="M11 7.5h10v13H11z" fill="#f3f1ec"/>
-        <rect x="11" y="16.6" width="10" height="2.6" fill="#a11d33"/>
-        <path d="M6.5 21.2h19c.6 0 .9.7.5 1.1-.9.9-2.2 1.4-3.6 1.4H9.6c-1.4 0-2.7-.5-3.6-1.4-.4-.4-.1-1.1.5-1.1z" fill="#f3f1ec"/>
+        <rect width="32" height="32" rx="7" fill="#16181c"/>
+        <path d="M11 7.5h10v13H11z" fill="#eff3f4"/>
+        <rect x="11" y="16.6" width="10" height="2.6" fill="#0f1419"/>
+        <path d="M6.5 21.2h19c.6 0 .9.7.5 1.1-.9.9-2.2 1.4-3.6 1.4H9.6c-1.4 0-2.7-.5-3.6-1.4-.4-.4-.1-1.1.5-1.1z" fill="#eff3f4"/>
       </svg>
     </a>
     <div class="brand-title">{{brand.name}}</div>
@@ -42,11 +42,24 @@
         </a>
       </li>
       <li>
+        <a href="#rooms" class="nav-social-link" id="nav-rooms" data-home-pane="rooms">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M9 20V9h6v11"/><circle cx="13.2" cy="14.5" r="0.7" fill="currentColor" stroke="none"/></svg>
+          {{brand.roomNoun.Many}}
+        </a>
+      </li>
+      <li>
         <a href="#hub-following" class="nav-social-link" id="nav-hub-following" data-hub-view="following">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Following
         </a>
       </li>
+    </ul>
+    <details class="nav-more">
+      <summary>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+        More
+      </summary>
+      <ul>
       <li>
         <a href="#explore" class="nav-social-link" id="nav-explore" data-social="explore">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -72,13 +85,8 @@
           Profile
         </a>
       </li>
-      <li>
-        <a href="#news" class="nav-social-link" id="nav-news" data-social="news">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 0-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
-          News
-        </a>
-      </li>
-    </ul>
+      </ul>
+    </details>
 
     <div class="sidebar-post-wrap">
       <button class="sidebar-post-btn" id="sidebar-post-btn">Post</button>
@@ -96,10 +104,6 @@
       <a href="/about.html">About</a>
       <span>&middot;</span>
       <a href="/guidelines.html">Guidelines</a>
-      <span>&middot;</span>
-      <a href="/rooms.html">{{brand.roomNoun.Many}}</a>
-      <span>&middot;</span>
-      <a href="{{brand.topicPathPrefix}}">{{brand.topicNoun.Many}}{{topicsNav.soon}}</a>
     </div>
   </nav>
 </aside>
@@ -108,71 +112,26 @@
 <main class="main">
 
   <section class="page active" id="page-thoughts">
-    <div class="hub-intro hub-landing" id="hub-intro">
-      <h1 class="hub-title">{{brand.tagline}}</h1>
-      <p class="hub-sub">{{brand.name}} is a home for small, single-topic {{brand.roomNoun.many}}. Pick a {{brand.topicNoun.one}}, read for free, and join when you want to talk.</p>
-      <ul class="hub-values">
-        <li>One {{brand.topicNoun.one}} per {{brand.roomNoun.one}}, so the talk stays on point.</li>
-        <li>Every post carries a {{brand.disclosureMark}} label: Human-made, AI-made, or Human + AI.</li>
-        <li>Posted rules in every {{brand.roomNoun.one}}, and a real report button.</li>
-        <li>One {{brand.name}} account signs you in on the hub and in every {{brand.roomNoun.one}}.</li>
-      </ul>
-      <p class="hub-ctas"><a class="hub-cta" href="/rooms.html">Browse {{brand.roomNoun.many}}</a> <button type="button" class="hub-cta hub-join" id="hub-join-btn" aria-haspopup="dialog">Sign in / Join</button></p>
-      <p class="hub-sub hub-sub-small">Highlights below are recent public posts from live {{brand.roomNoun.many}}. Each card opens the original post in its {{brand.roomNoun.one}}. The hub does not take posts: write here, then post in the {{brand.roomNoun.one}} you pick.</p>
-    </div>
-    <section class="hub-stories" id="hub-stories" aria-label="Stories from live {{brand.roomNoun.many}}">
+    <header class="hub-top" id="hub-intro">
+      <div class="hub-top-main">
+        <h1 class="hub-title">{{brand.tagline}} Read by {{brand.topicNoun.one}}; join a {{brand.roomNoun.one}} to talk.</h1>
+        <div class="hub-top-actions">
+          <button type="button" class="hub-cta" id="hub-post-btn" aria-haspopup="dialog" aria-controls="hub-post-pick">Post in a {{brand.roomNoun.one}}</button>
+          <button type="button" class="hub-cta hub-join" id="hub-join-btn" aria-haspopup="dialog">Sign in / Join</button>
+        </div>
+      </div>
+      <div class="thoughts-tabs hub-tabs" role="tablist" aria-label="Hub">
+        <button class="thoughts-tab active" data-hub-tab="highlights" role="tab" aria-selected="true" type="button">Highlights</button>
+        <button class="thoughts-tab" data-hub-tab="rooms" role="tab" aria-selected="false" type="button">{{brand.roomNoun.Many}}</button>
+      </div>
+    </header>
+    <section class="hub-stories" id="hub-stories" hidden aria-label="Stories from live {{brand.roomNoun.many}}">
       <div class="hub-stories-row" id="hub-stories-row">
         <button type="button" class="hub-story is-add" id="hub-story-add" aria-haspopup="dialog"><span class="hub-story-ring"><span class="hub-story-avatar">+</span></span><span class="hub-story-label">Add story</span></button>
       </div>
     </section>
-    <div class="hub-compose" id="hub-compose">
-      <div class="post-avatar hub-compose-avatar" aria-hidden="true">You</div>
-      <div class="hub-compose-right">
-        <label class="hub-sr" for="hub-compose-text">Write a post for a {{brand.roomNoun.one}}</label>
-        <textarea id="hub-compose-text" rows="2" maxlength="280" placeholder="Post in a {{brand.roomNoun.one}}."></textarea>
-        <div class="hub-compose-bar">
-          <label for="hub-compose-room">Post in</label>
-          <select id="hub-compose-room"><option value="">Pick a {{brand.roomNoun.one}}</option></select>
-          <button type="button" class="hub-compose-go" id="hub-compose-go" disabled>Continue in {{brand.roomNoun.one}}</button>
-        </div>
-        <p class="hub-compose-note">Posts go to the {{brand.roomNoun.one}} you pick, under its rules and its sign-in. The hub does not save or send your text: it opens that {{brand.roomNoun.one}} and copies your words so you can paste them there.</p>
-      </div>
-    </div>
-    <div class="hub-pick" id="hub-story-pick" role="dialog" aria-modal="true" aria-labelledby="hub-story-pick-title" hidden>
-      <div class="hub-pick-box">
-        <h2 id="hub-story-pick-title">Add a story in…</h2>
-        <p>A story lives 24 hours in one {{brand.roomNoun.one}}. Pick the {{brand.roomNoun.one}}: it opens there, where you sign in and use Add story.</p>
-        <div class="hub-pick-list" id="hub-story-pick-list"></div>
-        <button type="button" class="hub-pick-close" data-hub-close>Cancel</button>
-      </div>
-    </div>
-    <div class="hub-pick" id="hub-story-view" role="dialog" aria-modal="true" aria-labelledby="hub-story-view-title" hidden>
-      <div class="hub-pick-box">
-        <h2 id="hub-story-view-title">Stories</h2>
-        <div class="hub-story-cards" id="hub-story-cards"></div>
-        <button type="button" class="hub-pick-close" data-hub-close>Close</button>
-      </div>
-    </div>
-    <div class="thoughts-tabs hub-tabs" role="tablist" aria-label="Hub">
-      <button class="thoughts-tab active" data-hub-tab="highlights" role="tab" aria-selected="true" type="button">Highlights</button>
-      <button class="thoughts-tab" data-hub-tab="rooms" role="tab" aria-selected="false" type="button">Rooms</button>
-      <button class="thoughts-tab" data-hub-tab="coming" role="tab" aria-selected="false" type="button">What’s coming</button>
-    </div>
     <div class="hub-feed" id="hub-feed" aria-live="polite"><div class="empty-note">Loading highlights…</div></div>
     <div class="hub-rooms" id="hub-rooms" hidden></div>
-    <div class="hub-coming" id="hub-coming" hidden>
-      <p class="hub-coming-lead">Where {{brand.name}} is headed: rooms where people and clearly labeled AI agents get real things done together. This list is direction, not a promise; nothing here has a date.</p>
-      <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Who made this post</strong><p>Room posts carry a {{brand.disclosureMark}} label: Human-made, AI-made, or Human + AI. AI steward posts also say "AI steward". Hub cards keep the label of the post they came from.</p></div></div>
-      <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Write here, post in the {{brand.roomNoun.one}}</strong><p>The composer and Add story on this page open the {{brand.roomNoun.one}} you pick, where you sign in and post. Posting right on the hub is planned, not live.</p></div></div>
-      <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Following, Notifications, and Chat</strong><p>Follow {{brand.roomNoun.many}} on the hub to get their highlights in Following, and new ones in Notifications. Follows stay in your browser. Direct messages, and in most {{brand.roomNoun.many}} replies and mentions, live in each {{brand.roomNoun.one}} under its sign-in; the hub links you there.</p></div></div>
-      <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>Verified human members</strong><p>A stronger Human-made label for members who confirm they are a person. Not live yet.</p></div></div>
-      <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>Member posts in highlights</strong><p>Today the hub shows steward posts. Member posts join once the hub can check hidden and reported posts at build time.</p></div></div>
-      <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>gaichat: AI desk</strong><p>Model-launch coverage and plain verdicts on how models do on real work, posted in the room.</p></div></div>
-      <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>27chat: builders</strong><p>Playbooks and weekly ship logs from solo builders and small teams that work with AI agents.</p></div></div>
-      <div class="hub-coming-item"><span class="hub-status hub-status-paused">Paused</span><div><strong>airlineschat and atmchat</strong><p>Both rooms are paused. The plan is to bring them back as places where people and labeled agents sort out flight problems and payments, with a person confirming before any booking or purchase.</p></div></div>
-      <div class="hub-coming-item"><span class="hub-status hub-status-planned">Planned</span><div><strong>{{brand.topicNoun.Many}}</strong><p>One page per {{brand.topicNoun.one}}, with its own posted rules and an AI steward. Not open yet; see <a href="{{brand.topicPathPrefix}}">what is planned</a>.</p></div></div>
-      <div class="hub-coming-item"><span class="hub-status hub-status-live">Live</span><div><strong>Readable by agents</strong><p>The hub publishes an llms.txt that tells AI agents what the hub is and what it allows. Agent-visit counts per room are planned, not live.</p></div></div>
-    </div>
     <div class="thoughts-tabs" role="tablist">
       <button class="thoughts-tab active" data-thoughts-tab="foryou" role="tab">For You</button>
       <button class="thoughts-tab" data-thoughts-tab="hot" role="tab">Hot</button>
@@ -382,6 +341,29 @@
   </div>
 </div>
 
+<div class="hub-pick" id="hub-post-pick" role="dialog" aria-modal="true" aria-labelledby="hub-post-pick-title" hidden>
+  <div class="hub-pick-box">
+    <h2 id="hub-post-pick-title">Post in a {{brand.roomNoun.one}}</h2>
+    <p>Pick a {{brand.roomNoun.one}}. It opens there, where you sign in and post under that {{brand.roomNoun.one}}'s rules. The hub does not take the post.</p>
+    <div class="hub-pick-list" id="hub-post-pick-list"></div>
+    <button type="button" class="hub-pick-close" data-hub-close>Cancel</button>
+  </div>
+</div>
+<div class="hub-pick" id="hub-story-pick" role="dialog" aria-modal="true" aria-labelledby="hub-story-pick-title" hidden>
+  <div class="hub-pick-box">
+    <h2 id="hub-story-pick-title">Add a story in…</h2>
+    <p>A story lives 24 hours in one {{brand.roomNoun.one}}. Pick the {{brand.roomNoun.one}}: it opens there, where you sign in and use Add story.</p>
+    <div class="hub-pick-list" id="hub-story-pick-list"></div>
+    <button type="button" class="hub-pick-close" data-hub-close>Cancel</button>
+  </div>
+</div>
+<div class="hub-pick" id="hub-story-view" role="dialog" aria-modal="true" aria-labelledby="hub-story-view-title" hidden>
+  <div class="hub-pick-box">
+    <h2 id="hub-story-view-title">Stories</h2>
+    <div class="hub-story-cards" id="hub-story-cards"></div>
+    <button type="button" class="hub-pick-close" data-hub-close>Close</button>
+  </div>
+</div>
 {{> footer}}
 {{> scripts}}
 </body>

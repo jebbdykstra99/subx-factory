@@ -50,12 +50,14 @@ ok(st['membersShown'] is False, 'stories.json: steward-only by default')
 cfg = json.loads(read('hub', 'src', 'config.json'))
 ok('stories.json' in cfg['data'], 'hub config: stories.json is a data file')
 idx = read('hub', 'site', 'index.html'); js = read('hub', 'site', 'hub.js'); css = read('hub', 'site', 'hub.css')
-for idn in ('hub-stories-row', 'hub-story-add', 'hub-compose-text', 'hub-compose-room', 'hub-compose-go', 'hub-story-pick', 'hub-story-view'):
+for idn in ('hub-stories-row', 'hub-story-add', 'hub-post-btn', 'hub-post-pick', 'hub-story-pick', 'hub-story-view'):
     ok('id="%s"' % idn in idx, 'index.html: #%s present' % idn)
+ok('id="hub-compose-text"' not in idx and 'id="hub-compose-go"' not in idx, 'index.html: paste composer controls are gone')
 ok('class="stories-tray' not in idx.split('hub-stories')[0][-200:], 'index.html: hub row does not reuse the hidden .stories-tray class')
-ok('.hub-story' in css and '.hub-compose' in css, 'hub.css: hub-story / hub-compose styles')
+ok('.hub-story' in css and '.hub-pick' in css, 'hub.css: hub-story / hub-pick styles')
 ok(re.search(r"/stories\.json\?v=[0-9a-f]+", js) is not None, 'hub.js: stories.json is cache-busted')
-ok("'compose=' + encodeURIComponent(text)" in js and "roomHref(r.domain, 'story')" in js, 'hub.js: hand-off goes to https://<room>/#compose= and #story')
+ok("roomHref(r.domain, 'compose')" in js and "roomHref(r.domain, 'story')" in js, 'hub.js: hand-off goes to https://<room>/#compose and #story')
+ok('storiesEl.hidden = liveCount === 0' in js, 'hub.js: Stories row hides when stories.json has 0 live items')
 ok(not re.search(r"firestore|firebase|method:\s*'POST'|sendBeacon|XMLHttpRequest|sessionStorage|document\.cookie|indexedDB", js, re.I), 'hub.js: no writes, no Firebase, no cookies or session storage')
 # 2026-11-04 (hub Following): the ONE browser-storage use is the follows key (test/hub_storage_guard.py, which also
 # refuses bracket access, built names, and other indirect routes to storage)
@@ -69,7 +71,7 @@ csp = re.search(r"connect-src ([^;\"]+)", read('hub', 'firebase.json') if os.pat
 HUB_CONNECT = "'self' https://subx-skins.web.app https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://content-firebaseappcheck.googleapis.com https://www.google.com/recaptcha/"
 ok(csp is None or csp.group(1).strip() == HUB_CONNECT, "hub CSP connect-src is 'self' plus only the pinned sign-in origins")
 vis = re.sub(r'<[^>]+>', ' ', re.sub(r'<(script|style)\b.*?</\1>', '', idx, flags=re.S))
-ok('The hub does not save or send your text: it opens that room and copies your words so you can paste them there.' in vis, 'index.html: composer note (Key 1 E1 wording)')
+ok('copies your words' not in vis and 'Post in a room' in vis, 'index.html: no paste essay; Post in a room is the next action')
 ok('<!--' not in idx.split('id="hub-stories"')[0][-400:] and 'STORIES.md' not in idx, 'index.html: no internal note comment before the Stories row')
 ok('source' not in st, 'stories.json: no internal source note')
 ok('data/' not in json.dumps(json.loads(read('hub', 'site', 'site.json')).get('stories')), 'hub site.json: no internal data/ path note')

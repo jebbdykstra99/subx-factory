@@ -118,8 +118,10 @@ ok("'notifs': notifs" in read('hub', 'src', 'build_highlights.py') and "site_doc
    'E2: build_highlights sets notifs from the room site.json features.notifs')
 ok("Rooms with Notifications turned on show replies, mentions, and follows from members there, under that room's sign-in." in vis,
    'E2: Notifications copy (rooms with Notifications turned on)')
-ok('Direct messages, and in most rooms replies and mentions, live in each room under its sign-in; the hub links you there.' in vis,
-   'E2: What is coming copy (DMs, and in most rooms replies and mentions)')
+_about = read('hub', 'site', 'about.html')
+_about_vis = re.sub(r'<[^>]+>', ' ', re.sub(r'<(script|style)\b.*?</\1>', '', _about, flags=re.S))
+ok('id="whats-coming"' in _about and 'Direct messages, and in most rooms replies and mentions, live in each room under its sign-in; the hub links you there.' in _about_vis,
+   'E2: What is coming lives on about.html (DMs, and in most rooms replies and mentions)')
 # Key 1 E3: freshness copy; New by seen ids; baseline on follow
 ok('New highlights from rooms you follow since you last looked. Highlights update when the hub is rebuilt, not in real time.' in vis, 'E3: Notifications freshness copy')
 ok('Date.now()' not in js.split("var HUB_STORE")[1] and 'msOf(it.createdAt) > since' not in js, 'E3: New is not createdAt vs Date.now()')
@@ -136,7 +138,7 @@ ok(not [c for c in new_copy if re.search(r'[\u2010-\u2015]', c)], 'new copy: no 
 # footer Topics label follows topic status
 r = BR.Renderer(os.path.join(ROOT, 'hub', 'src'), os.path.join(ROOT, 'brand', 'brand.json'), tempfile.mkdtemp())
 ok(r.ctx['topicsNav']['soon'] == ' (soon)', 'footer: no active topic today, label keeps "(soon)"')
-ok('>Topics (soon)</a>' in idx, 'index.html: footer shows Topics (soon) today')
+ok('>Topics (soon)</a>' not in idx and 'Topics (soon)' not in idx, 'index.html: Topics (soon) is off newcomer hub chrome')
 with tempfile.TemporaryDirectory() as t:
     src = os.path.join(t, 'src'); shutil.copytree(os.path.join(ROOT, 'hub', 'src'), src)
     cfg = json.load(open(os.path.join(src, 'config.json')))

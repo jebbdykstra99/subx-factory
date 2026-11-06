@@ -175,9 +175,9 @@ for p in pages:
     ok(True, '%s: internal links resolve' % p)
 
 idx = read(os.path.join(SITE, 'index.html'))
-ok('<h1 class="hub-title">Small rooms for big interests.</h1>' in idx or '>Small rooms for big interests.</h1>' in idx, 'home: tagline headline')
+ok('Small rooms for big interests. Read by topic; join a room to talk.' in idx, 'home: compact identity line')
 ok('id="hub-feed"' in idx and 'id="hub-rooms"' in idx, 'home: highlights feed + rooms tab containers')
-ok('href="%s"' % brand['topicPathPrefix'] in idx, 'home: links the topic index stub')
+ok('href="%s"' % brand['topicPathPrefix'] in read(os.path.join(SITE, 'about.html')), 'about: links the topic index stub')
 ok('id="hub-rooms"' in read(os.path.join(SITE, 'rooms.html')) and '/hub.js?v=' in read(os.path.join(SITE, 'rooms.html')), 'rooms.html: directory container + hub.js')
 hl = json.load(open(os.path.join(SITE, 'highlights.json')))
 rooms = json.load(open(os.path.join(SITE, 'rooms.json')))
@@ -298,7 +298,8 @@ _ix = read(os.path.join(SITE, 'index.html'))
 ok(('<meta name="description" content="%s is a home for small, single-topic %s. Highlights from live %s, each linking back to its %s. One %s account works on the hub and in every %s.">'
     % (_bn, brand['roomNoun']['many'], brand['roomNoun']['many'], brand['roomNoun']['one'], _bn, brand['roomNoun']['one'])) in _ix and 'Read-only.' not in _ix,
    'index.html: meta description names the one account, no "Read-only."')
-ok(('id="hub-compose-text" rows="2" maxlength="280" placeholder="Post in a %s."' % brand['roomNoun']['one']) in _ix, 'index.html: hub composer placeholder is "Post in a %s."' % brand['roomNoun']['one'])
+ok('id="hub-post-btn"' in _ix and ('>Post in a %s</button>' % brand['roomNoun']['one']) in _ix, 'index.html: Post in a room opens a room picker')
+ok('id="hub-compose-text"' not in _ix and 'Continue in room' not in _ix and 'copies your words' not in _ix, 'index.html: paste composer is gone from #home')
 ok(not re.search('[\u2013\u2014]', re.sub(r'<[^>]+>', '', pv.split('Hub accounts', 1)[1].split('</li>', 1)[0])), 'privacy.html: no em or en dash in the hub accounts bullet')
 # HUB SIGN-IN (replaces CLO note (a)): only the shell page loads the Firebase SDK; static pages cannot
 ok(not [p for p in pages if p != 'index.html' and re.search(r'<script[^>]+(gstatic|firebase|googleapis|apis\.google)', read(os.path.join(SITE, p)), re.I)], 'no static page loads the Firebase / Google auth SDK')
@@ -462,10 +463,14 @@ ok('## Provenance labels (%s)' % brand['disclosureMark'] in read(os.path.join(SI
 gf = [f for f in files(SITE) if f.endswith(TEXT) and re.search(r'fonts\.(googleapis|gstatic)\.com', read(os.path.join(SITE, f)))]
 ok(not gf, 'hub/site: no Google Fonts links (%s)' % gf)
 hcss = read(os.path.join(SITE, 'hub.css'))
-furls = re.findall(r"url\((/assets/fonts/[^)?]+\.woff2)\?v=[0-9a-f]{10}\)", hcss)
-ok(len(furls) == 6 and all(os.path.isfile(os.path.join(SITE, u.lstrip('/'))) for u in furls), 'hub.css: 6 self-hosted woff2 faces, all present')
-ok(all(os.path.isfile(os.path.join(SITE, 'assets', 'fonts', 'OFL-%s.txt' % n)) and 'SIL Open Font License' in read(os.path.join(SITE, 'assets', 'fonts', 'OFL-%s.txt' % n))
-       for n in ('Inter', 'Newsreader')), 'assets/fonts: OFL 1.1 license files ship with the fonts')
+ok('@font-face' not in hcss and 'Newsreader' not in hcss, 'hub.css: system sans, no Newsreader font-face')
+_styles = read(os.path.join(SITE, 'styles.css'))
+_stack = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+ok(_styles.count(_stack) >= 2 and 'Newsreader' not in _styles, 'styles.css: --ui and --display are the system sans stack')
+ok(site['theme']['bg'] == '#000000' and site['theme']['nav-bg'] == '#000000' and site['theme']['surface'] == '#16181c'
+   and site['theme']['text'] == '#e7e9ea' and site['theme']['accent'] == '#1d9bf0'
+   and site['theme']['primary-bg'] == '#eff3f4' and site['theme']['primary-fg'] == '#0f1419',
+   'site.json theme is Lights Out with white primary pills')
 ok("font-src 'self'" in json.dumps(json.load(open(os.path.join(ROOT, 'hub', 'firebase.json')))), "firebase.json header CSP: font-src 'self'")
 for f in files(SITE):
     if not f.endswith(TEXT):
@@ -558,7 +563,8 @@ with tempfile.TemporaryDirectory() as t:
     about = read(os.path.join(out, 'about.html'))
     ok('+1-555-010-0199' in about and '1 Example Way' in about and 'MAKERMARK' in about and 'Tables' in about, 'rename: About shows the new phone, address, mark and room noun')
     idx_ = read(os.path.join(out, 'index.html'))
-    ok('Tiny tables for loud ideas.' in idx_ and 'href="/z/"' in idx_ and 'Browse tables' in idx_, 'rename: home tagline, topic link and CTA noun follow brand.json')
+    ok('Tiny tables for loud ideas.' in idx_ and 'Read by theme; join a table to talk.' in idx_ and '>Post in a table</button>' in idx_, 'rename: home tagline and Post in a room noun follow brand.json')
+    ok('href="/z/"' in read(os.path.join(out, 'about.html')), 'rename: about links the topic index under the renamed prefix')
     s_ = json.load(open(os.path.join(out, 'site.json')))
     ok(s_['name'] == 'Quillnest' and s_['domain'] == 'quillnest.example' and 'z/index.html' in s_['shell']['noShell'][2], 'rename: site.json name, domain and noShell path follow brand.json')
     cfgj = read(os.path.join(out, 'assets', 'whomark', 'config.json'))
