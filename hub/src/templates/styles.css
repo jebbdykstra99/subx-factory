@@ -1,43 +1,66 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Lights Out is the deterministic default (this fallback AND site.json, which
-   factory.js applyTheme writes inline). Default light counterpart, staged and not active:
-   --bg/#nav-bg #ffffff; --surface #f7f9f9; --border #eff3f4; --silver #cfd9de;
-   --text/#nav-text/#nav-hover/#nav-active/#text-strong #0f1419; --text-muted/#text-light #536471;
-   --accent/#teal/#focus #1d9bf0; --accent-dark #1a8cd8;
-   --primary-bg #0f1419; --primary-fg #ffffff; --primary-hover #272c30;
-   --hover-surface #eff3f4; --border-strong #cfd9de.
-   On white, #1d9bf0 body links can miss WCAG AA; use a darker link blue if light mode ships. */
+/* X light is the default (this fallback AND site.json, which factory.js applyTheme
+   writes inline). No stored choice means light. Lights Out is optional:
+   html[data-hub-theme="dark"] below, set only by the hub toggle (localStorage
+   subx-hub-theme). Those declarations use !important so they beat applyTheme's
+   inline light tokens. prefers-color-scheme is not consulted. */
 :root {
-  color-scheme: dark;
-  --bg:               #000000;
-  --surface:          #16181c;
-  --nav-bg:           #000000;
-  --nav-text:         #e7e9ea;
-  --nav-hover:        #eff3f4;
-  --nav-active:       #eff3f4;
-  --text:             #e7e9ea;
-  --text-strong:      #eff3f4;
-  --text-muted:       #71767b;
-  --text-light:       #71767b;
+  color-scheme: light;
+  --bg:               #ffffff;
+  --surface:          #f7f9f9;
+  --nav-bg:           #ffffff;
+  --nav-text:         #0f1419;
+  --nav-hover:        #0f1419;
+  --nav-active:       #0f1419;
+  --text:             #0f1419;
+  --text-strong:      #0f1419;
+  --text-muted:       #536471;
+  --text-light:       #536471;
   --accent:           #1d9bf0;
   --accent-dark:      #1a8cd8;
   --teal:             #1d9bf0;
-  --silver:           #2f3336;
-  --border:           #2f3336;
-  --primary-bg:       #eff3f4;
-  --primary-fg:       #0f1419;
-  --primary-hover:    #d7dbdc;
-  --hover-surface:    #1d1f23;
+  --silver:           #cfd9de;
+  --border:           #eff3f4;
+  --widget:           #eff3f4;
+  --primary-bg:       #0f1419;
+  --primary-fg:       #ffffff;
+  --primary-hover:    #272c30;
+  --hover-surface:    #f7f9f9;
   --focus:            #1d9bf0;
-  --border-strong:    #536471;
+  --border-strong:    #cfd9de;
   --nav-w:            275px;
   --right-w:          330px;
   --ui:               -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --display:          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
+html[data-hub-theme="dark"] {
+  color-scheme: dark;
+  --bg: #000000 !important;
+  --surface: #16181c !important;
+  --nav-bg: #000000 !important;
+  --nav-text: #e7e9ea !important;
+  --nav-hover: #eff3f4 !important;
+  --nav-active: #eff3f4 !important;
+  --text: #e7e9ea !important;
+  --text-strong: #eff3f4 !important;
+  --text-muted: #71767b !important;
+  --text-light: #71767b !important;
+  --accent: #1d9bf0 !important;
+  --accent-dark: #1a8cd8 !important;
+  --teal: #1d9bf0 !important;
+  --silver: #2f3336 !important;
+  --border: #2f3336 !important;
+  --widget: #16181c !important;
+  --primary-bg: #eff3f4 !important;
+  --primary-fg: #0f1419 !important;
+  --primary-hover: #d7dbdc !important;
+  --hover-surface: #16181c !important;
+  --focus: #1d9bf0 !important;
+  --border-strong: #536471 !important;
+}
 
-html { scroll-behavior: smooth; background: #000000; }
+html { scroll-behavior: smooth; background: var(--bg); }
 
 body {
   font-family: var(--ui);
@@ -84,7 +107,7 @@ button, input, select, textarea { font-family: inherit; }
   padding: 0.3rem; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
 }
-.sidebar-search-btn:hover { opacity: 1; background: rgba(255,255,255,0.08); }
+.sidebar-search-btn:hover { opacity: 1; background: var(--hover-surface); }
 .brand-mark { display: inline-block; }
 .brand-icon {
   display: block; width: 44px; height: 44px; margin: 0 auto 0.55rem;
@@ -107,17 +130,18 @@ button, input, select, textarea { font-family: inherit; }
 .sidebar nav ul { list-style: none; }
 
 .nav-social-link {
-  display: flex; align-items: center; gap: 0.75rem;
-  min-height: 44px;
-  padding: 0.45rem 1.5rem;
-  font-size: 0.95rem; font-weight: 500;
+  display: flex; align-items: center; gap: 1rem;
+  min-height: 50px;
+  padding: 0.3rem 1.15rem;
+  font-size: 20px; font-weight: 400;
   color: var(--nav-text); text-decoration: none;
   border-left: 2px solid transparent;
+  border-radius: 999px;
   transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
-.nav-social-link:hover { color: var(--nav-hover); background: rgba(255,255,255,0.04); }
-.nav-social-link.active { color: var(--nav-active); border-left-color: var(--accent); background: rgba(255,255,255,0.06); }
-.nav-social-link svg { opacity: 0.75; flex-shrink: 0; }
+.nav-social-link:hover { color: var(--nav-hover); background: var(--hover-surface); }
+.nav-social-link.active { color: var(--nav-active); font-weight: 800; border-left-color: transparent; background: transparent; }
+.nav-social-link svg { width: 26px; height: 26px; opacity: 1; flex-shrink: 0; }
 .nav-social-link:hover svg, .nav-social-link.active svg { opacity: 1; }
 
 .nav-badge {
@@ -207,6 +231,7 @@ button, input, select, textarea { font-family: inherit; }
   flex: 1;
   min-height: 100vh;
   min-width: 0;
+  background: var(--bg);
   transition: margin-left 0.28s ease, margin-right 0.28s ease;
 }
 .page { display: none; }
@@ -253,10 +278,10 @@ button, input, select, textarea { font-family: inherit; }
 .right-panel-body { flex: 1; padding: 0.4rem 0; overflow-y: auto; }
 a.news-item {
   display: block; padding: 1rem 1.4rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--border);
   text-decoration: none; cursor: pointer;
 }
-a.news-item:hover { background: rgba(255,255,255,0.07); }
+a.news-item:hover { background: var(--hover-surface); }
 .news-item-tag {
   font-size: 0.68rem; font-weight: 700;
   letter-spacing: 0.16em; text-transform: uppercase;
@@ -655,12 +680,12 @@ body.nav-collapsed .explore-overlay { left: 0; }
 .chat-threads-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem; }
 .chat-threads-title { font-family: var(--display); font-size: 1.4rem; font-weight: 700; letter-spacing: 0.02em; }
 .chat-new-btn {
-  background: var(--nav-bg); color: #fff; border: none; border-radius: 999px;
+  background: var(--primary-bg); color: var(--primary-fg); border: none; border-radius: 999px;
   padding: 0.28rem 0.7rem; font-size: 0.75rem; font-weight: 600;
 }
 .chat-search-input, .explore-search-input {
-  width: 100%; border: 1px solid var(--border); border-radius: 999px;
-  padding: 0.45rem 0.85rem; background: var(--bg); outline: none; font: inherit; font-size: 0.88rem;
+  width: 100%; border: 1px solid var(--widget); border-radius: 999px;
+  padding: 0.55rem 1rem; background: var(--widget); color: var(--text); outline: none; font: inherit; font-size: 15px;
 }
 .chat-search-input:focus, .explore-search-input:focus { border-color: var(--teal); }
 .chat-thread-list { overflow-y: auto; flex: 1; }
@@ -819,7 +844,7 @@ body.nav-collapsed .explore-overlay { left: 0; }
   justify-content: center; gap: 5px;
   border-radius: 4px;
 }
-.hamburger:hover { background: rgba(255,255,255,0.07); }
+.hamburger:hover { background: var(--hover-surface); }
 .hamburger span {
   display: block; width: 20px; height: 1.5px;
   background: var(--nav-text);
@@ -836,7 +861,7 @@ body.nav-collapsed .hamburger span:nth-child(1),
 body.nav-collapsed .hamburger span:nth-child(2),
 body.nav-collapsed .hamburger span:nth-child(3) { transform: none; opacity: 1; }
 body.nav-collapsed .hamburger span { background: var(--text); }
-body.nav-collapsed .hamburger:hover { background: rgba(255,255,255,0.08); }
+body.nav-collapsed .hamburger:hover { background: var(--hover-surface); }
 
 .nav-overlay {
   display: none; position: fixed; inset: 0;
@@ -862,7 +887,7 @@ body.nav-collapsed .hamburger:hover { background: rgba(255,255,255,0.08); }
   .hamburger span:nth-child(2),
   .hamburger span:nth-child(3) { transform: none; opacity: 1; }
   .hamburger span { background: var(--text); }
-  .hamburger:hover { background: rgba(255,255,255,0.08); }
+  .hamburger:hover { background: var(--hover-surface); }
   body.nav-open .sidebar { transform: translateX(0); }
   body.nav-open .nav-overlay { display: block; }
   body.nav-open .hamburger span { background: var(--nav-text); }

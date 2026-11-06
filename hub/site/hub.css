@@ -26,17 +26,31 @@
 .brand-title { font-size: 1.35rem; }
 .right-panel { box-shadow: none; background: var(--bg); }
 .right-panel-header { padding: 1.05rem 1.15rem 0.75rem; }
+.right-panel-body {
+  margin: 0 1rem 0.6rem; background: var(--widget); border: 1px solid var(--widget);
+  border-radius: 16px; overflow: hidden;
+}
 .right-panel-title { font-family: var(--ui); font-size: 1.05rem; }
 
 .nav-more { width: 100%; margin-top: 0.2rem; }
 .nav-more > summary {
-  display: flex; align-items: center; gap: 0.75rem;
-  min-height: 44px; padding: 0.45rem 1.5rem;
-  font-size: 0.95rem; font-weight: 650; color: var(--nav-text);
-  cursor: pointer; list-style: none;
+  display: flex; align-items: center; gap: 1rem;
+  min-height: 50px; padding: 0.3rem 1.15rem;
+  font-size: 20px; font-weight: 400; color: var(--nav-text);
+  cursor: pointer; list-style: none; border-radius: 999px;
 }
 .nav-more > summary::-webkit-details-marker { display: none; }
-.nav-more > summary:hover { color: var(--nav-hover); background: rgba(255,255,255,0.04); }
+.nav-more > summary:hover { color: var(--nav-hover); background: var(--hover-surface); }
+.hub-theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  margin: 0.45rem 1.15rem 0.15rem; padding: 0.4rem 0.95rem;
+  border-radius: 999px; border: 1px solid var(--silver);
+  background: var(--bg); color: var(--text);
+  font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+}
+.hub-theme-toggle[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.hub-theme-toggle:hover { background: var(--hover-surface); }
+.hub-theme-toggle[aria-pressed="true"]:hover { background: var(--primary-hover); color: var(--primary-fg); }
 .nav-more[open] > summary { color: var(--text-strong); }
 .nav-more > ul { list-style: none; }
 .nav-more:has(.nav-badge.visible) > summary::after {
@@ -70,7 +84,7 @@
 }
 .hub-cta:hover { background: var(--primary-hover); color: var(--primary-fg); }
 .hub-cta.hub-join {
-  background: transparent; color: var(--text-strong); border-color: var(--border-strong);
+  background: var(--bg); color: var(--text); border-color: var(--silver);
 }
 .hub-cta.hub-join:hover { background: var(--hover-surface); color: var(--text-strong); }
 .hub-cta:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -103,9 +117,10 @@
 .hub-open:hover { text-decoration: underline; }
 .hub-tier {
   display: inline-flex; align-items: center;
-  background: #eff3f4; color: #0f1419; border-radius: 999px;
+  background: transparent; color: var(--text); border-radius: 999px;
   padding: 0.05rem 0.45rem; font-size: 0.75rem; font-weight: 700; line-height: 1.45;
 }
+html[data-hub-theme="dark"] .hub-tier { background: #eff3f4; color: #0f1419; }
 
 .hub-room-card { display: block; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); color: inherit; text-decoration: none; }
 .hub-room-card:hover { background: var(--hover-surface); }
@@ -141,15 +156,15 @@
 .hub-label { font-size: 0.78rem; font-weight: 700; }
 .hub-rooms-directory { max-width: 760px; margin: 0 auto; border-top: 1px solid var(--border); }
 
-/* Legal footer stays fixed and on the same black canvas. Bottom padding keeps post text above it. */
+/* Legal footer stays fixed, on the same canvas as the page. */
 .legal-footer {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 2147483000;
   display: block !important; visibility: visible !important;
   padding: 8px 12px; text-align: center;
   font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: #000000; color: #71767b; border-top: 1px solid #2f3336;
+  background: var(--bg); color: var(--text-muted); border-top: 1px solid var(--border);
 }
-.legal-footer a { color: #e7e9ea; text-decoration: underline; }
+.legal-footer a { color: var(--text-muted); text-decoration: underline; }
 .legal-footer-line { display: block; }
 .legal-footer-nonaff { font-size: 11px; opacity: 1; }
 body { padding-bottom: 7.5rem; }
@@ -172,13 +187,14 @@ body.hub-home .chat-overlay { bottom: var(--foot-h); }
 @media (max-width: 900px) { .legal-footer { display: block !important; transform: none !important; } }
 
 /* Disclosure mark final-v4.1. Art and label colors stay spec colors. Never invert or recolor the SVG.
-   On the black canvas the badge sits on a light chip so the literal #000000 AI label stays legible. */
+   Light mode shows the mark directly. Lights Out puts it on a light chip so the literal #000000 AI label stays legible. */
 .whomark {
   display: inline-flex; align-items: center; gap: .25em; margin-left: .25em;
-  padding: 2px 8px 2px 4px; vertical-align: -0.2em; white-space: nowrap; line-height: 1;
-  background: #eff3f4; color: #0f1419; border-radius: 999px;
+  padding: 2px 4px 2px 2px; vertical-align: -0.2em; white-space: nowrap; line-height: 1;
+  background: transparent; border-radius: 999px;
   filter: none;
 }
+html[data-hub-theme="dark"] .whomark { background: #eff3f4; color: #0f1419; padding: 2px 8px 2px 4px; }
 .whomark-icon, .whomark-icon img, .whomark svg { width: 16px; height: 16px; display: block; flex-shrink: 0; filter: none; }
 .whomark--s14 .whomark-icon, .whomark--s14 .whomark-icon img { width: 14px; height: 14px; }
 .whomark--lg .whomark-icon, .whomark--lg .whomark-icon img { width: 24px; height: 24px; }
@@ -209,7 +225,7 @@ body.hub-home .chat-overlay { bottom: var(--foot-h); }
   display: flex; align-items: center; justify-content: center; padding: 1rem;
 }
 .hub-pick-box {
-  background: #000000; color: var(--text);
+  background: var(--bg); color: var(--text);
   border: 1px solid var(--border); border-radius: 16px;
   width: min(26rem, 100%); max-height: min(70vh, 32rem);
   display: flex; flex-direction: column; overflow: hidden;
