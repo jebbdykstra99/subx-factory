@@ -467,10 +467,10 @@ ok('@font-face' not in hcss and 'Newsreader' not in hcss, 'hub.css: system sans,
 _styles = read(os.path.join(SITE, 'styles.css'))
 _stack = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
 ok(_styles.count(_stack) >= 2 and 'Newsreader' not in _styles, 'styles.css: --ui and --display are the system sans stack')
-ok(site['theme']['bg'] == '#000000' and site['theme']['nav-bg'] == '#000000' and site['theme']['surface'] == '#16181c'
-   and site['theme']['text'] == '#e7e9ea' and site['theme']['accent'] == '#1d9bf0'
-   and site['theme']['primary-bg'] == '#eff3f4' and site['theme']['primary-fg'] == '#0f1419',
-   'site.json theme is Lights Out with white primary pills')
+ok(site['theme']['bg'] == '#ffffff' and site['theme']['nav-bg'] == '#ffffff' and site['theme']['surface'] == '#f7f9f9'
+   and site['theme']['border'] == '#eff3f4' and site['theme']['text'] == '#0f1419' and site['theme']['text-muted'] == '#536471'
+   and site['theme']['accent'] == '#1d9bf0' and site['theme']['primary-bg'] == '#0f1419' and site['theme']['primary-fg'] == '#ffffff',
+   'site.json theme is X light by default, black primary pill')
 ok("font-src 'self'" in json.dumps(json.load(open(os.path.join(ROOT, 'hub', 'firebase.json')))), "firebase.json header CSP: font-src 'self'")
 for f in files(SITE):
     if not f.endswith(TEXT):
@@ -537,7 +537,8 @@ dummy.update({'name': 'Quillnest', 'legalEntity': 'Quillnest Labs, Inc.', 'prima
               'disclosureMark': 'MAKERMARK', 'nonAffiliation': 'Not affiliated with anyone else.', 'notAdvice': 'Opinions only.',
               'footer': '(c) {{year}} {{brand.legalEntity}} · Terms · Privacy · Report: {{brand.takedownEmail}}'})
 # internal ids that are not brand copy: the pin's repo path, the siteId / project ids, a storage key
-ALLOW = ['jebbdykstra99/subx-factory', 'subx-factory', '"siteId": "subx"', 'subx-skins', 'subx.vid']
+ALLOW = ['jebbdykstra99/subx-factory', 'subx-factory', '"siteId": "subx"', 'subx-skins', 'subx.vid',
+         'subx-hub-theme', 'subxSetHubTheme']
 with tempfile.TemporaryDirectory() as t:
     bp = os.path.join(t, 'brand.json'); json.dump(dummy, open(bp, 'w'))
     out = os.path.join(t, 'site')
