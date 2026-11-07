@@ -11,6 +11,7 @@
     "test:storage:baseline": "cp ../storage.rules.BASELINE_box_subx-og storage.rules && firebase emulators:exec --only storage --project demo-subx-storage 'MODE=baseline RULES=storage.rules node storage.test.mjs'",
     "test:under18": "cp ../firestore.rules.hub-signin.proposed.v2 firestore.rules && firebase emulators:exec --only firestore --project demo-subx-v2 'RULES=firestore.rules node under18-lock.test.mjs'",
     "test:handles": "cp ../firestore.rules.hub-signin.proposed.v2 firestore.rules && firebase emulators:exec --only firestore --project demo-subx-v2 'RULES=firestore.rules node handles.test.mjs'",
+    "test:gpchat92": "cp ../firestore.rules.hub-signin.proposed.v2 firestore.rules && firebase emulators:exec --only firestore --project demo-subx-v2 'RULES=firestore.rules node gpchat92.test.mjs'",
     "test:hub": "cp ../firestore.rules.hub-signin.proposed firestore.rules && firebase emulators:exec --only firestore --project demo-subx-hub 'DM=off RULES=firestore.rules node hub-signin.test.mjs'",
     "test:hub:dm-on": "cp ../firestore.rules.hub-signin.proposed.dm-on firestore.rules && firebase emulators:exec --only firestore --project demo-subx-hub 'DM=on RULES=firestore.rules node hub-signin.test.mjs'",
     "test:hub:main": "cp ../firestore.rules.hub-signin.proposed firestore.rules && firebase emulators:exec --only firestore --project demo-subx-guard 'RULES=firestore.rules node test.mjs'"

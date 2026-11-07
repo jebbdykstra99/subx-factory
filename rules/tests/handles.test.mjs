@@ -22,50 +22,62 @@ function claimTx(uid, handle, claim, userPatch) {
     tx.set(d.doc('users/' + uid), userPatch, { merge: true });
   });
 }
+const pair = (uid, handle, site = '27chat', claimExtra = {}) => claimTx(uid, handle,
+  Object.assign({ uid, siteId: site }, claimExtra),
+  { siteId: site, displayName: 'Fan', handle });
 
 await env.clearFirestore();
 
 await t('H1 signed-out get fails', assertFails(anon().doc('handles/fan1').get()));
 await t('H2 signed-in get of a missing handle ok', assertSucceeds(db('h1').doc('handles/missing').get()));
-await t('H3 claim {uid, siteId:27chat} ok', assertSucceeds(db('h1').doc('handles/fan1').set({ uid: 'h1', siteId: '27chat' })));
+await t('H3 claim paired with users.handle ok', assertSucceeds(pair('h1', 'fan1')));
+await t('H3b orphan claim without users.handle fails', assertFails(db('h1').doc('handles/orphan1').set({ uid: 'h1', siteId: '27chat' })));
 await t('H4 owner reads the claim', assertSucceeds(db('h1').doc('handles/fan1').get()));
 await t('H5 another signed-in user reads the claim', assertSucceeds(db('h2').doc('handles/fan1').get()));
-await t('H5b signed-in list ok', assertSucceeds(db('h2').collection('handles').limit(5).get()));
+await t('H5b signed-in list fails', assertFails(db('h2').collection('handles').limit(5).get()));
+await t('H5d admin list fails', assertFails(db(ADMIN).collection('handles').limit(5).get()));
 await t('H5c signed-out list fails', assertFails(anon().collection('handles').limit(5).get()));
-await t('H6 duplicate claim by the owner fails', assertFails(db('h1').doc('handles/fan1').set({ uid: 'h1', siteId: '27chat' })));
+await t('H6 duplicate claim by the owner fails', assertFails(pair('h1', 'fan1')));
 await t('H6b merge update of the owner claim fails', assertFails(db('h1').doc('handles/fan1').set({ siteId: 'gpchat' }, { merge: true })));
-await t('H7 another uid cannot claim the same handle', assertFails(db('h2').doc('handles/fan1').set({ uid: 'h2', siteId: '27chat' })));
+await t('H7 another uid cannot claim the same handle', assertFails(pair('h2', 'fan1')));
 await t('H7b another uid cannot overwrite the claim with the owner uid', assertFails(db('h2').doc('handles/fan1').set({ uid: 'h1', siteId: '27chat' })));
-await t('H8 another uid claims a different handle', assertSucceeds(db('h2').doc('handles/fan2').set({ uid: 'h2', siteId: 'gpchat' })));
-await t('H9 claim with only uid (siteId omitted) ok', assertSucceeds(db('h3').doc('handles/fan3').set({ uid: 'h3' })));
-await t('H10 extra key fails', assertFails(db('h3').doc('handles/fanx').set({ uid: 'h3', siteId: '27chat', handle: 'fanx' })));
-await t('H11 missing uid fails', assertFails(db('h3').doc('handles/fany').set({ siteId: '27chat' })));
-await t('H12 uid mismatch fails', assertFails(db('h3').doc('handles/fanz').set({ uid: 'h1', siteId: '27chat' })));
-await t('H13 unknown siteId fails', assertFails(db('h3').doc('handles/fanbad').set({ uid: 'h3', siteId: 'not-a-room' })));
+await t('H8 another uid claims a different handle', assertSucceeds(pair('h2', 'fan2', 'gpchat')));
+await t('H9 claim body with only uid ok when users.handle matches', assertSucceeds(claimTx('h3', 'fan3', { uid: 'h3' }, { siteId: '27chat', displayName: 'Fan', handle: 'fan3' })));
+await t('H10 extra key fails', assertFails(claimTx('h3', 'fanx', { uid: 'h3', siteId: '27chat', handle: 'fanx' }, { siteId: '27chat', handle: 'fanx' })));
+await t('H11 missing uid fails', assertFails(claimTx('h3', 'fany', { siteId: '27chat' }, { siteId: '27chat', handle: 'fany' })));
+await t('H12 uid mismatch fails', assertFails(claimTx('h3', 'fanz', { uid: 'h1', siteId: '27chat' }, { siteId: '27chat', handle: 'fanz' })));
+await t('H13 unknown siteId fails', assertFails(claimTx('h3', 'fanbad', { uid: 'h3', siteId: 'not-a-room' }, { siteId: '27chat', handle: 'fanbad' })));
 await t('H14 signed-out create fails', assertFails(anon().doc('handles/anon1').set({ uid: 'anon' })));
-for (const reserved of ['admin', 'moderator', 'official', 'subx', 'jebb', 'jebb1', 'admin1', 'subxfan']) {
-  await t('H15 reserved ' + reserved + ' fails for a member', assertFails(db('h4').doc('handles/' + reserved).set({ uid: 'h4', siteId: '27chat' })));
+for (const reserved of ['admin', 'moderator', 'official', 'subx', 'support', 'takedown', 'jebb', 'jebb1', 'admin1', 'subxfan', 'j32b']) {
+  await t('H15 reserved ' + reserved + ' fails for a member', assertFails(pair('h4', reserved)));
 }
-await t('H16 exact blocklist mod fails', assertFails(db('h4').doc('handles/mod').set({ uid: 'h4' })));
-await t('H17 leetspeak adm1n fails', assertFails(db('h4').doc('handles/adm1n').set({ uid: 'h4' })));
-await t('H18 uppercase fails', assertFails(db('h4').doc('handles/Bad').set({ uid: 'h4' })));
-await t('H19 length 16 fails', assertFails(db('h4').doc('handles/' + 'a'.repeat(16)).set({ uid: 'h4' })));
-await t('H20 length 15 ok', assertSucceeds(db('h4').doc('handles/' + 'a'.repeat(15)).set({ uid: 'h4', siteId: '27chat' })));
-await t('H21 underscore ok', assertSucceeds(db('h4').doc('handles/fan_ok').set({ uid: 'h4' })));
-await t('H22 j32b is not a reserved prefix; a member can claim it', assertSucceeds(db('h5').doc('handles/j32b').set({ uid: 'h5', siteId: '27chat' })));
-await t('H23 admin cannot take j32b once it is claimed', assertFails(db(ADMIN).doc('handles/j32b').set({ uid: ADMIN, siteId: '27chat' })));
-await t('H24 admin claims reserved jebb', assertSucceeds(db(ADMIN).doc('handles/jebb').set({ uid: ADMIN, siteId: '27chat' })));
-await t('H25 admin claims reserved subx, moderator, official, adminfan', assertSucceeds((async () => {
-  await db(ADMIN).doc('handles/subx').set({ uid: ADMIN });
-  await db(ADMIN).doc('handles/moderator').set({ uid: ADMIN, siteId: '27chat' });
-  await db(ADMIN).doc('handles/official').set({ uid: ADMIN, siteId: 'gpchat' });
-  await db(ADMIN).doc('handles/adminfan').set({ uid: ADMIN, siteId: '27chat' });
+await t('H16 exact blocklist mod fails', assertFails(pair('h4', 'mod')));
+await t('H17 leetspeak adm1n fails', assertFails(pair('h4', 'adm1n')));
+await t('H18 uppercase fails', assertFails(pair('h4', 'Bad')));
+await t('H19 length 16 fails', assertFails(pair('h4', 'a'.repeat(16))));
+await t('H20 length 15 ok', assertSucceeds(pair('h4', 'a'.repeat(15))));
+await t('H21 underscore ok', assertSucceeds(pair('h21', 'fan_ok')));
+await t('H22 j32b is denied to a member even in the claim transaction', assertFails(pair('h5', 'j32b')));
+await t('H23 j32b is denied to ADMIN_UID', assertFails(pair(ADMIN, 'j32b')));
+await t('H24 admin cannot client-claim jebb', assertFails(pair(ADMIN, 'jebb')));
+await t('H25 admin cannot client-claim subx, support, takedown, or adminfan', assertFails((async () => {
+  await pair(ADMIN, 'subx');
+  await pair(ADMIN, 'support');
+  await pair(ADMIN, 'takedown');
+  await pair(ADMIN, 'adminfan');
 })()));
-await t('H26 admin still cannot claim exact-blocklist mod', assertFails(db(ADMIN).doc('handles/mod').set({ uid: ADMIN })));
-await t('H27 owner delete ok', assertSucceeds(db('h2').doc('handles/fan2').delete()));
-await t('H28 other uid delete fails', assertFails(db('h2').doc('handles/fan1').delete()));
+await t('H26 admin can claim an ordinary handle', assertSucceeds(pair(ADMIN, 'roomfan')));
+await t('H27 stale delete while users.handle still matches fails', assertFails(db('h2').doc('handles/fan2').delete()));
+await t('H28 other uid delete fails', assertFails(db('h1').doc('handles/fan2').delete()));
 await t('H29 admin cannot delete another uid claim', assertFails(db(ADMIN).doc('handles/fan1').delete()));
-await t('H30 after owner delete, another uid can claim it', assertSucceeds(db('h6').doc('handles/fan2').set({ uid: 'h6', siteId: '27chat' })));
+await t('H30 release: delete the claim and clear users.handle', assertSucceeds((async () => {
+  const d = db('h2');
+  await d.runTransaction(async (tx) => {
+    tx.delete(d.doc('handles/fan2'));
+    tx.set(d.doc('users/h2'), { handle: FV.delete() }, { merge: true });
+  });
+})()));
+await t('H30b another uid reclaims the released handle', assertSucceeds(pair('h6', 'fan2', '27chat')));
 
 await t('H31 users.handle without a claim fails', assertFails(db('p1').doc('users/p1').set({ siteId: '27chat', displayName: 'Fan', handle: 'noclaim' })));
 await t('H32 signup, age attestation, and profile edit without a handle still ok', assertSucceeds((async () => {
@@ -77,8 +89,8 @@ await t('H32 signup, age attestation, and profile edit without a handle still ok
 await t('H33 transaction claims the handle and sets users.handle', assertSucceeds(claimTx('p3', 'p3fan', { uid: 'p3', siteId: '27chat' }, {
   siteId: '27chat', displayName: 'Fan', handle: 'p3fan', ageConfirmed: true, ageAttested18: true, ageAttestedAt: FV.serverTimestamp()
 })));
-await t('H34 set users.handle after the claim already exists', assertSucceeds((async () => {
-  await db('p4').doc('handles/p4fan').set({ uid: 'p4', siteId: 'gpchat' });
+await t('H34 repeating the same handle after the claim exists ok', assertSucceeds((async () => {
+  await pair('p4', 'p4fan', 'gpchat');
   await db('p4').doc('users/p4').set({ siteId: 'gpchat', displayName: 'Fan', handle: 'p4fan' }, { merge: true });
 })()));
 await t('H35 users.handle set to someone else\'s claim fails', assertFails(db('p4').doc('users/p4').set({ siteId: 'gpchat', handle: 'fan1' }, { merge: true })));
@@ -90,15 +102,44 @@ await t('H39 changing the legacy handle without a new claim fails', assertFails(
 await t('H40 changing the legacy handle in the claim transaction ok', assertSucceeds(claimTx('p6', 'newfan', { uid: 'p6', siteId: 'gpchat' }, { siteId: 'gpchat', handle: 'newfan' })));
 await t('H41 hub profile handle with a subx claim ok', assertSucceeds(claimTx('p7', 'hubfan', { uid: 'p7', siteId: 'subx' }, { siteId: 'subx', displayName: 'Hub Fan', handle: 'hubfan' })));
 await t('H42 member cannot set a reserved users.handle', assertFails(claimTx('p8', 'jebb', { uid: 'p8', siteId: '27chat' }, { siteId: '27chat', handle: 'jebb' })));
-await t('H43 admin claims reserved prefix jebbroom and sets users.handle in one transaction', assertSucceeds(claimTx(ADMIN, 'jebbroom', { uid: ADMIN, siteId: '27chat' }, { siteId: '27chat', displayName: 'Room Owner', handle: 'jebbroom' })));
-await t('H44 admin sets users.handle to the already-claimed jebb', assertSucceeds(db(ADMIN).doc('users/' + ADMIN).set({ siteId: '27chat', handle: 'jebb' }, { merge: true })));
+await t('H43 admin cannot claim reserved prefix jebbroom', assertFails(pair(ADMIN, 'jebbroom')));
+await t('H44 admin cannot set users.handle j32b without a client claim', assertFails(db(ADMIN).doc('users/' + ADMIN).set({ siteId: '27chat', handle: 'j32b' }, { merge: true })));
+await t('K1 swap: new claim, delete the old claim, point users.handle at the new id', assertSucceeds((async () => {
+  const d = db('p4');
+  await d.runTransaction(async (tx) => {
+    tx.delete(d.doc('handles/p4fan'));
+    tx.set(d.doc('handles/p4new'), { uid: 'p4', siteId: 'gpchat' });
+    tx.set(d.doc('users/p4'), { siteId: 'gpchat', handle: 'p4new' }, { merge: true });
+  });
+})()));
+await t('K2 swap without deleting the old claim fails', assertFails((async () => {
+  const d = db('p4');
+  await d.runTransaction(async (tx) => {
+    tx.set(d.doc('handles/p4alt'), { uid: 'p4', siteId: 'gpchat' });
+    tx.set(d.doc('users/p4'), { siteId: 'gpchat', handle: 'p4alt' }, { merge: true });
+  });
+})()));
+await t('K3 release after the swap', assertSucceeds((async () => {
+  const d = db('p4');
+  await d.runTransaction(async (tx) => {
+    tx.delete(d.doc('handles/p4new'));
+    tx.set(d.doc('users/p4'), { handle: FV.delete() }, { merge: true });
+  });
+})()));
+await t('K4 reclaim of the released handle by another uid', assertSucceeds(pair('p4b', 'p4new', 'gpchat')));
 
 await seed(async (s) => s.doc('users/p9').set({
   siteId: 'gpchat', displayName: 'Fan', suspended: true, suspendedReason: 'under18', ageAttested18: false,
   profileHidden: true, deletionQueuedAt: QTS, ageConfirmed: true
 }));
-await t('H45 restricted member can still claim a handle and set it', assertSucceeds(claimTx('p9', 'u18fan', { uid: 'p9', siteId: 'gpchat' }, { siteId: 'gpchat', handle: 'u18fan' })));
-await t('H46 that claim did not clear the queue', assertSucceeds(db('p9').doc('users/p9').update({ displayName: 'Fan Two' })));
+await t('H45 suspended and profileHidden member cannot claim or set a handle', assertFails(claimTx('p9', 'u18fan', { uid: 'p9', siteId: 'gpchat' }, { siteId: 'gpchat', handle: 'u18fan' })));
+await t('H45b suspended member cannot create the claim doc alone', assertFails(db('p9').doc('handles/u18fan').set({ uid: 'p9', siteId: 'gpchat' })));
+await seed(async (s) => s.doc('users/p10').set({ siteId: 'gpchat', displayName: 'Fan', profileHidden: true }));
+await t('H45c profileHidden without suspended cannot claim', assertFails(pair('p10', 'hidfan')));
+await t('H45d profileHidden member can still edit displayName', assertSucceeds(db('p10').doc('users/p10').set({ siteId: 'gpchat', displayName: 'Hidden Fan' }, { merge: true })));
+await seed(async (s) => s.doc('users/p11').set({ siteId: 'gpchat', displayName: 'Fan', suspended: true, ageAttested18: false }));
+await t('H45e suspended without profileHidden cannot change users.handle', assertFails(pair('p11', 'susfan')));
+await t('H46 suspended member can still edit displayName', assertSucceeds(db('p9').doc('users/p9').update({ displayName: 'Fan Two' })));
 await t('H47 restricted member still cannot drop the queue', assertFails(db('p9').doc('users/p9').update({ deletionQueuedAt: FV.delete() })));
 
 console.log(results.join('\n'));

@@ -91,6 +91,15 @@ await t('S16 suspended false fails', assertFails(user('s1').update({ suspended: 
 await t('S17 deleteField suspended fails', assertFails(user('s1').update({ suspended: FV.delete() })));
 await t('S18 ageConfirmed true to false is allowed', assertSucceeds(user('s1').update({ ageConfirmed: false })));
 await t('S19 ageConfirmed false to true now fails', assertFails(user('s1').update({ ageConfirmed: true })));
+await t('S18b deleteField ageAttested18 while suspended is allowed', assertSucceeds(user('s1').update({ ageAttested18: FV.delete() })));
+await seed(async (s) => s.doc('users/s3').set({
+  siteId: 'gpchat', displayName: 'Fan', suspended: true, suspendedReason: 'under18', ageAttested18: false,
+  profileHidden: true, deletionQueuedAt: QTS, ageConfirmed: true, ageAttestedAt: QTS
+}));
+await t('S23 suspended cannot rewrite ageAttestedAt', assertFails(user('s3').update({ ageAttestedAt: OTHER })));
+await t('S24 suspended cannot delete ageAttestedAt', assertFails(user('s3').update({ ageAttestedAt: FV.delete() })));
+await t('S25 suspended can set ageConfirmed false and leave ageAttestedAt', assertSucceeds(user('s3').update({ ageConfirmed: false })));
+await t('S27 not suspended can set ageAttestedAt', assertSucceeds(user('n1').update({ ageAttestedAt: QTS })));
 
 await seed(async (s) => s.doc('users/s2').set({
   siteId: 'gpchat', displayName: 'Fan', suspended: true, ageAttested18: false, ageConfirmed: false
@@ -110,6 +119,7 @@ await t('Q3 queued-only ageAttested18 true fails', assertFails(user('q1').update
 await t('Q4 queued-only deleteField queue fails', assertFails(user('q1').update({ deletionQueuedAt: FV.delete() })));
 await t('Q5 queued-only rewrite queue fails', assertFails(user('q1').update({ deletionQueuedAt: OTHER })));
 await t('Q6 queued-only displayName ok', assertSucceeds(user('q1').update({ displayName: 'Fan Two' })));
+await t('Q6c queued-only cannot set ageAttestedAt', assertFails(user('q1').update({ ageAttestedAt: QTS })));
 await t('Q6b queued-only replacement omitting the queue fails', assertFails(user('q1').set({ siteId: 'gpchat', displayName: 'Fan', ageConfirmed: false, ageAttested18: false })));
 await seed(async (s) => s.doc('users/q2').set({
   siteId: 'gpchat', displayName: 'Fan', deletionQueuedAt: QTS, ageAttested18: true, ageConfirmed: true
@@ -127,6 +137,7 @@ await t('R3 reason-only ageAttested18 true fails', assertFails(user('r1').update
 await t('R4 reason-only change reason fails', assertFails(user('r1').update({ suspendedReason: 'other' })));
 await t('R5 reason-only deleteField reason fails', assertFails(user('r1').update({ suspendedReason: FV.delete() })));
 await t('R6 reason-only displayName ok', assertSucceeds(user('r1').update({ displayName: 'Fan Two' })));
+await t('R6b reason-only can set ageAttestedAt', assertSucceeds(user('r1').update({ ageAttestedAt: QTS })));
 await t('R7 reason-only may add a queue timestamp', assertSucceeds(user('r1').update({ deletionQueuedAt: QTS })));
 await t('R8 that queue is then fixed', assertFails(user('r1').update({ deletionQueuedAt: FV.delete() })));
 

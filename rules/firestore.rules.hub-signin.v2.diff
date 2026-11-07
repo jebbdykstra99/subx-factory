@@ -1,6 +1,6 @@
 --- rules/firestore.rules.hub-signin.proposed
 +++ rules/firestore.rules.hub-signin.proposed.v2
-@@ -19,6 +19,17 @@
+@@ -19,6 +19,18 @@
  // HUB DM TOGGLE (2026-11-04): hubDmOn() is a single-line switch: false (OFF) in firestore.rules.hub-signin.proposed,
  // true (ON) in firestore.rules.hub-signin.proposed.dm-on. It only gates conversations/messages docs with siteId 'subx'.
  // Room DMs (siteId in factorySite()) are allowed by factorySite() alone in both files, so they do not change.
@@ -11,30 +11,39 @@
 +// suspendedReason == 'under18', or deletionQueuedAt present, on the existing doc OR the resulting doc.
 +// An unchanged legacy ageConfirmed:true stays writable. Applies on create. suspendOk's isAdmin()
 +// exemption is unchanged. Not deployed.
-+// HANDLES (2026-11-07, draft, NOT published): 27chat PR 53 (824dfbe5). Signed-in read of
-+// handles/{handle}; create only when the doc is new; no update; delete only by the claim's uid.
-+// users.handle may be set or changed only when handles/{handle}.uid == auth.uid after the write
-+// (existsAfter/getAfter, so the claim may be created in the same transaction). Not deployed.
++// HANDLES (2026-11-07, draft, NOT published): 27chat PR 53 (824dfbe5). One shared namespace.
++// Signed-in get only; list is denied. Create pairs with users.handle in the same transaction.
++// No update. Delete only when the profile handle no longer points at that id. A suspended or
++// profileHidden account cannot claim or change users.handle. Reserved names, including j32b,
++// are not client-claimable. Not deployed.
  service cloud.firestore {
    match /databases/{database}/documents {
      function signedIn() {
-@@ -209,6 +220,15 @@
+@@ -209,6 +221,23 @@
          && !h.matches('^(admin|moderator|official|subx|jebb).*')
          && !h.matches('.*(adm1n|4dmin|0fficial|st3ward).*');
      }
-+    // HANDLES document id. Same charset, exact blocklist, and leetspeak as handleOk / factory.js
-+    // handleOk (27chat 824dfbe5). Reserved prefixes are the client's (admin|moderator|official|subx|jebb)
-+    // and are allowed only for isAdmin() (uid o774wL9hUVSi19EkDCgLqQomP8i2, the factory ADMIN_UID).
++    // Exact names no client may claim, including isAdmin(). The admin SDK migration
++    // assigns these and bypasses rules. j32b is reserved for that script.
++    function reservedHandle(h) {
++      return h in [
++        'j32b', 'admin', 'subx', 'support', 'takedown',
++        'moderator', 'official', 'jebb',
++        'mod', 'mods', 'staff', 'steward', 'system', 'root', 'team'
++      ];
++    }
++    // HANDLES document id. Same charset and leetspeak as factory.js handleOk.
++    // Prefixes admin|moderator|official|subx|jebb are refused for every client.
 +    function claimHandleOk(h) {
 +      return h is string && h.matches('^[a-z0-9_]{1,15}$')
-+        && !(h in ['mod', 'mods', 'staff', 'support', 'steward', 'system', 'root', 'team'])
++        && !reservedHandle(h)
 +        && !h.matches('.*(adm1n|4dmin|0fficial|st3ward).*')
-+        && (isAdmin() || !h.matches('^(admin|moderator|official|subx|jebb).*'));
++        && !h.matches('^(admin|moderator|official|subx|jebb).*');
 +    }
      function postKeysOk(d) {
        return d.keys().hasOnly([
          'siteId', 'parentId', 'authorUid', 'authorName', 'authorHandle', 'text',
-@@ -297,7 +317,42 @@
+@@ -297,7 +326,42 @@
        return isAdmin() || !exists(/databases/$(database)/documents/users/$(request.auth.uid))
          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('suspended', false) != true;
      }
@@ -77,7 +86,7 @@
      function suspendOk(d) {
        return isAdmin() || (
          (!d.keys().hasAny(['suspended']) || d.suspended == true)
-@@ -306,8 +361,33 @@
+@@ -306,8 +370,84 @@
          && (!d.keys().hasAny(['ageAttested18']) || d.ageAttested18 is bool)
          && !(d.get('ageAttested18', false) == true && d.get('suspended', false) == true)
          && !d.keys().hasAny(['dob', 'birthDate', 'dateOfBirth'])
@@ -93,25 +102,76 @@
 +          || !under18Restricted(resource.data)
 +          || (queuePreserved(d) && reasonPreserved(d) && hiddenPreserved(d))
 +        )
++        && ageAttestedAtLocked(d)
        );
      }
-+    // users/{uid} has no key allowlist; profileOk already accepts a handle string that passes handleOk.
-+    // Setting or changing handle requires handles/{handle}.uid == auth.uid after this write, so the
-+    // claim can be created in the same transaction (getAfter). An unchanged handle does not, so a
-+    // profile that already stored one stays writable before a claim exists.
-+    function handleLinkOk(d) {
++    // While suspended or deletion-queued (existing or resulting doc), ageAttestedAt
++    // cannot be added, removed, or rewritten. Setting ageConfirmed or ageAttested18
++    // to false, or removing them, stays allowed.
++    function suspendedOrQueued(data) {
++      return data.get('suspended', false) == true
++        || data.keys().hasAny(['deletionQueuedAt']);
++    }
++    function ageAttestedAtLocked(d) {
++      return !(
++          (resource != null && suspendedOrQueued(resource.data))
++          || suspendedOrQueued(d)
++        )
++        || (
++          (resource == null || !resource.data.keys().hasAny(['ageAttestedAt']))
++            ? !d.keys().hasAny(['ageAttestedAt'])
++            : (d.keys().hasAny(['ageAttestedAt'])
++                && d.ageAttestedAt == resource.data.ageAttestedAt)
++        );
++    }
++    function handleUnchanged(d) {
++      return resource != null
++        && resource.data.keys().hasAny(['handle'])
++        && d.keys().hasAny(['handle'])
++        && resource.data.handle == d.handle;
++    }
++    function handleAbsentBoth(d) {
 +      return !d.keys().hasAny(['handle'])
-+        || (resource != null
-+            && resource.data.keys().hasAny(['handle'])
-+            && resource.data.handle == d.handle)
-+        || (d.handle is string
-+            && existsAfter(/databases/$(database)/documents/handles/$(d.handle))
-+            && getAfter(/databases/$(database)/documents/handles/$(d.handle)).data.uid == request.auth.uid);
++        && (resource == null || !resource.data.keys().hasAny(['handle']));
++    }
++    function handleRemoved(d) {
++      return !d.keys().hasAny(['handle'])
++        && resource != null
++        && resource.data.keys().hasAny(['handle']);
++    }
++    // Resulting users doc, so a same-transaction suspend/hide is visible.
++    function callerHandleBlocked() {
++      return existsAfter(/databases/$(database)/documents/users/$(request.auth.uid))
++        && (
++          getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('suspended', false) == true
++          || getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('profileHidden', false) == true
++        );
++    }
++    // Replacing or clearing a handle must delete a claim this uid owns.
++    // A claim owned by someone else is left in place. An unchanged handle is not released.
++    function ownedOldClaimReleased(d) {
++      return resource == null
++        || !resource.data.keys().hasAny(['handle'])
++        || (d.keys().hasAny(['handle']) && resource.data.handle == d.handle)
++        || !exists(/databases/$(database)/documents/handles/$(resource.data.handle))
++        || get(/databases/$(database)/documents/handles/$(resource.data.handle)).data.get('uid', '') != request.auth.uid
++        || !existsAfter(/databases/$(database)/documents/handles/$(resource.data.handle));
++    }
++    // users/{uid} has no key allowlist. An unchanged handle does not need a claim, so a
++    // profile that already stored one stays writable. A set or change requires the new
++    // claim and is refused while this account is suspended or profileHidden.
++    function handleLinkOk(d) {
++      return (handleAbsentBoth(d) || handleUnchanged(d)
++          || (handleRemoved(d) && !callerHandleBlocked())
++          || (d.keys().hasAny(['handle']) && d.handle is string && !callerHandleBlocked()
++              && existsAfter(/databases/$(database)/documents/handles/$(d.handle))
++              && getAfter(/databases/$(database)/documents/handles/$(d.handle)).data.uid == request.auth.uid))
++        && ownedOldClaimReleased(d);
 +    }
      // ===== END PREVIEW-LIFT GUARD helpers =====
  
      match /posts/{postId} {
-@@ -352,6 +432,7 @@
+@@ -352,6 +492,7 @@
          && memberSite(request.resource.data)                       // HUB SIGN-IN
          && !request.resource.data.keys().hasAny(['email', 'phone', 'phoneNumber'])
          && profileOk(request.resource.data)                        // PREVIEW-LIFT GUARD
@@ -119,24 +179,34 @@
          && suspendOk(request.resource.data);                       // GPCHAT LIFT R2
  
        match /blocks/{targetUid} {
-@@ -427,6 +508,22 @@
+@@ -427,6 +568,32 @@
        }
      }
  
-+    // HANDLES (27chat PR 53, 824dfbe5). No match existed, so every client claim was denied.
-+    // The document id is the handle. Body is { uid, siteId? } only. Create is new docs only
-+    // (a second set is an update and is denied). Delete is the owner uid. isAdmin() may claim
-+    // reserved prefixes; it may not update or delete someone else's claim.
++    // HANDLES (27chat PR 53). Shared across rooms: one SubX identity, one namespace.
++    // Signed-in get only. list is denied so the handle-to-uid map cannot be enumerated.
++    // Create is a new doc whose uid is the caller, and the same transaction must leave
++    // users/{uid}.handle equal to this id. No update. Delete only by the owner, and only
++    // when users.handle no longer equals this id after the write.
 +    match /handles/{handle} {
-+      allow read: if signedIn();
++      allow get: if signedIn();
++      allow list: if false;
 +      allow create: if signedIn()
 +        && claimHandleOk(handle)
++        && !callerHandleBlocked()
 +        && request.resource.data.keys().hasAll(['uid'])
 +        && request.resource.data.keys().hasOnly(['uid', 'siteId'])
 +        && request.resource.data.uid == request.auth.uid
-+        && (!request.resource.data.keys().hasAny(['siteId']) || memberSite(request.resource.data));
++        && (!request.resource.data.keys().hasAny(['siteId']) || memberSite(request.resource.data))
++        && existsAfter(/databases/$(database)/documents/users/$(request.auth.uid))
++        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('handle', '') == handle;
 +      allow update: if false;
-+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
++      allow delete: if signedIn()
++        && resource.data.uid == request.auth.uid
++        && (
++          !existsAfter(/databases/$(database)/documents/users/$(request.auth.uid))
++          || getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('handle', '') != handle
++        );
 +    }
 +
      match /reports/{reportId} {
