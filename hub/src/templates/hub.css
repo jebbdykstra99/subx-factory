@@ -388,6 +388,8 @@ body.partner-room-home .sponsored-label,
 body.partner-room-home .example-label { font-size: 15px; font-weight: 700; color: #0f1419; }
 body.partner-room-home .wm-ai { color: #000000; font-weight: 700; font-size: 15px; margin-left: 0.35rem; }
 body.partner-room-home .wm-human { color: #1E7B34; font-weight: 700; font-size: 15px; margin-left: 0.35rem; }
+body.partner-room-home .wm-hybrid { color: #9A6700; font-weight: 700; font-size: 15px; margin-left: 0.35rem; }
+html[data-hub-theme="dark"] body.partner-room-home .wm-hybrid { color: #e7c36a; }
 body.partner-room-home .seat-pill {
   margin-left: 0.35rem; font-size: 13px; color: #536471;
   border: 1px solid #cfd9de; border-radius: 999px; padding: 0.05rem 0.45rem;

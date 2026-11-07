@@ -73,18 +73,15 @@ ok('<h1 class="partner-name">%s</h1>' % EXPECTED in html, 'header reads displayN
 ok('property="og:title" content="%s"' % EXPECTED in html, 'og:title reads displayName')
 ok('name="twitter:title" content="%s"' % EXPECTED in html, 'twitter title reads displayName')
 ok('Sponsored by %s' % EXPECTED in html, 'disclosure reads displayName')
-ok('%s staff' % EXPECTED in html, 'staff label reads displayName')
+ok('Room sponsor: %s.' % EXPECTED in html, 'sponsor card reads displayName')
+ok('%s staff' % EXPECTED not in html and 'SubX editorial' in html and 'Example partner post' in html, 'seeded byline is SubX editorial, not brand staff')
 ok(BRIEF in html, 'pinned room brief uses the required wording verbatim')
 ok(html.count('<article class="post') == 9, 'feed has 9 seeded posts')
 ok('id="sidebar"' in html and 'class="main"' in html and 'id="right-panel"' in html, 'room shell has left nav, feed column, and right rail')
 ok('partner-banner' in html and 'partner-avatar' in html, 'room has a themed banner and avatar')
 ok('class="partner-chip">Sponsored' in html, 'promotional cards and posts are labeled Sponsored')
 
-hrefs = re.findall(r'<a\b[^>]*href="([^"]+)"[^>]*>', html)
-external = [h for h in hrefs if h.startswith('http')]
-ok(external and set(external) == {'https://usserviceanimals.org/'}, 'the only external link is the sponsor homepage (%s)' % external[:6])
-tags = re.findall(r'<a\b[^>]*href="https://usserviceanimals.org/"[^>]*>', html)
-ok(tags and all('rel="sponsored noopener"' in t for t in tags), 'homepage links use rel="sponsored noopener"')
+ok('usserviceanimals.org' not in html, 'room has no usserviceanimals.org href or url')
 ok('/products/' not in html and '/packages/' not in html and 'checkout' not in html.lower(), 'no product, package, or checkout link')
 
 low = html.lower()
@@ -134,7 +131,7 @@ with tempfile.TemporaryDirectory() as t:
     ok('<h1 class="partner-name">%s</h1>' % PROBE in renamed, 'renamed header follows displayName')
     ok('property="og:title" content="%s"' % PROBE in renamed, 'renamed og:title follows displayName')
     ok('Sponsored by %s' % PROBE in renamed, 'renamed disclosure follows displayName')
-    ok('%s staff' % PROBE in renamed, 'renamed staff label follows displayName')
+    ok('Room sponsor: %s.' % PROBE in renamed, 'renamed sponsor card follows displayName')
     ok(renamed.count(PROBE) >= 8, 'renamed name shows on title, header, tags, and cards (%d)' % renamed.count(PROBE))
 
 print('\n%d failure(s)' % len(fails))
