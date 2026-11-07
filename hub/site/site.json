@@ -229,6 +229,7 @@
       "guidelines.html",
       "report.html",
       "404.html",
+      "partners.html",
       "t/grand-prix-racing/index.html",
       "t/papacy-and-church/index.html",
       "t/generative-ai/index.html",
@@ -279,7 +280,8 @@
       "t/dogs/index.html",
       "t/board-games/index.html",
       "t/photography/index.html",
-      "t/books/index.html"
+      "t/books/index.html",
+      "partners/usserviceanimals/index.html"
     ],
     "file": "shell/v1.2.6/factory.js",
     "sha256": "798184e45cdd243a04c81b065689f7fe1744263314a1a49b487ad1ac199ba48e",

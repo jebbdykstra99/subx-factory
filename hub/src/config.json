@@ -124,6 +124,11 @@
       "title": "Not found, {{brand.name}}",
       "description": "Page not found.",
       "robots": "noindex,nofollow"
+    },
+    "partners.html": {
+      "title": "Partner rooms, {{brand.name}}",
+      "description": "How partner rooms are labeled, and who runs moderation.",
+      "robots": "noindex,nofollow"
     }
   },
   "topics": {

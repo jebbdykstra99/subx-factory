@@ -88,9 +88,10 @@ LIVE_TOPICS = [t for t in SEED['topics'] if t['status'] != 'hold']
 TOPIC_PAGES = [brand['topicPathPrefix'].strip('/') + '/' + t['slug'] + '/index.html' for t in LIVE_TOPICS]
 # go-live 2026-11-04: the public hub pages are indexed; 404, the topic index and every non-active topic stay noindex
 PUBLIC_PAGES = ['index.html', 'rooms.html', 'about.html', 'terms.html', 'privacy.html', 'guidelines.html', 'report.html']
-NOINDEX_PAGES = ['404.html', topic_index] + TOPIC_PAGES
-ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', '404.html'] + TOPIC_PAGES),
-   'hub pages: home, rooms, about, topic index, 4 legal, 404 + %d topic pages (%d pages)' % (len(TOPIC_PAGES), len(pages)))
+PARTNER_PAGES = ['partners.html', 'partners/usserviceanimals/index.html']
+NOINDEX_PAGES = ['404.html', topic_index] + TOPIC_PAGES + PARTNER_PAGES
+ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', '404.html'] + TOPIC_PAGES + PARTNER_PAGES),
+   'hub pages: home, rooms, about, topic index, 4 legal, 404 + %d topic pages + partner preview (%d pages)' % (len(TOPIC_PAGES), len(pages)))
 site = json.load(open(os.path.join(SITE, 'site.json')))
 sh = site['shell']
 no_shell = set(x.lstrip('/') for x in sh.get('noShell', []))
@@ -355,6 +356,7 @@ sm = read(os.path.join(SITE, 'sitemap.xml'))
 locs = re.findall(r'<loc>([^<]*)</loc>', sm)
 want_locs = sorted('https://%s/%s' % (brand['primaryDomain'], '' if p == 'index.html' else p) for p in PUBLIC_PAGES)
 ok('<urlset' in sm and sorted(locs) == want_locs, 'sitemap.xml lists exactly the 7 public hub pages (%s)' % locs)
+ok(not [u for u in locs if '/partners' in u], 'sitemap.xml omits the noindex partner preview pages')
 ok(not [u for u in locs if brand['topicPathPrefix'] in u] and not [u for u in locs if '404' in u], 'sitemap.xml lists no topic page, no topic index and no 404 while no topic is active')
 ok(all('<meta name="robots" content="noindex,nofollow">' in read(os.path.join(SITE, f)) for f in NOINDEX_PAGES), 'hide-until-active: 404, topic index and every hidden topic stay noindex,nofollow')
 ok(all('<meta name="robots" content="index,follow">' in read(os.path.join(SITE, f)) for f in PUBLIC_PAGES), 'public hub pages are index,follow')

@@ -300,8 +300,12 @@ class Renderer:
                 raise RenderError('site.json shell.keep %s was not rendered' % k['file'])
             k['sha256'] = sha256_file(p)
         topics = self.topics()
+        # Partner rooms render to /partners/<slug>/ even when hubSlot is false. A true hubSlot is refused:
+        # nothing in this renderer may add one to featuredRooms, roomOrder, or hub navigation.
+        self._partner_rooms = self.partner_rooms()
         ns = site.setdefault('shell', {}).setdefault('noShell', [])
         ns += [self.topic_path(t['slug']) for t in topics]
+        ns += [self.partner_rel(slug) for slug, _room, _html in self._partner_rooms]
         rail = os.path.join(self.src, 'data', 'rail.json')
         if os.path.isfile(rail):
             site.setdefault('rail', {})['outbound'] = json.load(open(rail, encoding='utf-8'))
@@ -332,6 +336,8 @@ class Renderer:
         # 4. topic pages (non-HOLD seed rows) and the sitemap (eligible topics only)
         for t in topics:
             self.write(self.topic_path(t['slug']), self.render_topic(t).encode('utf-8'))
+        for slug, room, html_path in self._partner_rooms:
+            self.write(self.partner_rel(slug), self.render_partner(slug, room, html_path).encode('utf-8'))
         self.write('sitemap.xml', self.sitemap(topics).encode('utf-8'))
         return self
 
@@ -428,6 +434,67 @@ class Renderer:
             line = '  <span class="legal-footer-line legal-footer-gov">%s</span>\n' % esc_for('.html')(self.ctx['brand']['nonAffiliationGov'])
             out = out[:end] + line + out[end:]
         return out
+
+
+    def partner_rel(self, slug):
+        return 'partners/%s/index.html' % slug
+
+    def partner_rooms(self):
+        """hub/src/partners/<slug>/{config.json,index.html}. displayName is the only name field.
+
+        hubSlot must be false. These pages are static and noindex. They are not added to the sitemap
+        or to any hub nav list."""
+        root = os.path.join(self.src, 'partners')
+        if not os.path.isdir(root):
+            return []
+        found = []
+        for slug in sorted(os.listdir(root)):
+            d = os.path.join(root, slug)
+            if slug.startswith('.') or not os.path.isdir(d):
+                continue
+            if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,48}', slug):
+                raise RenderError('partner room directory %r must be a lowercase slug' % slug)
+            cfg_path = os.path.join(d, 'config.json')
+            html_path = os.path.join(d, 'index.html')
+            if not (os.path.isfile(cfg_path) and os.path.isfile(html_path)):
+                raise RenderError('partner room %s needs config.json and index.html' % slug)
+            cfg = json.load(open(cfg_path, encoding='utf-8'))
+            if not isinstance(cfg, dict):
+                raise RenderError('partner room %s config must be an object' % slug)
+            if cfg.get('slug') != slug:
+                raise RenderError('partner room %s: config slug must match the directory' % slug)
+            name = cfg.get('displayName')
+            if not isinstance(name, str) or not name.strip() or name != name.strip():
+                raise RenderError('partner room %s: displayName must be a non-empty string' % slug)
+            if any(x in name for x in ('{{', '}}', '<', '>')):
+                raise RenderError('partner room %s: displayName must be plain text' % slug)
+            if cfg.get('hubSlot') is not False:
+                raise RenderError('partner room %s: hubSlot must be false so it stays out of hub navigation' % slug)
+            room = {}
+            for k, v in cfg.items():
+                if k.startswith('_') or isinstance(v, bool):
+                    continue
+                if not isinstance(v, str):
+                    raise RenderError('partner room %s: %s must be a string' % (slug, k))
+                if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*', k):
+                    raise RenderError('partner room %s: bad key %r' % (slug, k))
+                room[k] = v
+            found.append((slug, room, html_path))
+        return found
+
+    def render_partner(self, slug, room, html_path):
+        rel = self.partner_rel(slug)
+        extra_desc = room.get('description') or ''
+        page = {
+            'title': '%s \u00b7 %s' % (room['displayName'], self.ctx['brand']['name']),
+            'description': ('Sponsored room. %s. %s' % (room['displayName'], extra_desc)).strip(),
+            'robots': topic_status.NOINDEX,
+            'canonical': self.canonical(rel),
+        }
+        text = open(html_path, encoding='utf-8').read()
+        if '<!--' in text:
+            raise RenderError('%s: partner room HTML cannot contain comments' % rel)
+        return self.render_text(text, '.html', page, where=rel, extra={'room': room})
 
 
 def files_under(d):

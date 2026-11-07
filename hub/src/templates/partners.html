@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{> head}}
+</head>
+<body class="legal-page">
+
+  <article class="legal-doc">
+    <p class="legal-kicker">{{brand.name}}</p>
+    <h1>Partner rooms</h1>
+    <p>Some {{brand.name}} {{brand.roomNoun.many}} are partner rooms. Sponsorship is labeled on the room itself. Near the top you will see "Sponsored by" and the partner name. Promotional cards and posts are labeled Sponsored. Posts from a partner's staff are labeled as that staff.</p>
+    <p>A partner does not control moderation. {{brand.legalEntity}} runs the room and reviews reports. Members, not the sponsor, run the conversation.</p>
+    <p>A partner room is not legal, medical, or veterinary advice.</p>
+    <p>Questions and notices go to <a data-takedown href="mailto:{{brand.takedownEmail}}">{{brand.takedownEmail}}</a>. Operated by {{brand.legalEntity}}. Reports are checked by {{brand.reviewerLine}}.</p>
+    <p><a href="/">Back to {{brand.name}}</a></p>
+  </article>
+{{> footer}}
+{{> scripts-static}}
+</body>
+</html>
