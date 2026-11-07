@@ -569,7 +569,7 @@ service cloud.firestore {
     }
 
     // HANDLES (27chat PR 53). Shared across rooms: one SubX identity, one namespace.
-    // Signed-in get only. list is denied so the handle-to-uid map cannot be enumerated.
+    // Signed-in get only. Collection listing is denied. Signed-in users may still look up an individual handle and its account association.
     // Create is a new doc whose uid is the caller, and the same transaction must leave
     // users/{uid}.handle equal to this id. No update. Delete only by the owner, and only
     // when users.handle no longer equals this id after the write.
