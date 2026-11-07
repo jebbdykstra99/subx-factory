@@ -149,6 +149,13 @@ main() {
   python3 fold.py >/dev/null
   node --check factory.js
   node split.mjs
+  # 27chat #51 sign-in loop. The reviewed diff is against the split core at blob
+  # 7463cba (shell v1.2.8), so it is applied after split.mjs, not in the template.
+  if ! patch --forward --batch -p1 -i signin-loop.patch; then
+    echo "rebuild: sign-in loop patch failed. The split core no longer matches blob 7463cba." >&2
+    exit 1
+  fi
+  rm -f factory.js.orig
   local f
   for f in "${OUT[@]}"; do node --check "$f"; done
   if [ "$mode" = check ]; then

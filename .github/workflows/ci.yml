@@ -15,7 +15,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: node --check factory/factory.js && node --check factory/factory-gp.js && node --check factory/factory-rail.js && node --check factory/factory-reports.js
       - run: npx eslint --no-eslintrc -c .eslintrc.json factory/factory.js factory/factory-gp.js factory/factory-rail.js factory/factory-reports.js
-      - name: Core byte budget (<= 255 KB; lean audit 2026-10-22)
+      - name: Core byte budget (<= 265000 B; v1.2.9 sign-in fix)
         run: tools/check_budget.sh
       - run: node test/nest-feed.test.js
       - run: node test/notifs-reports.test.js

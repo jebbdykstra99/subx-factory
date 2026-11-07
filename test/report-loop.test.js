@@ -25,7 +25,7 @@ assert.ok(core.includes("    syncMyReports();\n    var nav = document.querySelec
 assert.ok(core.includes("'reports-overlay', 'myreports-overlay'].forEach("), 'My reports overlay closes with the others');
 assert.ok(core.includes('        reportTriage(r) +\n'), 'admin row uses reportTriage');
 assert.ok(core.includes("'(post not loaded)'"), 'core renderReports fallback uses (post not loaded)');
-assert.ok(Buffer.byteLength(core) <= 255000, 'core budget');
+assert.ok(Buffer.byteLength(core) <= 265000, 'core budget');
 
 // ---- fake DOM
 const els = {};

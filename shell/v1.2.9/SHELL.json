@@ -1,0 +1,34 @@
+{
+  "version": "v1.2.9",
+  "immutable": true,
+  "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.9 (Google signInWithPopup on every browser; redirect only when the popup is blocked or unsupported). Never edit files in this folder; a change is a new shell/vX.Y.Z/ folder.",
+  "sourceCommit": "046b394bab6953940c7fd8d56f58ee6b185c2bfb",
+  "sourcePath": "factory/",
+  "url": {
+    "pinned": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@<MERGE_SHA>/shell/v1.2.9/<file>",
+    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@046b394bab6953940c7fd8d56f58ee6b185c2bfb/factory/<file>",
+    "rule": "Pin by full 40-char commit SHA only. Never @main, @latest, a branch, or a semver range."
+  },
+  "files": {
+    "factory.js": {
+      "bytes": 260929,
+      "sha256": "38a9575f0eab15642d5ffbc48ea13fd82c7af6eb9d8961a5d0a1306ad6a3916b",
+      "integrity": "sha384-QmkXv3bVD3XxtcS/nZY5LDaisMvfraaPv5BZe/kAItmWCDMWVU+mI4HVLbxSl6ue"
+    },
+    "factory-gp.js": {
+      "bytes": 34934,
+      "sha256": "9ab816ec31425cdf9ef989be23e5c189fc6b0753ae22cf4febeca6adf12346fb",
+      "integrity": "sha384-tq+QuZTG9sDVR8ib8wI1WQ+AloqbR/lcG7G7MX/ojBT7MrMU6V79VNf/YHjT424G"
+    },
+    "factory-rail.js": {
+      "bytes": 10235,
+      "sha256": "2316ec5db056652901090168e1e7919de96d2b31560140cb515f9bbd35281f17",
+      "integrity": "sha384-jxl1awyRi+uY/v+bWh0u8GC5VAKIk3MRfvmpMglcbYLodc/ikfABxaR8CJqARPpS"
+    },
+    "factory-reports.js": {
+      "bytes": 9369,
+      "sha256": "6f330c72877200219657c4efad5f58da2f22f231090ef0af373dac09b04790fc",
+      "integrity": "sha384-JXG7NnZQE0ZbGlnicSCvBQqN2oPxnTsQ8ZynkUPWUFmk8cjJb/K4jqLMcnikqhY/"
+    }
+  }
+}

@@ -52,7 +52,7 @@ const guards = [
   ["register", "if (!accountsOpen()) { err.textContent = ACC_CLOSED;"],
   ["google click", "if (!accountsOpen() && !document.documentElement.classList.contains('acc-stew'))"],
   ["finishGoogle", "if (u && !accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut().then("],
-  ["redirect", "if (u && !accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut();"],
+  ["redirect", "if (!accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut();"],
   ["boot", "wireEvents();\n    applyAccountsGate();"],
   ["static note hidden when open", "if (n) n.style.display = o ? 'none' : '';"],
   ["once-guard on style id", "if (o || document.getElementById('acc-gate-css')) return;"],
