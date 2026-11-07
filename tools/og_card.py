@@ -2,8 +2,9 @@
 """Link-preview image for the hub. Python stdlib at render time.
 
 Colors, the cat, the name, and the tagline come from brand/brand.json.
-Glyph shapes are baked masks (Inter, SIL Open Font License) in tools/og_font.png
-and tools/og_font.json. Rebuild those with: python3 tools/og_card.py --bake
+Glyph shapes are baked masks in tools/og_font.png and tools/og_font.json.
+Those files are a derived subset of Inter. See tools/og_font.NOTICE.md and
+tools/OFL-Inter.txt. Rebuild the masks with: python3 tools/og_card.py --bake
 brand_render calls build() and writes logo.ogImage (hub/site/og.png).
 """
 import json, os, struct, zlib
