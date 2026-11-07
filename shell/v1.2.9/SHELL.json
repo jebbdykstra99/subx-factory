@@ -2,11 +2,11 @@
   "version": "v1.2.9",
   "immutable": true,
   "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.9 (Google signInWithPopup on every browser; redirect only when the popup is blocked or unsupported). Never edit files in this folder; a change is a new shell/vX.Y.Z/ folder.",
-  "sourceCommit": "046b394bab6953940c7fd8d56f58ee6b185c2bfb",
+  "sourceCommit": "2b962596185e8a2a0f3624e227b1dbb7ce06a726",
   "sourcePath": "factory/",
   "url": {
     "pinned": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@<MERGE_SHA>/shell/v1.2.9/<file>",
-    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@046b394bab6953940c7fd8d56f58ee6b185c2bfb/factory/<file>",
+    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@2b962596185e8a2a0f3624e227b1dbb7ce06a726/factory/<file>",
     "rule": "Pin by full 40-char commit SHA only. Never @main, @latest, a branch, or a semver range."
   },
   "files": {
