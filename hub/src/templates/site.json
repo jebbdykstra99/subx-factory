@@ -120,8 +120,9 @@
       "privacy.html",
       "guidelines.html",
       "report.html",
-      "404.html",
-      "partners.html"
+      "partners.html",
+      "partners/dogacademy/index.html",
+      "404.html"
     ]
   }
 }

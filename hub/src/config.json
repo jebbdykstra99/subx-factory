@@ -126,8 +126,8 @@
       "robots": "noindex,nofollow"
     },
     "partners.html": {
-      "title": "Partner rooms, {{brand.name}}",
-      "description": "How partner rooms are labeled, and who runs moderation.",
+      "title": "Why am I seeing this?, {{brand.name}}",
+      "description": "Partner rooms are sponsored by the named company. {{brand.legalEntity}} runs the rooms. Moderation stays with {{brand.legalEntity}}.",
       "robots": "noindex,nofollow"
     }
   },

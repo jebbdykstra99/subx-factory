@@ -88,10 +88,12 @@ LIVE_TOPICS = [t for t in SEED['topics'] if t['status'] != 'hold']
 TOPIC_PAGES = [brand['topicPathPrefix'].strip('/') + '/' + t['slug'] + '/index.html' for t in LIVE_TOPICS]
 # go-live 2026-11-04: the public hub pages are indexed; 404, the topic index and every non-active topic stay noindex
 PUBLIC_PAGES = ['index.html', 'rooms.html', 'about.html', 'terms.html', 'privacy.html', 'guidelines.html', 'report.html']
-PARTNER_PAGES = ['partners.html', 'partners/usserviceanimals/index.html']
-NOINDEX_PAGES = ['404.html', topic_index] + TOPIC_PAGES + PARTNER_PAGES
-ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', '404.html'] + TOPIC_PAGES + PARTNER_PAGES),
-   'hub pages: home, rooms, about, topic index, 4 legal, 404 + %d topic pages + partner preview (%d pages)' % (len(TOPIC_PAGES), len(pages)))
+NOINDEX_PAGES = ['404.html', topic_index] + TOPIC_PAGES
+_arts = json.load(open(os.path.join(ROOT, 'rooms', 'dogacademy-partner', 'articles.json'), encoding='utf-8'))['articles']
+_art_pages = ['partners/dogacademy/articles/%s.html' % a['slug'] for a in _arts]
+_partner_pages = ['partners.html', 'partners/dogacademy/index.html', 'partners/usserviceanimals/index.html'] + _art_pages
+ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', '404.html'] + _partner_pages + TOPIC_PAGES),
+   'hub pages: home, rooms, about, topic index, partners, both partner rooms, articles, 4 legal, 404 + %d topic pages (%d pages)' % (len(TOPIC_PAGES), len(pages)))
 site = json.load(open(os.path.join(SITE, 'site.json')))
 sh = site['shell']
 no_shell = set(x.lstrip('/') for x in sh.get('noShell', []))
@@ -480,6 +482,8 @@ for f in files(SITE):
     t = read(os.path.join(SITE, f))
     if f == 'about.html':
         ok(brand['contactPhone'] in t and brand['mailingAddress'] in t, 'about.html shows the phone and the mailing address')
+    elif f == 'partners/dogacademy/index.html':
+        ok(brand['contactPhone'] in t and 'Ocean Park' not in t and 'CA 90405' not in t, 'partner room home shows the public phone and no street address')
     else:
         ok(brand['contactPhone'] not in t and '539-5005' not in t and 'Ocean Park' not in t and 'CA 90405' not in t, '%s: no phone or mailing address (About only)' % f)
     emails = set(re.findall(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', t)) - {brand['takedownEmail'], 'you@email.com'}
