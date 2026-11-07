@@ -129,10 +129,127 @@ CSP_AUTH_FRAME = ['https://subx-skins.firebaseapp.com', 'https://www.google.com/
 CSP_AUTH = '; '.join(['script-src ' + ' '.join(CSP_AUTH_SCRIPT), 'connect-src ' + ' '.join(CSP_AUTH_CONNECT),
                       'frame-src ' + ' '.join(CSP_AUTH_FRAME), "object-src 'none'", "base-uri 'none'", "font-src 'self'"])
 
+# Partner rooms (hub slot). The room name string lives only in rooms/<id>/site.json "displayName".
+# partnerRooms[].displayName references that field. The widget stays empty unless enabled is true,
+# or the render is a preview that forces the flag on. Never written into hub/site by --preview-partners.
+PARTNER_CAP = 2
+DISPLAY_REF = re.compile(r'^@rooms/([a-z0-9-]+)/site\.json#displayName$')
+
+
+def partner_initials(name):
+    parts = re.findall(r'[A-Za-z0-9]+', name or '')
+    if not parts:
+        return '?'
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return (parts[0][0] + parts[-1][0]).upper()
+
+
+def load_partner_config(hub_rooms_path, rooms_root):
+    """Resolve hub/src/rooms.json partnerRooms against each room site.json. Does not decide visibility."""
+    cfg = json.load(open(hub_rooms_path, encoding='utf-8'))
+    raw = cfg.get('partnerRooms') or []
+    if not isinstance(raw, list):
+        raise RenderError('partnerRooms must be a list')
+    organic = {r.get('room') for r in cfg.get('rooms') or [] if isinstance(r, dict)}
+    featured = set(cfg.get('featuredRooms') or [])
+    order = set(cfg.get('roomOrder') or [])
+    out = []
+    for p in raw:
+        if not isinstance(p, dict):
+            raise RenderError('partnerRooms entry must be an object')
+        room = p.get('room')
+        if not isinstance(room, str) or not re.fullmatch(r'[a-z0-9-]{1,40}', room):
+            raise RenderError('partner room id is missing')
+        if room in organic or room in featured or room in order:
+            raise RenderError('partner room %s must stay out of the organic rooms list, featuredRooms, and roomOrder' % room)
+        for key in ('sponsor', 'label', 'disclosure', 'since', 'displayName', 'enabled'):
+            if key not in p:
+                raise RenderError('partner room %s is missing %s' % (room, key))
+        if p['enabled'] is not True and p['enabled'] is not False:
+            raise RenderError('partner room %s enabled must be true or false' % room)
+        if p['label'] != 'Sponsored':
+            raise RenderError('partner room %s label must be Sponsored' % room)
+        if p['sponsor'] != '@displayName':
+            raise RenderError('partner room %s sponsor must reference @displayName' % room)
+        if p['disclosure'] != 'Sponsored by {{displayName}}':
+            raise RenderError('partner room %s disclosure must be Sponsored by {{displayName}}' % room)
+        if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(p['since'])):
+            raise RenderError('partner room %s since must be YYYY-MM-DD' % room)
+        ref = p['displayName']
+        m = DISPLAY_REF.fullmatch(ref if isinstance(ref, str) else '')
+        if not m or m.group(1) != room:
+            raise RenderError('partner room %s displayName must reference rooms/%s/site.json#displayName' % (room, room))
+        site_path = os.path.join(rooms_root, room, 'site.json')
+        if not os.path.isfile(site_path):
+            raise RenderError('partner room %s has no site.json' % room)
+        site = json.load(open(site_path, encoding='utf-8'))
+        name = site.get('displayName')
+        if not isinstance(name, str) or not name.strip() or name != name.strip() or '\n' in name:
+            raise RenderError('rooms/%s/site.json displayName must be a single non-empty line' % room)
+        if re.search(r'[\u2013\u2014]', name):
+            raise RenderError('displayName must not use an en or em dash')
+        tagline = site.get('tagline') if isinstance(site.get('tagline'), str) else ''
+        out.append({
+            'room': room,
+            'name': name,
+            'tagline': tagline,
+            'sponsor': name,
+            'label': 'Sponsored',
+            'disclosure': 'Sponsored by ' + name,
+            'since': p['since'],
+            'enabled': p['enabled'] is True,
+            'initials': partner_initials(name),
+        })
+    return out
+
+
+def shown_partners(entries, preview):
+    """Rooms that render. Preview forces the flag on. More than PARTNER_CAP is an error, not a silent drop."""
+    shown = [e for e in entries if e['enabled'] is True or preview]
+    if len(shown) > PARTNER_CAP:
+        raise RenderError('Partner rooms widget is capped at %d' % PARTNER_CAP)
+    return shown
+
+
+def partner_widget_html(shown):
+    """Partner rooms widget. Empty when nothing is enabled (the live hub). No logos, no brand colors."""
+    if not shown:
+        return ''
+    rows = []
+    for p in shown:
+        tag = ('<span class="partner-room-tagline">%s</span>' % html_attr(p['tagline'])) if p['tagline'] else ''
+        rows.append(
+            '<a class="partner-room" href="/partners.html">'
+            '<span class="post-avatar" style="background:#2f3336" aria-hidden="true">%s</span>'
+            '<span class="partner-room-text">'
+            '<span class="partner-room-name">%s</span>%s'
+            '<span class="partner-disclosure">%s</span>'
+            '</span></a>' % (html_attr(p['initials']), html_attr(p['name']), tag, html_attr(p['disclosure'])))
+    return (
+        '<section class="partner-rooms" id="partner-rooms" aria-label="Partner rooms">'
+        '<h2 class="partner-rooms-title">Partner rooms</h2>'
+        '<div class="partner-rooms-body">%s</div>'
+        '<p class="partner-rooms-why"><a href="/partners.html">Why am I seeing this?</a></p>'
+        '</section>' % ''.join(rows))
+
+
+def partner_list_html(shown, legal_entity):
+    if not shown:
+        return '<p>No partner room is listed on the hub right now.</p>'
+    items = ''.join(
+        '<li><strong>%s</strong>. <span class="partner-disclosure">%s</span> Operated by %s.</li>'
+        % (html_attr(p['name']), html_attr(p['disclosure']), html_attr(legal_entity)) for p in shown)
+    return '<h2>Listed on the hub</h2><ul>%s</ul>' % items
+
 
 class Renderer:
-    def __init__(self, src, brand_path, out):
+    def __init__(self, src, brand_path, out, preview_partners=False, rooms_root=None):
         self.src, self.out = src, out
+        self.preview_partners = bool(preview_partners)
+        self.rooms_root = rooms_root or os.path.join(ROOT, 'rooms')
+        self.partner_entries = []
+        self.partner_shown = []
         self.cfg = json.load(open(os.path.join(src, 'config.json'), encoding='utf-8'))
         brand = json.load(open(brand_path, encoding='utf-8'))
         hl = json.load(open(os.path.join(src, 'data', 'highlights.json'), encoding='utf-8'))
@@ -189,6 +306,14 @@ class Renderer:
                 return path + '?v=' + self.assets[path]
             if k == 'footer:links':
                 return footer_links(ctx)
+            if k == 'partner:widget':
+                return partner_widget_html(self.partner_shown)
+            if k == 'partner:list':
+                return partner_list_html(self.partner_shown, self.ctx['brand']['legalEntity'])
+            if k == 'partner:ogTitle':
+                return html_attr(expand(lookup(ctx, 'page.title'), ctx))
+            if k == 'partner:ogDescription':
+                return html_attr(expand(lookup(ctx, 'page.description'), ctx))
             if k.startswith('url:'):
                 if not KEY_RE.fullmatch(k[4:]):
                     raise RenderError('%s: bad token {{%s}}' % (where, k))
@@ -259,8 +384,15 @@ class Renderer:
             text = text.replace(mark, new)
         return text.encode('utf-8')
 
+    def prepare_partners(self):
+        path = os.path.join(self.src, 'rooms.json')
+        entries = load_partner_config(path, self.rooms_root) if os.path.isfile(path) else []
+        self.partner_entries = entries
+        self.partner_shown = shown_partners(entries, self.preview_partners)
+
     def run(self):
         os.makedirs(self.out, exist_ok=True)
+        self.prepare_partners()
         cfg = self.cfg
         # 1. vendored shared files (byte copies, re-branded only when the brand differs)
         for v in cfg.get('vendor', []):
@@ -319,6 +451,10 @@ class Renderer:
             if hub_noindex:
                 page['robots'] = topic_status.NOINDEX
             page.setdefault('robots', topic_status.INDEX)
+            if n == 'partners.html' and self.partner_shown:
+                names = ', '.join(p['name'] for p in self.partner_shown)
+                page['title'] = '%s, %s' % (names, page['title'])
+                page['description'] = '%s. %s' % (self.partner_shown[0]['disclosure'], page['description'])
             if page['robots'] not in (topic_status.INDEX, topic_status.NOINDEX):
                 raise RenderError('config.json pages.%s.robots must be %r or %r' % (n, topic_status.INDEX, topic_status.NOINDEX))
             page['canonical'] = self.canonical(self.out_path(n))
@@ -438,25 +574,32 @@ def files_under(d):
     return out
 
 
-def render(src=None, brand=None, out=None):
+def render(src=None, brand=None, out=None, preview_partners=False, rooms_root=None):
     src = src or os.path.join(ROOT, 'hub', 'src')
     brand = brand or os.path.join(ROOT, 'brand', 'brand.json')
     out = out or os.path.join(ROOT, 'hub', 'site')
-    return Renderer(src, brand, out).run()
+    return Renderer(src, brand, out, preview_partners=preview_partners, rooms_root=rooms_root).run()
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--check', action='store_true')
+    ap.add_argument('--preview-partners', action='store_true',
+                    help='force partner rooms on, for a local preview only; refuses to write hub/site')
     ap.add_argument('--brand')
     ap.add_argument('--src')
     ap.add_argument('--out')
     a = ap.parse_args(argv)
     target = a.out or os.path.join(ROOT, 'hub', 'site')
+    live = os.path.realpath(os.path.join(ROOT, 'hub', 'site'))
     try:
+        if a.preview_partners and (a.check or os.path.realpath(target) == live):
+            print('brand_render: --preview-partners writes a separate --out directory, never hub/site, and not with --check',
+                  file=sys.stderr)
+            return 2
         if a.check:
             with tempfile.TemporaryDirectory() as tmp:
-                render(a.src, a.brand, tmp)
+                render(a.src, a.brand, tmp, preview_partners=False)
                 want, have = files_under(tmp), files_under(target) if os.path.isdir(target) else set()
                 bad = sorted((want ^ have) | {f for f in want & have
                                               if not filecmp.cmp(os.path.join(tmp, f), os.path.join(target, f), shallow=False)})
@@ -467,7 +610,7 @@ def main(argv=None):
                 print('brand_render --check: hub/site matches brand/brand.json + hub/src (%d files)' % len(want))
                 return 0
         # rebuild in place: only files the renderer owns are rewritten; stray files are reported, never deleted
-        r = render(a.src, a.brand, target)
+        r = render(a.src, a.brand, target, preview_partners=a.preview_partners)
         extra = files_under(target) - r.written
         if extra:
             print('note: files in %s the renderer does not produce (left alone): %s' % (target, ', '.join(sorted(extra))))

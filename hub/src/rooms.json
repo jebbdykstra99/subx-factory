@@ -238,5 +238,17 @@
   "ciachat",
   "cobrachat"
  ],
- "rankedBy": "30-day unique visitors (console), order only; refreshed 2026-10-31"
+ "rankedBy": "30-day unique visitors (console), order only; refreshed 2026-10-31",
+ "partnerRooms": [
+  {
+   "_note": "displayName is a reference. The room name string lives only in that room site.json displayName field.",
+   "room": "dogacademy-partner",
+   "displayName": "@rooms/dogacademy-partner/site.json#displayName",
+   "sponsor": "@displayName",
+   "label": "Sponsored",
+   "disclosure": "Sponsored by {{displayName}}",
+   "since": "2026-11-07",
+   "enabled": false
+  }
+ ]
 }

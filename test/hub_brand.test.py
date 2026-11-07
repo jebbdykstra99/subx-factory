@@ -89,8 +89,8 @@ TOPIC_PAGES = [brand['topicPathPrefix'].strip('/') + '/' + t['slug'] + '/index.h
 # go-live 2026-11-04: the public hub pages are indexed; 404, the topic index and every non-active topic stay noindex
 PUBLIC_PAGES = ['index.html', 'rooms.html', 'about.html', 'terms.html', 'privacy.html', 'guidelines.html', 'report.html']
 NOINDEX_PAGES = ['404.html', topic_index] + TOPIC_PAGES
-ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', '404.html'] + TOPIC_PAGES),
-   'hub pages: home, rooms, about, topic index, 4 legal, 404 + %d topic pages (%d pages)' % (len(TOPIC_PAGES), len(pages)))
+ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', 'partners.html', '404.html'] + TOPIC_PAGES),
+   'hub pages: home, rooms, about, topic index, partners, 4 legal, 404 + %d topic pages (%d pages)' % (len(TOPIC_PAGES), len(pages)))
 site = json.load(open(os.path.join(SITE, 'site.json')))
 sh = site['shell']
 no_shell = set(x.lstrip('/') for x in sh.get('noShell', []))
