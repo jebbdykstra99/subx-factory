@@ -42,6 +42,8 @@
     "icon32": "/assets/brand/cat-32.png",
     "icon48": "/assets/brand/cat-48.png",
     "icon128": "/assets/brand/cat-128.png",
-    "icon256": "/assets/brand/cat-256.png"
+    "icon256": "/assets/brand/cat-256.png",
+    "ogBackground": "#ffffff",
+    "ogImage": "/og.png"
   }
 }

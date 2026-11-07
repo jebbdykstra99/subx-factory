@@ -25,6 +25,8 @@ Square sizes sit next to the mask and are copied, not redrawn: `cat-16.png`, `ca
 
 To swap the drawing: replace `logo.mask` and those size files in the same folder, keep the paths, and re-render. Do not add a CSS offset. `cover` plus `center` shows this wide master without letterboxing its empty side margins, and a square file dropped at the same path is shown whole.
 
+The link preview image is drawn by `tools/og_card.py` from `logo.mask`, `logo.color`, `logo.ogBackground`, `brand.name`, and `brand.tagline`. `python3 tools/brand_render.py` writes it to `logo.ogImage` (`/og.png`).
+
 ## Shell and CSP
 
 - `index.html` runs the shared shell `shell/v1.2.6/factory.js`, self-hosted at

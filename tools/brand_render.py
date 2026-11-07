@@ -42,7 +42,7 @@ Usage: python3 tools/brand_render.py [--check] [--brand PATH] [--out DIR] [--src
 import argparse, base64, filecmp, hashlib, json, os, re, sys, tempfile, urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import topic_slug, topic_status, logo_mask  # noqa: E402
+import topic_slug, topic_status, logo_mask, og_card  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # hub fork of the shared shell (EXCEPTIONS.md E21): the one header line that names the source repo is replaced
@@ -100,6 +100,43 @@ def esc_for(ext):
     if ext in ('.json', '.js'):
         return lambda s: json.dumps(s, ensure_ascii=False)[1:-1]
     return lambda s: s
+
+
+def og_meta(template, ctx):
+    """Open Graph and Twitter tags. A page that already sets a property keeps that tag.
+    Pages without og:image still receive the share image."""
+    have = set(re.findall(r'<meta\s+(?:property|name)="((?:og|twitter):[^"]+)"', template))
+    brand = ctx['brand']
+    logo = brand.get('logo') or {}
+    page = ctx.get('page') or {}
+    domain = brand['primaryDomain']
+    path = logo.get('ogImage') or '/og.png'
+    image = 'https://%s%s' % (domain, path)
+    title = expand(str(page.get('title') or brand['name']), ctx)
+    desc = expand(str(page.get('description') or brand['tagline']), ctx)
+    url = page.get('canonical') or ('https://%s/' % domain)
+    alt = '%s cat logo' % brand['name']
+    rows = [
+        ('property', 'og:type', 'website'),
+        ('property', 'og:site_name', brand['name']),
+        ('property', 'og:title', title),
+        ('property', 'og:description', desc),
+        ('property', 'og:url', url),
+        ('property', 'og:image', image),
+        ('property', 'og:image:width', str(og_card.WIDTH)),
+        ('property', 'og:image:height', str(og_card.HEIGHT)),
+        ('property', 'og:image:alt', alt),
+        ('name', 'twitter:card', 'summary_large_image'),
+        ('name', 'twitter:title', title),
+        ('name', 'twitter:description', desc),
+        ('name', 'twitter:image', image),
+    ]
+    lines = []
+    for attr, key, value in rows:
+        if key in have:
+            continue
+        lines.append('  <meta %s="%s" content="%s">' % (attr, key, html_attr(str(value))))
+    return '\n'.join(lines)
 
 
 def footer_links(ctx):
@@ -335,6 +372,8 @@ class Renderer:
                 return path + '?v=' + self.assets[path]
             if k == 'footer:links':
                 return footer_links(ctx)
+            if k == 'og:meta':
+                return og_meta(text, ctx)
             if k == 'partner:widget':
                 return partner_widget_html(self.partner_shown)
             if k == 'partner:feed':
@@ -436,6 +475,7 @@ class Renderer:
             pairs = logo_mask.plan(self.ctx['brand'])
         except logo_mask.LogoError as e:
             raise RenderError(str(e))
+        mask_bytes = None
         root = os.path.realpath(ROOT)
         for rel, href, px in pairs:
             full = os.path.realpath(os.path.join(ROOT, rel))
@@ -452,6 +492,17 @@ class Renderer:
                 raise RenderError('%s has an unexpected size' % rel)
             self.write(href.lstrip('/'), data)
             self.assets[href] = hashlib.sha256(data).hexdigest()[:10]
+            if px is None:
+                mask_bytes = data
+        try:
+            card = og_card.build(self.ctx['brand'], mask_bytes)
+        except og_card.CardError as e:
+            raise RenderError(str(e))
+        og_href = self.ctx['brand']['logo'].get('ogImage') or '/og.png'
+        if not og_href.startswith('/') or '..' in og_href:
+            raise RenderError('brand.logo.ogImage must be a site path')
+        self.write(og_href.lstrip('/'), card)
+        self.assets[og_href] = hashlib.sha256(card).hexdigest()[:10]
 
     def run(self):
         os.makedirs(self.out, exist_ok=True)

@@ -14,6 +14,7 @@ MASK_REL = re.compile(r'^brand/assets/[a-z0-9.-]+\.png$')
 HREF = re.compile(r'^/assets/brand/[a-z0-9.-]+\.png$')
 ICON_KEY = re.compile(r'^icon([1-9][0-9]|[1-9][0-9]{2}|1024)$')
 KNOWN = ('mask', 'color', 'colorDark', 'publicMask')
+OPTIONAL = ('ogBackground', 'ogImage')
 
 
 def png_wh(data):
@@ -33,8 +34,12 @@ def plan(brand):
     if not isinstance(logo, dict):
         raise LogoError('brand.logo must be an object')
     for key in logo:
-        if key not in KNOWN and not ICON_KEY.fullmatch(key):
+        if key not in KNOWN and key not in OPTIONAL and not ICON_KEY.fullmatch(key):
             raise LogoError('brand.logo has unknown key %s' % key)
+    if 'ogBackground' in logo and not HEX.fullmatch(str(logo['ogBackground'])):
+        raise LogoError('brand.logo.ogBackground must be #RRGGBB')
+    if 'ogImage' in logo and (not isinstance(logo['ogImage'], str) or not re.fullmatch(r'/[a-z0-9./-]+\.png', logo['ogImage'])):
+        raise LogoError('brand.logo.ogImage must be a site png path')
     for key in KNOWN:
         if key not in logo:
             raise LogoError('brand.logo is missing %s' % key)

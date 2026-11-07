@@ -43,8 +43,8 @@ ok(logo['color'] == '#000000' and logo['colorDark'] == '#ffffff',
    'logo.color is #000000 and logo.colorDark is #ffffff')
 ok(logo['mask'] == 'brand/assets/cat-mask.png' and logo['publicMask'] == '/assets/brand/cat-mask.png',
    'one mask path in brand.json')
-ok(list(logo) == ['mask', 'color', 'colorDark', 'publicMask', 'icon16', 'icon24', 'icon32', 'icon48', 'icon128', 'icon256'],
-   'logo keys are the mask, two colors, and the size paths')
+ok(list(logo) == ['mask', 'color', 'colorDark', 'publicMask', 'icon16', 'icon24', 'icon32', 'icon48', 'icon128', 'icon256', 'ogBackground', 'ogImage'],
+   'logo keys are the mask, two colors, the size paths, and the share image')
 
 names = sorted(os.listdir(os.path.join(ROOT, 'brand', 'assets')))
 ok(names == sorted(os.path.basename(p) for p in EXPECT), 'brand/assets holds only the mask and the six sizes (%s)' % names)
@@ -87,6 +87,27 @@ ok('alt="SubX"' in idx and 'class="brand-icon"' in idx, 'header logo alt text is
 ok('favicon.svg' not in idx and 'icon32' not in idx, 'home no longer links the old svg favicon')
 for key in ('icon16', 'icon24', 'icon32', 'icon48', 'icon128', 'icon256'):
     ok(logo[key] + '?v=' in idx, 'home links %s from brand.json' % key)
+desc = re.search(r'<meta name="description" content="([^"]*)">', idx)
+ok(desc is not None and desc.group(1).strip() != '', 'index.html has a meta description')
+og = re.search(r'<meta property="og:image" content="([^"]+)">', idx)
+ok(og is not None and og.group(1) == 'https://%s%s' % (brand['primaryDomain'], logo['ogImage']),
+   'index.html og:image is the absolute share image (%s)' % (og.group(1) if og else None))
+ok('<meta name="twitter:card" content="summary_large_image">' in idx, 'index.html twitter:card is summary_large_image')
+og_path = logo['ogImage'].lstrip('/')
+og_file = os.path.join(SITE, og_path)
+ok(os.path.isfile(og_file), 'og image file exists')
+og_bytes = open(og_file, 'rb').read()
+ok(logo_mask.png_wh(og_bytes) == (1200, 630), 'og image is 1200x630')
+ok(len(og_bytes) <= 300 * 1024, 'og image is under 300KB (%d)' % len(og_bytes))
+# partner pages keep their own og:title and stay noindex; the share image is added
+part = read(os.path.join(SITE, 'partners.html'))
+ok(part.count('property="og:title"') == 1 and 'Why am I seeing this?' in part, 'partners.html keeps one og:title')
+ok('<meta name="robots" content="noindex,nofollow">' in part and 'property="og:image"' in part,
+   'partners.html stays noindex and gains og:image')
+room = read(os.path.join(SITE, 'partners/usserviceanimals/index.html'))
+ok(room.count('property="og:title"') == 1 and '<meta name="robots" content="noindex,nofollow">' in room,
+   'partner room keeps one og:title and stays noindex')
+ok('property="og:image"' in room, 'partner room gains og:image')
 
 # A color edit in brand.json is the only change the CSS needs.
 dummy = json.loads(json.dumps(brand))
@@ -110,7 +131,7 @@ with tempfile.TemporaryDirectory() as t:
 logo_doc = read(os.path.join(ROOT, 'hub', 'README.md')).split('## Logo\n', 1)[1]
 ok('## Logo' in read(os.path.join(ROOT, 'hub', 'README.md')) and not re.search(r'[\u2013\u2014]', logo_doc),
    'Logo section has no em or en dash')
-for rel in ('tools/logo_mask.py', 'test/hub_logo.test.py', 'hub/src/templates/styles.css',
+for rel in ('tools/logo_mask.py', 'tools/og_card.py', 'test/hub_logo.test.py', 'hub/src/templates/styles.css',
             'hub/src/partials/head.html', 'hub/src/templates/index.html', 'tools/brand_render.py'):
     ok(not re.search(r'[\u2013\u2014]', read(os.path.join(ROOT, rel))), '%s has no em or en dash' % rel)
 
