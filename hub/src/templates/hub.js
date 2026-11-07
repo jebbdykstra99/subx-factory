@@ -42,13 +42,65 @@
       '<a class="hub-card-link" href="' + esc(url) + '" rel="noopener"><div class="post-text">' + esc(it.text) + '</div></a>' +
       '<a class="hub-open" href="' + esc(url) + '" rel="noopener">Open in ' + esc(it.domain) + ' →</a></div></article>';
   }
-  function roomCard(r) {
-    var url = safeUrl('https://' + r.domain + '/'); if (!url) return '';
-    return '<a class="hub-room-card' + (r.featured ? ' is-featured' : '') + '" href="' + esc(url) + '" rel="noopener"><strong>' + esc(r.name) + '</strong>' +
-      (r.featured ? '<span class="hub-feat-tag">Featured</span>' : '') +
-      '<span class="hub-room-domain">' + esc(r.domain) + '</span>' + (r.tagline ? '<p>' + esc(r.tagline) + '</p>' : '') + '</a>';
+  function labelText(tier) {
+    if (tier === 'ai') return 'AI-made · AI steward';
+    if (tier === 'human') return 'Human-made';
+    if (tier === 'hybrid') return 'Human + AI';
+    return '';
   }
-  function getJSON(p) { return fetch(p, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(p + ' ' + r.status); return r.json(); }); }
+  function flat(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); }
+  function hexColor(c) { return /^#[0-9a-fA-F]{6}$/.test(String(c || '')) ? c : ''; }
+  function peekPost(it) {
+    if (!it) return null;
+    var url = safeUrl(it.url); if (!url) return null;
+    var text = flat(it.text); if (!text) return null;
+    return { url: url, handle: it.authorHandle || it.handle || '', tier: it.tier || '', names: it.names || '', text: text, createdAt: it.createdAt || '' };
+  }
+  function latestByRoom(items) {
+    var best = {};
+    (items || []).forEach(function (it) {
+      if (!it || !it.room) return;
+      var prev = best[it.room];
+      var t = Date.parse(it.createdAt), p = prev ? Date.parse(prev.createdAt) : NaN;
+      if (!prev || (isFinite(t) && (!isFinite(p) || t >= p))) best[it.room] = it;
+    });
+    return best;
+  }
+  function roomPeek(r, it) {
+    var roomUrl = safeUrl('https://' + r.domain + '/');
+    var accent = hexColor(r.accent);
+    var bar = '<span class="hub-room-peek-bar"' + (accent ? ' style="background:' + esc(accent) + '"' : '') + ' aria-hidden="true"></span>';
+    var post = peekPost(it);
+    if (post) {
+      var who = post.handle ? '@' + post.handle : (r.name || '');
+      var label = labelText(post.tier);
+      var when = ago(post.createdAt);
+      var aria = 'Latest post in ' + (r.name || 'this room') + (post.handle ? ' by @' + post.handle : '') + (label ? ', ' + label : '') + (when ? ', ' + when : '') + '. ' + post.text;
+      return '<a class="hub-room-peek" href="' + esc(post.url) + '" rel="noopener" aria-label="' + esc(aria) + '">' + bar +
+        '<span class="hub-room-peek-body"><span class="hub-room-peek-meta"><span class="hub-room-peek-handle">' + esc(who) + '</span>' +
+        tierHtml(post.tier, post.names) + '<span class="hub-room-peek-time">' + esc(when) + '</span></span>' +
+        '<span class="hub-room-peek-text">' + esc(post.text) + '</span>' +
+        '<span class="hub-room-peek-line">' + esc(who + (label ? ' · ' + label : '') + ' · ' + post.text) + '</span></span></a>';
+    }
+    var quiet = flat(r.brief) || flat(r.tagline);
+    if (!quiet || !roomUrl) return '';
+    return '<a class="hub-room-peek is-quiet" href="' + esc(roomUrl) + '" rel="noopener" aria-label="' + esc((r.name || 'Room') + '. ' + quiet) + '">' + bar +
+      '<span class="hub-room-peek-body"><span class="hub-room-peek-fallback">' + esc(quiet) + '</span>' +
+      '<span class="hub-room-peek-line">' + esc(quiet) + '</span></span></a>';
+  }
+  function roomCard(r, it) {
+    var url = safeUrl('https://' + r.domain + '/'); if (!url) return '';
+    return '<div class="hub-room-card' + (r.featured ? ' is-featured' : '') + '"><a class="hub-room-main" href="' + esc(url) + '" rel="noopener"><strong>' + esc(r.name) + '</strong>' +
+      (r.featured ? '<span class="hub-feat-tag">Featured</span>' : '') +
+      '<span class="hub-room-domain">' + esc(r.domain) + '</span>' + (r.tagline ? '<p>' + esc(r.tagline) + '</p>' : '') + '</a>' +
+      roomPeek(r, it) + '</div>';
+  }
+  // One fetch per URL per page load. The Rooms tab reuses the highlights.json request the home feed already started.
+  var jsonCache = {};
+  function getJSON(p) {
+    if (!jsonCache[p]) jsonCache[p] = fetch(p, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(p + ' ' + r.status); return r.json(); });
+    return jsonCache[p];
+  }
   var feed = document.getElementById('hub-feed'), roomsEl = document.getElementById('hub-rooms');
   if (feed) {
     getJSON('{{asset:/highlights.json}}').then(function (d) {
@@ -62,8 +114,18 @@
     }).catch(function () { feed.innerHTML = '<div class="post-empty">Highlights are unavailable right now. Open a {{brand.roomNoun.one}} from the list.</div>'; });
   }
   if (roomsEl) {
-    getJSON('{{asset:/rooms.json}}').then(function (d) {
-      roomsEl.innerHTML = ((d && d.rooms) || []).map(roomCard).join('') || '<div class="post-empty">No {{brand.roomNoun.many}} listed.</div>';
+    // highlights.json is already in flight on the home page (the feed started it). Elsewhere, use the preview
+    // copied onto rooms.json at build time, so this page does not start a second request.
+    var roomsP = getJSON('{{asset:/rooms.json}}');
+    var hlP = jsonCache['{{asset:/highlights.json}}'];
+    var itemsP = hlP ? hlP.then(function (d) { return (d && d.items) || []; }, function () { return []; }) : Promise.resolve([]);
+    Promise.all([roomsP, itemsP]).then(function (pair) {
+      var latest = latestByRoom(pair[1]);
+      var list = ((pair[0] && pair[0].rooms) || []).filter(function (r) {
+        return r && !(r.partner === true && r.enabled !== true);
+      });
+      roomsEl.innerHTML = list.map(function (r) { return roomCard(r, latest[r.room] || r.preview); }).join('') ||
+        '<div class="post-empty">No {{brand.roomNoun.many}} listed.</div>';
     }).catch(function () { roomsEl.innerHTML = '<div class="post-empty">{{brand.roomNoun.Many}} are unavailable right now.</div>'; });
   }
   // Stories row + Post in a room (2026-11-06). Nothing is sent or stored by the hub.

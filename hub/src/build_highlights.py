@@ -19,7 +19,10 @@ Option A from the 2026-10-30 readiness notes: a static build, no rules change, n
   rewritten), and a highlight that quotes a failing tagline is dropped. --refilter applies this to data/ too.
 - Writes only hub/src/data (no CNAME, no site.json edit: tools/brand_render.py fills site.json rail.outbound from
   rail.json). The per-room report is printed, not saved.
-Usage: python3 hub/src/build_highlights.py [--fetch 40] [--max 40] [--no-live-check] | --refilter | --stories-only
+Usage: python3 hub/src/build_highlights.py [--fetch 40] [--max 40] [--no-live-check] | --refilter | --stories-only | --annotate-preview
+- Room row preview (no page-load fetch): each suggested room can carry accent (site.json theme.accent), brief (Room Brief
+  first outbound line), and preview (the newest published highlight for that room). --annotate-preview fills those on
+  data/rooms.json from the public site.json files plus the highlights already on disk. It does not read Firestore.
 - Stories (2026-11-04, draft): also writes data/stories.json, the live rooms with Stories on (for the hub's Add story
   picker) and their live public TEXT stories. Steward-only unless --allow-member-stories; photo/clip stories are never
   copied. Stories expire in 24 hours, so this file needs a rebuild cadence (see shell/STORIES.md).
@@ -173,6 +176,101 @@ def clip(t):
     t = re.sub(r'\s+\n', '\n', t.strip())
     return t if len(t) <= MAX_TEXT else t[:MAX_TEXT - 1].rstrip() + '…'
 
+ACCENT_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
+POST_URL_RE = re.compile(r'^https://[a-z0-9.-]+\.[a-z]{2,}/\?p=[A-Za-z0-9_-]+$', re.I)
+
+def accent_of(site):
+    """Room theme accent from its public site.json, or '' when the value is not a 6-digit hex color."""
+    theme = (site or {}).get('theme') if isinstance(site, dict) else None
+    if not isinstance(theme, dict):
+        return ''
+    raw = theme.get('accent')
+    if isinstance(raw, str) and ACCENT_RE.match(raw.strip()):
+        return raw.strip().lower()
+    return ''
+
+def brief_line(site):
+    """First Room Brief line: the first outbound headline (else snippet) that passes the tagline safety rules."""
+    rail = (site or {}).get('rail') if isinstance(site, dict) else None
+    cards = rail.get('outbound') if isinstance(rail, dict) else None
+    if not isinstance(cards, list):
+        return ''
+    for card in cards:
+        if not isinstance(card, dict):
+            continue
+        for key in ('headline', 'snippet'):
+            raw = card.get(key)
+            if not isinstance(raw, str):
+                continue
+            line = raw.strip().split('\n', 1)[0].strip()
+            if not line or tagline_rule(line) is not None:
+                continue
+            if EMAIL_RE.search(line) or PHONE_RE.search(re.sub(r'https?://\S+', '', line)) or blocked(line):
+                continue
+            return line
+    return ''
+
+def latest_by_room(items):
+    """Newest published highlight per room, by createdAt. Ties keep the later item."""
+    best = {}
+    for it in items or []:
+        if not isinstance(it, dict) or not it.get('room'):
+            continue
+        prev = best.get(it['room'])
+        if prev is None or (ms(it.get('createdAt') or '') or 0) >= (ms(prev.get('createdAt') or '') or 0):
+            best[it['room']] = it
+    return best
+
+def preview_from(it):
+    """Compact copy of one highlight for a room row. None when the post cannot be linked safely. Text is not edited."""
+    if not isinstance(it, dict):
+        return None
+    url = it.get('url') if isinstance(it.get('url'), str) else ''
+    text = it.get('text') if isinstance(it.get('text'), str) else ''
+    if not POST_URL_RE.match(url) or not text.strip() or text_rule(text):
+        return None
+    tier = it.get('tier') if it.get('tier') in ('ai', 'human', 'hybrid') else ''
+    handle = it.get('authorHandle') if isinstance(it.get('authorHandle'), str) else ''
+    out = {'url': url, 'handle': handle, 'tier': tier, 'text': text, 'createdAt': it.get('createdAt') or ''}
+    names = it.get('names')
+    if isinstance(names, str) and names.strip():
+        out['names'] = names
+    return out
+
+def apply_previews(rooms, items):
+    """Set or clear each room's preview from the published highlights. Leaves accent and brief alone."""
+    latest = latest_by_room(items)
+    for r in rooms or []:
+        prev = preview_from(latest.get(r.get('room')))
+        if prev:
+            r['preview'] = prev
+        elif 'preview' in r:
+            del r['preview']
+
+def annotate_preview():
+    """Fill accent, brief, and preview on data/rooms.json. Public site.json reads only. No Firestore."""
+    rp = os.path.join(DATA, 'rooms.json')
+    rd = json.load(open(rp, encoding='utf-8'))
+    hl = json.load(open(os.path.join(DATA, 'highlights.json'), encoding='utf-8'))
+    for r in rd.get('rooms') or []:
+        site = live_site(r.get('domain'))
+        accent, brief = accent_of(site), brief_line(site)
+        if accent:
+            r['accent'] = accent
+        elif 'accent' in r:
+            del r['accent']
+        if brief:
+            r['brief'] = brief
+        elif 'brief' in r:
+            del r['brief']
+        if site is None:
+            print('annotate-preview: %s site.json unreachable' % r.get('room'))
+    apply_previews(rd.get('rooms') or [], hl.get('items') or [])
+    json.dump(rd, open(rp, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
+    n_prev = sum(1 for r in rd['rooms'] if r.get('preview'))
+    print('annotate-preview: %d rooms, %d with a highlight preview (wrote %s)' % (len(rd['rooms']), n_prev, rp))
+    return 0
+
 def write_rail(suggest):
     # Right rail (factory rail.outbound cards): suggested live rooms, merged into site.json by tools/brand_render.py.
     rail = [{'tag': 'Featured room' if s['featured'] else 'Room', 'headline': s['name'], 'snippet': safe_tagline(s['tagline']),
@@ -186,7 +284,6 @@ def refilter():
     rd = json.load(open(rp, encoding='utf-8'))
     cleared = [r['room'] for r in rd['rooms'] if r.get('tagline') and tagline_rule(r['tagline'])]
     for r in rd['rooms']: r['tagline'] = safe_tagline(r.get('tagline'))
-    json.dump(rd, open(rp, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
     write_rail(rd['rooms'])
     print('refilter: taglines cleared: %s' % (', '.join(cleared) or '-'))
     p = os.path.join(DATA, 'highlights.json')
@@ -197,6 +294,8 @@ def refilter():
     counts = {}
     for it in keep: counts[it['room']] = counts.get(it['room'], 0) + 1
     d['items'], d['counts'] = keep, counts
+    apply_previews(rd['rooms'], keep)
+    json.dump(rd, open(rp, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
     json.dump(d, open(p, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
     print('refilter: kept %d, dropped %d (%s)' % (len(keep), len(drop), ', '.join('%s/%s' % (i['room'], i['postId']) for i in drop) or '-'))
     return 0
@@ -282,9 +381,12 @@ def main():
     ap.add_argument('--no-live-check', action='store_true')
     ap.add_argument('--allow-unverified-members', action='store_true', help='include member posts even when hides cannot be read (not recommended)')
     ap.add_argument('--refilter', action='store_true', help='re-apply text_rule to data/highlights.json only (no fetch)')
+    ap.add_argument('--annotate-preview', action='store_true', help='fill room accent, brief, and highlight preview from public site.json plus data/highlights.json (no Firestore)')
     ap.add_argument('--stories-only', action='store_true', help='rebuild data/stories.json only (highlights untouched)')
     ap.add_argument('--allow-member-stories', action='store_true', help='include member text stories (decision pending; default steward-only)')
     a = ap.parse_args()
+    if a.annotate_preview:
+        return annotate_preview()
     if a.refilter:
         return refilter()
 
@@ -316,8 +418,12 @@ def main():
             # notifs (2026-11-04, hub Notifications): the room's own site.json turns member Notifications on
             # (features.notifs true); the hub shows an "Open Notifications" link only for those rooms
             notifs = isinstance(site_doc, dict) and isinstance(site_doc.get('features'), dict) and site_doc['features'].get('notifs') is True
-            suggest.append({'room': room, 'name': r['name'], 'domain': r['domain'], 'tagline': safe_tagline(r.get('tagline')), 'featured': room in featured,
-                            'notifs': notifs})
+            entry = {'room': room, 'name': r['name'], 'domain': r['domain'], 'tagline': safe_tagline(r.get('tagline')), 'featured': room in featured,
+                     'notifs': notifs}
+            accent, brief = accent_of(site_doc), brief_line(site_doc)
+            if accent: entry['accent'] = accent
+            if brief: entry['brief'] = brief
+            suggest.append(entry)
         per_room = f_per if room in featured else o_per
         if not r.get('highlights') or per_room <= 0:
             rep['skipped'] = 'held: ' + (r.get('hold') or 'highlights off') if not r.get('highlights') else 'suggestion only (otherPerRoom 0)'; continue
@@ -364,6 +470,7 @@ def main():
             if not layer: return out
             out += layer; rnd += 1
     items = (robin([n for n in order if n in featured]) + robin([n for n in order if n not in featured]))[:a.max]
+    apply_previews(suggest, items)
     now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     counts = {}
     for it in items: counts[it['room']] = counts.get(it['room'], 0) + 1
