@@ -85,7 +85,8 @@ ok('<h2>Room</h2>' not in pages['index.html'] and pages['index.html'].count('Ope
 ok('id="articles"' in pages['index.html'] and pages['index.html'].count('class="news-item-headline"') >= 6, 'articles show as cards')
 ok('Home alone practice' in pages['index.html'] and 'Separation anxiety course' not in pages['index.html'], 'home alone card title is neutral')
 ok(pages['index.html'].count('>Sponsored<') >= 7, 'product cards and the partner post are labeled Sponsored')
-ok(('%s staff' % name) in pages['index.html'] and ('%s staff' % name) in pages['llms.txt'], 'staff label renders from displayName')
+ok('SubX editorial' in pages['index.html'] and 'Example partner post' in pages['index.html'] and ('%s staff' % name) not in pages['index.html'] and 'Human-made' not in pages['index.html'], 'seeded posts are SubX editorial examples, not brand staff or Human-made')
+ok('SubX editorial' in pages['llms.txt'] and ('Sponsored by %s' % name) in pages['llms.txt'], 'llms.txt names SubX editorial and the sponsor line')
 ok('color: #000000' in pages['index.html'] and 'AI-made' in pages['index.html'], 'AI label stays AI-made at #000000')
 ok('Do not post diagnoses.' in pages['guidelines.html'], 'guidelines tell members not to post diagnoses')
 ok('SubX, LLC' in pages['index.html'] and 'takedown@subx.it' in pages['index.html'] and '+1-650-539-5005' in pages['index.html'], 'operator and public contacts are on the room')
@@ -106,8 +107,8 @@ with tempfile.TemporaryDirectory() as t:
     alt_pages = PR.render(os.path.join(room, 'site.json'))
     blob = '\n'.join(alt_pages.values())
     ok(name not in blob and alt in alt_pages['index.html'] and ('<title>%s</title>' % alt) in alt_pages['index.html']
-       and ('Sponsored by %s' % alt) in alt_pages['index.html'] and ('%s staff' % alt) in alt_pages['llms.txt']
-       and ('Guidelines, %s' % alt) in alt_pages['guidelines.html'],
+       and ('Sponsored by %s' % alt) in alt_pages['index.html'] and ('Sponsored by %s' % alt) in alt_pages['llms.txt']
+       and 'SubX editorial' in alt_pages['llms.txt'] and ('Guidelines, %s' % alt) in alt_pages['guidelines.html'],
        'one displayName edit renames the room header, title, meta, posts, guidelines, and llms.txt')
     hub_out = os.path.join(t, 'hub')
     BR.render(out=hub_out, preview_partners=True, rooms_root=os.path.join(t, 'rooms'))
@@ -119,9 +120,9 @@ with tempfile.TemporaryDirectory() as t:
        and 'property="og:title" content="%s, Why am I seeing this?' % alt in part, 'partners page title, meta, and og follow displayName')
     ok(idx.index('id="news-feed"') < idx.index('id="partner-rooms"'), 'partner widget is under Suggested rooms')
     artp = read(os.path.join(hub_out, 'partners', 'dogacademy', 'articles', 'calm-steady-presence.html'))
-    ok(('%s staff' % alt) in artp and name not in artp and 'Not affiliated with or endorsed by Cesar Millan.' in artp
-       and 'rel="noopener"' in artp and 'https://www.cesarmillan.com/about' in artp,
-       'article byline follows displayName and names the public source without an endorsement')
+    ok('SubX editorial' in artp and 'Example partner post' in artp and ('Sponsored by %s' % alt) in artp
+       and artp.count('>Sponsored<') >= 1 and name not in artp and 'Millan' not in artp and 'cesarmillan' not in artp,
+       'article byline is SubX editorial, related cards say Sponsored, and Millan is gone')
 
 live = BR.render(out=os.path.join(tempfile.mkdtemp(), 'live'))
 live_idx = read(os.path.join(live.out, 'index.html'))
@@ -134,11 +135,12 @@ ok(PR.load_articles() and len(PR.load_articles()['articles']) == 6, 'six origina
 for line in ('Partner rooms are sponsored by the named company.',
              'SubX, LLC runs the rooms. Moderation stays with SubX, LLC.',
              'A brand cannot edit or remove member posts.',
-             'Member data is never shared with a brand.',
-             'Fees are flat and never tied to sales.',
-             'There are no fake reviews.'):
+             'Partner staff must identify their affiliation.',
+             'Fake reviews are prohibited.'):
     ok(line in live_part, 'partners page: %s' % line[:48])
 ok(not re.search(r'\bpays\b', live_part, re.I), 'partners page does not say the brand pays')
+ok('Fees are flat' not in live_part, 'partners page does not state a fee')
+ok('labeled Sponsored' in live_part, 'partners page keeps the Sponsored label')
 css = read(os.path.join(ROOT, 'hub', 'src', 'templates', 'hub.css'))
 ok('#eff3f4' in css and '#536471' in css and '.partner-disclosure' in css and 'font-size: 15px' in css
    and 'body.hub-home:has(.partner-rooms) .right-panel' in css and 'position: static' in css,

@@ -91,8 +91,9 @@ PUBLIC_PAGES = ['index.html', 'rooms.html', 'about.html', 'terms.html', 'privacy
 NOINDEX_PAGES = ['404.html', topic_index] + TOPIC_PAGES
 _arts = json.load(open(os.path.join(ROOT, 'rooms', 'dogacademy-partner', 'articles.json'), encoding='utf-8'))['articles']
 _art_pages = ['partners/dogacademy/articles/%s.html' % a['slug'] for a in _arts]
-ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', 'partners.html', 'partners/dogacademy/index.html', '404.html'] + _art_pages + TOPIC_PAGES),
-   'hub pages: home, rooms, about, topic index, partners, partner room, articles, 4 legal, 404 + %d topic pages (%d pages)' % (len(TOPIC_PAGES), len(pages)))
+_partner_pages = ['partners.html', 'partners/dogacademy/index.html', 'partners/usserviceanimals/index.html'] + _art_pages
+ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', '404.html'] + _partner_pages + TOPIC_PAGES),
+   'hub pages: home, rooms, about, topic index, partners, both partner rooms, articles, 4 legal, 404 + %d topic pages (%d pages)' % (len(TOPIC_PAGES), len(pages)))
 site = json.load(open(os.path.join(SITE, 'site.json')))
 sh = site['shell']
 no_shell = set(x.lstrip('/') for x in sh.get('noShell', []))
@@ -357,6 +358,7 @@ sm = read(os.path.join(SITE, 'sitemap.xml'))
 locs = re.findall(r'<loc>([^<]*)</loc>', sm)
 want_locs = sorted('https://%s/%s' % (brand['primaryDomain'], '' if p == 'index.html' else p) for p in PUBLIC_PAGES)
 ok('<urlset' in sm and sorted(locs) == want_locs, 'sitemap.xml lists exactly the 7 public hub pages (%s)' % locs)
+ok(not [u for u in locs if '/partners' in u], 'sitemap.xml omits the noindex partner preview pages')
 ok(not [u for u in locs if brand['topicPathPrefix'] in u] and not [u for u in locs if '404' in u], 'sitemap.xml lists no topic page, no topic index and no 404 while no topic is active')
 ok(all('<meta name="robots" content="noindex,nofollow">' in read(os.path.join(SITE, f)) for f in NOINDEX_PAGES), 'hide-until-active: 404, topic index and every hidden topic stay noindex,nofollow')
 ok(all('<meta name="robots" content="index,follow">' in read(os.path.join(SITE, f)) for f in PUBLIC_PAGES), 'public hub pages are index,follow')

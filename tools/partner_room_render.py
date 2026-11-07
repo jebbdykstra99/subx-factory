@@ -166,6 +166,7 @@ ROOM_PATH = '/partners/dogacademy/'
 ARTICLES = os.path.join(ROOM, 'articles.json')
 ARTICLE_DIR = 'partners/dogacademy/articles'
 CLAIM = re.compile(r'\b(cure|cures|guarantee|guaranteed|testimonial)\b|\$|\bpays\b', re.I)
+EXAMPLE_TAG = 'Example partner post'
 
 
 def load_articles(path=None):
@@ -190,15 +191,9 @@ def load_articles(path=None):
             raise RoomError('article %s must point aggression or health worries to a trainer or a vet' % slug)
     if len(set(slugs)) != len(slugs):
         raise RoomError('article slugs must be unique')
-    # The room name is filled at render time. Article source must not repeat it.
-    # Caller passes the current displayName when it knows it.
-    if not str(data.get('sourceUrl') or '').startswith('https://www.cesarmillan.com/'):
-        raise RoomError('article source must be a public page on his official site')
-    for key in ('attribution', 'nonAffiliation', 'sourceLabel'):
-        if not str(data.get(key) or '').strip():
-            raise RoomError('articles.json is missing %s' % key)
-    if 'Not affiliated' not in data['nonAffiliation'] or 'endorsed' not in data['nonAffiliation']:
-        raise RoomError('articles need the not affiliated line')
+    blob_all = json.dumps(data, ensure_ascii=False)
+    if re.search(r'millan', blob_all, re.I):
+        raise RoomError('articles must not name Millan')
     return data
 
 
@@ -216,7 +211,9 @@ def fragments(site, brand, whomark):
     name = validate(site, brand, whomark)
     ai = whomark['tiers']['ai']
     human = whomark['tiers']['human']
+    hybrid = whomark['tiers']['hybrid']
     disclosure = fill(site['disclosure'], name)
+    editorial = brand['name'] + ' editorial'
     staff = fill(site['staffLabel'], name)
     partner_line = fill(site['partnerLine'], name)
     cards = []
@@ -235,17 +232,13 @@ def fragments(site, brand, whomark):
         if p.get('whomark') == 'ai':
             mark = '<span class="wm wm-ai">%s</span>' % esc(ai['stewardLabel'])
             who_initials = 'AI'
-        else:
-            mark = '<span class="wm wm-human">%s</span>' % esc(human['textLabel'])
-            who_initials = initials(name)
-        if p['kind'] == 'staff':
-            who = '<span class="staff-label">%s</span>' % esc(staff)
-        elif p['kind'] == 'partner':
-            who = '<span class="sponsored-label">Sponsored</span>'
-        elif p['kind'] == 'example':
-            who = '<span class="example-label">Example</span>'
-        else:
             who = '<span class="staff-label">AI steward</span>'
+        else:
+            mark = '<span class="wm wm-hybrid">%s</span>' % esc(hybrid['textLabel'])
+            who_initials = 'SX'
+            who = '<span class="staff-label">%s</span><span class="example-label">%s</span>' % (esc(editorial), esc(EXAMPLE_TAG))
+            if p['kind'] == 'partner':
+                who += '<span class="sponsored-label">Sponsored</span>'
         seat = ('<span class="seat-pill">%s</span>' % esc(p['seat'])) if p.get('seat') else ''
         extra = ''
         if p['kind'] == 'partner':
@@ -266,16 +259,18 @@ def fragments(site, brand, whomark):
     for a in pack['articles']:
         href = '/' + article_rel(a['slug'])
         article_bits.append(
-            '<a class="news-item" href="%s"><div class="staff-label">%s</div>'
+            '<a class="news-item" href="%s"><div class="sponsored-label">Sponsored</div>'
+            '<div class="staff-label">%s</div><span class="example-label">%s</span>'
+            '<div class="partner-disclosure">%s</div>'
             '<div class="news-item-headline">%s</div><div class="news-item-snippet">%s</div></a>'
-            % (esc(href), esc(staff), esc(a['title']), esc(a['dek'])))
+            % (esc(href), esc(editorial), esc(EXAMPLE_TAG), esc(disclosure), esc(a['title']), esc(a['dek'])))
         feed_bits.append(
-            '<article class="post"><div class="post-avatar" style="background:#2f3336" aria-hidden="true">%s</div>'
+            '<article class="post"><div class="post-avatar" style="background:#2f3336" aria-hidden="true">SX</div>'
             '<div class="post-body"><div class="post-meta"><span class="staff-label">%s</span>'
-            '<span class="wm wm-human">%s</span></div>'
+            '<span class="example-label">%s</span><span class="wm wm-hybrid">%s</span></div>'
             '<p class="post-text"><a href="%s">%s</a></p><p class="post-text">%s</p>'
             '<span class="partner-disclosure">%s</span></div></article>'
-            % (esc(initials(name)), esc(staff), esc(human['textLabel']), esc(href), esc(a['title']), esc(a['dek']), esc(disclosure)))
+            % (esc(editorial), esc(EXAMPLE_TAG), esc(hybrid['textLabel']), esc(href), esc(a['title']), esc(a['dek']), esc(disclosure)))
     rules = ''.join('<li>%s</li>' % esc(g) for g in site['guidelines'])
     contacts = 'Operated by %s. <a href="mailto:%s">%s</a>. %s.' % (
         esc(brand['legalEntity']), esc(brand['takedownEmail']), esc(brand['takedownEmail']), esc(brand['contactPhone']))
@@ -299,6 +294,7 @@ def fragments(site, brand, whomark):
         'ai_color': ai['color'],
         'human_label': human['textLabel'],
         'hybrid_label': whomark['tiers']['hybrid']['textLabel'],
+        'editorial': editorial,
         'operator': brand['legalEntity'],
         'email': brand['takedownEmail'],
         'phone': brand['contactPhone'],
@@ -374,16 +370,13 @@ def article_html(fr, article):
     paras = ''.join('<p>%s</p>' % e(p) for p in article['paragraphs'])
     href = '/' + article_rel(article['slug'])
     others = ''.join(
-        '<a class="news-item" href="/%s"><div class="news-item-headline">%s</div></a>'
+        '<a class="news-item" href="/%s"><div class="sponsored-label">Sponsored</div>'
+        '<div class="news-item-headline">%s</div></a>'
         % (article_rel(a['slug']), e(a['title'])) for a in pack['articles'])
     credit = (
-        '<p class="article-byline"><span class="staff-label">%s</span> <span class="wm wm-human">%s</span></p>'
+        '<p class="article-byline"><span class="staff-label">%s</span> <span class="example-label">%s</span> <span class="wm wm-hybrid">%s</span></p>'
         '<p class="partner-disclosure">%s</p>'
-        '<p class="article-credit">%s</p>'
-        '<p><a href="%s" rel="noopener">%s</a></p>'
-        '<p class="article-credit">%s</p>'
-        % (e(fr['staff']), e(fr['human_label']), e(fr['disclosure']),
-           e(pack['attribution']), e(pack['sourceUrl']), e(pack['sourceLabel']), e(pack['nonAffiliation'])))
+        % (e(fr['editorial']), e(EXAMPLE_TAG), e(fr['hybrid_label']), e(fr['disclosure'])))
     main = '''<div class="room-banner" role="img" aria-label="Room banner"></div>
   <div class="room-id">
     <div class="room-avatar" aria-hidden="true">%s</div>
@@ -453,7 +446,7 @@ def render_pages(site, brand, whomark):
 ## Disclosure
 - The room says: %s
 - Promotional product cards and partner posts are labeled Sponsored.
-- Staff posts are labeled %s.
+- Example partner posts are bylined %s and tagged Example partner post.
 - WHOMARK labels stay %s, %s, and %s. The AI label color is %s.
 - WHOMARK labels do not replace the sponsor line on the room or on a partner post.
 
@@ -464,7 +457,7 @@ def render_pages(site, brand, whomark):
 
 Domain: TBD. This file is a room prototype. It grants no license to copy content.
 """ % (
-        name, name, fr['tagline'], fr['operator'], fr['disclosure'], fr['staff'],
+        name, name, fr['tagline'], fr['operator'], fr['disclosure'], fr['editorial'],
         fr['human_label'], fr['ai_text'], fr['hybrid_label'], fr['ai_color'],
         fr['operator'], fr['email'], fr['phone'])
     return {'index.html': index, 'guidelines.html': guidelines, 'llms.txt': llms}
