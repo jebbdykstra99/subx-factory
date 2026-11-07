@@ -4,7 +4,7 @@
   "domain": "TBD",
   "displayName": "Dog Academy",
   "tagline": "Train together. Brag a little.",
-  "partnerLine": "Partner room. {{displayName}} supports this room. Members, not the sponsor, run the conversation. Operated by SubX, LLC.",
+  "partnerLine": "Partner room. {{displayName}} supports this room. Members, not the sponsor, run the conversation.",
   "staffLabel": "{{displayName}} staff",
   "disclosure": "Sponsored by {{displayName}}",
   "operator": "SubX, LLC",
@@ -72,8 +72,8 @@
       },
       {
         "tag": "Sponsored",
-        "headline": "Separation anxiety course",
-        "snippet": "Course page on the sponsor site. No outcome is promised here.",
+        "headline": "Home alone practice",
+        "snippet": "A course page on the sponsor site.",
         "url": "https://dogacademy.org/courses/minimizing-separation-anxiety"
       }
     ]
@@ -82,18 +82,63 @@
     {
       "kind": "staff",
       "whomark": "human",
-      "text": "Loose leash practice: a few minutes on a walk, then tell the room how it went."
+      "seat": "Puppy start",
+      "text": "A first week with a puppy can start with a crate, a potty spot, and a sleep spot. Tell the room what you tried."
+    },
+    {
+      "kind": "example",
+      "whomark": "human",
+      "seat": "Puppy start",
+      "text": "Example question, not a member post: what does the first week of potty practice look like in your house?"
+    },
+    {
+      "kind": "staff",
+      "whomark": "human",
+      "seat": "Leash and walks",
+      "text": "Loose leash practice: a few minutes on one walk, then tell the room what you tried."
+    },
+    {
+      "kind": "example",
+      "whomark": "human",
+      "seat": "Leash and walks",
+      "text": "Example question, not a member post: do you start loose leash practice in the driveway or on the sidewalk?"
+    },
+    {
+      "kind": "staff",
+      "whomark": "human",
+      "seat": "Barking and reactivity",
+      "text": "When barking starts, note what happened just before it. Try one calm step, then say what you saw."
+    },
+    {
+      "kind": "staff",
+      "whomark": "human",
+      "seat": "Home alone",
+      "text": "Home alone practice: step out for a short time, come back calm, and tell the room what you tried."
+    },
+    {
+      "kind": "example",
+      "whomark": "human",
+      "seat": "Tricks and enrichment",
+      "text": "Example question, not a member post: which trick are you teaching this week?"
+    },
+    {
+      "kind": "staff",
+      "whomark": "human",
+      "seat": "Breed corner",
+      "text": "Breed corner is for what you are learning about your dog's breed. Name the breed and one thing you are curious about."
     },
     {
       "kind": "partner",
       "whomark": "human",
+      "seat": "Leash and walks",
       "text": "Private training sessions are listed on the sponsor site.",
       "href": "https://dogacademy.org/in-person-dog-training/private-training"
     },
     {
       "kind": "steward",
       "whomark": "ai",
-      "text": "Do not post a diagnosis here, and do not ask another member for one."
+      "seat": "Home alone",
+      "text": "Do not post a diagnosis here, and do not ask another member for one. This room is not medical advice and not legal advice."
     }
   ],
   "shell": {

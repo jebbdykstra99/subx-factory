@@ -297,6 +297,60 @@ html[data-hub-theme="dark"] .whomark { background: #eff3f4; color: #0f1419; padd
   }
 }
 
+/* Partner room prototype. Same X shell as the hub: left nav, banner, centered feed, right rail. */
+body.partner-room-home { background: var(--bg); color: var(--text); }
+body.partner-room-home .room-nav-avatar,
+body.partner-room-home .room-avatar {
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: #2f3336; color: #e7e9ea; font-weight: 700;
+}
+body.partner-room-home .room-nav-avatar { width: 44px; height: 44px; margin: 0 auto 0.45rem; font-size: 0.95rem; }
+body.partner-room-home .room-banner { height: 140px; background: var(--surface); border-bottom: 1px solid var(--border); }
+body.partner-room-home .room-id {
+  display: flex; align-items: flex-end; gap: 0.85rem;
+  padding: 0 1.3rem; margin-top: -36px;
+}
+body.partner-room-home .room-avatar {
+  width: 72px; height: 72px; font-size: 1.15rem; flex: none;
+  border: 3px solid var(--bg);
+}
+body.partner-room-home .room-id h1 { margin: 0; font-size: 1.35rem; line-height: 1.2; color: #0f1419; }
+body.partner-room-home .room-tagline { margin: 0.15rem 0 0; font-size: 15px; color: #536471; }
+body.partner-room-home .room-meta { padding: 0.55rem 1.3rem 0.15rem; }
+body.partner-room-home .room-meta p { margin: 0.35rem 0 0; font-size: 15px; line-height: 1.45; }
+body.partner-room-home .partner-disclosure { color: #536471; font-size: 15px; font-weight: 700; line-height: 1.4; }
+body.partner-room-home .room-seats { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.7rem 1.3rem 0.35rem; }
+body.partner-room-home .room-seat {
+  border: 1px solid var(--border-strong); border-radius: 999px; padding: 0.22rem 0.7rem;
+  font-size: 15px; color: #0f1419; background: var(--bg); text-decoration: none;
+}
+body.partner-room-home .staff-label,
+body.partner-room-home .sponsored-label,
+body.partner-room-home .example-label { font-size: 15px; font-weight: 700; color: #0f1419; }
+body.partner-room-home .wm-ai { color: #000000; font-weight: 700; font-size: 15px; margin-left: 0.35rem; }
+body.partner-room-home .wm-human { color: #1E7B34; font-weight: 700; font-size: 15px; margin-left: 0.35rem; }
+body.partner-room-home .seat-pill {
+  margin-left: 0.35rem; font-size: 13px; color: #536471;
+  border: 1px solid #cfd9de; border-radius: 999px; padding: 0.05rem 0.45rem;
+}
+body.partner-room-home .room-articles { padding: 0.2rem 1rem 0.4rem; }
+body.partner-room-home .room-articles h2 { font-size: 1.05rem; margin: 0.4rem 0.3rem 0.35rem; }
+body.partner-room-home .article-body { padding: 0.4rem 1.3rem 2rem; max-width: 40rem; }
+body.partner-room-home .article-body p,
+body.partner-room-home .article-credit,
+body.partner-room-home .article-byline { font-size: 15px; line-height: 1.55; margin: 0 0 0.85rem; }
+body.partner-room-home .article-credit { color: #536471; }
+body.partner-room-home .room-guidelines { padding: 0.4rem 1.3rem 1.4rem; }
+body.partner-room-home .room-guidelines h2 { font-size: 1.05rem; margin: 0.6rem 0; }
+body.partner-room-home .right-panel-body .news-item { background: transparent; }
+@media (max-width: 1100px) {
+  body.partner-room-home { display: block; overflow: auto; height: auto; }
+  body.partner-room-home .main { margin-right: 0; width: auto; height: auto; max-height: none; overflow: visible; }
+  body.partner-room-home .right-panel {
+    display: flex; position: static; width: 100%; height: auto; inset: auto; bottom: auto; border-left: none;
+  }
+}
+
 @media (max-width: 900px) {
   .hub-top .thoughts-tabs { padding-left: 0; }
   .hub-top-main { padding: 0.45rem 0.75rem 0.45rem 3.35rem; align-items: flex-start; }

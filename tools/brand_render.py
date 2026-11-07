@@ -314,6 +314,12 @@ class Renderer:
                 return html_attr(expand(lookup(ctx, 'page.title'), ctx))
             if k == 'partner:ogDescription':
                 return html_attr(expand(lookup(ctx, 'page.description'), ctx))
+            if k == 'partnerRoom:body':
+                return self.partner_room_body
+            if k == 'partnerRoom:ogTitle':
+                return html_attr(self.partner_room_title)
+            if k == 'partnerRoom:ogDescription':
+                return html_attr(self.partner_room_description)
             if k.startswith('url:'):
                 if not KEY_RE.fullmatch(k[4:]):
                     raise RenderError('%s: bad token {{%s}}' % (where, k))
@@ -434,6 +440,13 @@ class Renderer:
         topics = self.topics()
         ns = site.setdefault('shell', {}).setdefault('noShell', [])
         ns += [self.topic_path(t['slug']) for t in topics]
+        import partner_room_render as PR
+        try:
+            for rel in PR.room_page_rels():
+                if rel not in ns:
+                    ns.append(rel)
+        except PR.RoomError as e:
+            raise RenderError(str(e))
         rail = os.path.join(self.src, 'data', 'rail.json')
         if os.path.isfile(rail):
             site.setdefault('rail', {})['outbound'] = json.load(open(rail, encoding='utf-8'))
@@ -469,7 +482,33 @@ class Renderer:
         for t in topics:
             self.write(self.topic_path(t['slug']), self.render_topic(t).encode('utf-8'))
         self.write('sitemap.xml', self.sitemap(topics).encode('utf-8'))
+        self.write_partner_room()
         return self
+
+    def write_partner_room(self):
+        """Static room home a hosting preview can serve. noindex. The hub widget flag does not hide this page."""
+        import partner_room_render as PR
+        site_path = os.path.join(self.rooms_root, 'dogacademy-partner', 'site.json')
+        if not os.path.isfile(site_path):
+            raise RenderError('partner room site.json is missing')
+        brand_name = self.ctx['brand']['name']
+        whomark = PR.load(PR.WHOMARK)
+        fr = PR.fragments(PR.load(site_path), self.ctx['brand'], whomark)
+        tpl = open(os.path.join(self.src, 'partner-room', 'home.html'), encoding='utf-8').read()
+
+        def emit(rel, title, description, body):
+            self.partner_room_body = body
+            self.partner_room_title = title
+            self.partner_room_description = description
+            page = {'title': title, 'description': description, 'robots': topic_status.NOINDEX,
+                    'canonical': self.canonical(rel)}
+            text = self.render_text(tpl, '.html', page, where=rel)
+            self.write(rel, text.encode('utf-8'))
+
+        emit('partners/dogacademy/index.html', '%s, %s' % (fr['name'], brand_name),
+             '%s %s' % (fr['tagline'], fr['disclosure']), PR.body_html(fr))
+        for a in fr['article_pack']['articles']:
+            emit(PR.article_rel(a['slug']), '%s, %s' % (a['title'], brand_name), a['dek'], PR.article_html(fr, a))
 
     # ---- topics ----
     def topic_cfg(self):

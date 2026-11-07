@@ -229,6 +229,7 @@
       "guidelines.html",
       "report.html",
       "partners.html",
+      "partners/dogacademy/index.html",
       "404.html",
       "t/grand-prix-racing/index.html",
       "t/papacy-and-church/index.html",
@@ -280,7 +281,13 @@
       "t/dogs/index.html",
       "t/board-games/index.html",
       "t/photography/index.html",
-      "t/books/index.html"
+      "t/books/index.html",
+      "partners/dogacademy/articles/calm-steady-presence.html",
+      "partners/dogacademy/articles/move-then-rule-then-affection.html",
+      "partners/dogacademy/articles/set-the-walk.html",
+      "partners/dogacademy/articles/same-rules-every-day.html",
+      "partners/dogacademy/articles/quiet-door-and-greeting.html",
+      "partners/dogacademy/articles/short-daily-lessons.html"
     ],
     "file": "shell/v1.2.6/factory.js",
     "sha256": "798184e45cdd243a04c81b065689f7fe1744263314a1a49b487ad1ac199ba48e",

@@ -29,6 +29,9 @@ name = site['displayName']
 hub = json.load(open(HUB_ROOMS, encoding='utf-8'))
 entry = hub['partnerRooms'][0]
 
+brand = json.load(open(os.path.join(ROOT, 'brand', 'brand.json'), encoding='utf-8'))
+ok(site.get('operator') == brand['legalEntity'] and site.get('takedownEmail') == brand['takedownEmail'] and site.get('contactPhone') == brand['contactPhone'],
+   'room file contacts match brand.json')
 ok(entry['enabled'] is False, 'partner entry is flagged off')
 ok(entry['displayName'] == '@rooms/%s/site.json#displayName' % entry['room'], 'hub displayName references the room site.json field')
 ok(entry['sponsor'] == '@displayName' and entry['disclosure'] == 'Sponsored by {{displayName}}', 'sponsor and disclosure fill from displayName')
@@ -65,6 +68,8 @@ for dirpath, dirs, files in os.walk(ROOT):
             continue
         if rel == 'rooms/dogacademy-partner/site.json':
             text = text.replace(json.dumps(name, ensure_ascii=False), '""', 1)
+        if rel.startswith('hub/site/partners/dogacademy/'):
+            continue
         if name in text:
             hits.append(rel)
 ok(not hits, 'displayName is not hardcoded anywhere else (%s)' % hits[:8])
@@ -74,7 +79,11 @@ joined = '\n'.join(pages.values())
 ok(name in pages['index.html'] and pages['index.html'].count('<title>%s</title>' % name) == 1, 'room title renders displayName')
 ok('property="og:title" content="%s"' % name in pages['index.html'], 'room og:title renders displayName')
 ok('<h1>%s</h1>' % name in pages['index.html'], 'room header renders displayName')
-ok(('Sponsored by %s' % name) in pages['index.html'] and pages['index.html'].count('class="disclosure"') >= 2, 'room and partner posts show the sponsor line')
+ok(('Sponsored by %s' % name) in pages['index.html'] and pages['index.html'].count('class="partner-disclosure"') >= 2, 'room and partner posts show the sponsor line')
+ok('class="sidebar"' in pages['index.html'] and 'class="room-banner"' in pages['index.html'] and 'class="room-avatar"' in pages['index.html'] and 'id="room-feed"' in pages['index.html'], 'room home uses the shell: nav, banner, avatar, feed')
+ok('<h2>Room</h2>' not in pages['index.html'] and pages['index.html'].count('Operated by ') == 1, 'no empty Room heading and one operator line')
+ok('id="articles"' in pages['index.html'] and pages['index.html'].count('class="news-item-headline"') >= 6, 'articles show as cards')
+ok('Home alone practice' in pages['index.html'] and 'Separation anxiety course' not in pages['index.html'], 'home alone card title is neutral')
 ok(pages['index.html'].count('>Sponsored<') >= 7, 'product cards and the partner post are labeled Sponsored')
 ok(('%s staff' % name) in pages['index.html'] and ('%s staff' % name) in pages['llms.txt'], 'staff label renders from displayName')
 ok('color: #000000' in pages['index.html'] and 'AI-made' in pages['index.html'], 'AI label stays AI-made at #000000')
@@ -109,11 +118,19 @@ with tempfile.TemporaryDirectory() as t:
     ok(alt in part and ('<title>%s, Why am I seeing this?' % alt) in part and name not in part
        and 'property="og:title" content="%s, Why am I seeing this?' % alt in part, 'partners page title, meta, and og follow displayName')
     ok(idx.index('id="news-feed"') < idx.index('id="partner-rooms"'), 'partner widget is under Suggested rooms')
+    artp = read(os.path.join(hub_out, 'partners', 'dogacademy', 'articles', 'calm-steady-presence.html'))
+    ok(('%s staff' % alt) in artp and name not in artp and 'Not affiliated with or endorsed by Cesar Millan.' in artp
+       and 'rel="noopener"' in artp and 'https://www.cesarmillan.com/about' in artp,
+       'article byline follows displayName and names the public source without an endorsement')
 
 live = BR.render(out=os.path.join(tempfile.mkdtemp(), 'live'))
 live_idx = read(os.path.join(live.out, 'index.html'))
 live_part = read(os.path.join(live.out, 'partners.html'))
-ok('id="partner-rooms"' not in live_idx and name not in live_idx and name not in live_part, 'flag off: hub does not show the room')
+ok('id="partner-rooms"' not in live_idx and name not in live_idx and name not in live_part, 'flag off: hub home does not show the room')
+room_home = read(os.path.join(live.out, 'partners', 'dogacademy', 'index.html'))
+ok('class="room-banner"' in room_home and 'class="sidebar"' in room_home and name in room_home and 'noindex,nofollow' in room_home,
+   'flag off still publishes the noindex room home')
+ok(PR.load_articles() and len(PR.load_articles()['articles']) == 6, 'six original articles')
 for line in ('Partner rooms are sponsored by the named company.',
              'SubX, LLC runs the rooms. Moderation stays with SubX, LLC.',
              'A brand cannot edit or remove member posts.',

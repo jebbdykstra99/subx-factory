@@ -91,8 +91,8 @@ def validate(site, brand, whomark):
         raise RoomError('siteId must be dogacademy-partner')
     if site.get('domain') != 'TBD':
         raise RoomError('domain must stay TBD until a name clears trademark review')
-    if site.get('operator') != brand['legalEntity'] or site.get('takedownEmail') != brand['takedownEmail'] or site.get('contactPhone') != brand['contactPhone']:
-        raise RoomError('operator, takedown email, and phone must match brand.json')
+    # Rendered contact lines use brand.json so a brand rename reaches every page.
+    # The room file is checked against the real brand in test/partner_rooms.test.py.
     if '3019' in raw or 'Ocean Park' in raw or '90405' in raw:
         raise RoomError('room config must not carry a street address')
     sh = site.get('shell') or {}
@@ -122,6 +122,10 @@ def validate(site, brand, whomark):
         url = c.get('url') or ''
         if not url.startswith('https://dogacademy.org/'):
             raise RoomError('Room Brief links stay on dogacademy.org')
+        if 'minimizing-separation-anxiety' in url:
+            shown = (c.get('headline') or '') + ' ' + (c.get('snippet') or '')
+            if c.get('headline') != 'Home alone practice' or 'anxiety' in shown.lower():
+                raise RoomError('the home alone card stays a neutral title with no anxiety outcome')
         urls.append(url)
     if set(urls) != RAIL_URLS or len(urls) != len(set(urls)):
         raise RoomError('Room Brief URLs must be the six ordinary training pages, once each')
@@ -129,13 +133,22 @@ def validate(site, brand, whomark):
         raise RoomError('leave puppy sales out of the rail')
     feed = site.get('feed') or []
     kinds = [p.get('kind') for p in feed]
-    if 'partner' not in kinds or 'staff' not in kinds:
-        raise RoomError('the feed needs a staff post and a partner post')
+    if not (8 <= len(feed) <= 10):
+        raise RoomError('the feed needs 8 to 10 posts')
+    if not {'partner', 'staff', 'example', 'steward'} <= set(kinds):
+        raise RoomError('the feed needs staff tips, example questions, a partner post, and an AI steward note')
+    seats = {p.get('seat') for p in feed}
+    if not {n.get('label') for n in nests} <= seats:
+        raise RoomError('every explore seat needs a post')
     for p in feed:
         if p.get('kind') == 'partner' and not p.get('href', '').startswith('https://dogacademy.org/'):
             raise RoomError('a partner post links to the sponsor site')
+        if p.get('kind') == 'example' and not str(p.get('text') or '').startswith('Example question'):
+            raise RoomError('example posts must be marked as examples')
         if re.search(r'\breviews?\b|\btestimonial', p.get('text') or '', re.I):
             raise RoomError('feed posts are not reviews')
+    if 'Operated by' in fill(site.get('partnerLine') or '', name):
+        raise RoomError('partner line must not repeat the operator line')
     if '{{displayName}}' not in (site.get('partnerLine') or '') or '{{displayName}}' not in (site.get('staffLabel') or '') or '{{displayName}}' not in (site.get('disclosure') or ''):
         raise RoomError('partner line, staff label, and disclosure must fill from {{displayName}}')
     if not any('diagnos' in g.lower() for g in site.get('guidelines') or []):
@@ -149,83 +162,254 @@ def validate(site, brand, whomark):
     return name
 
 
-CSS = """
-:root { color-scheme: light; }
-* { box-sizing: border-box; }
-body { margin: 0; background: #fff; color: #0f1419;
-  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-a { color: #0f1419; }
-.wrap { display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-areas: "head rail" "feed rail"; min-height: 100vh; }
-header { grid-area: head; padding: 1.15rem 1.3rem 0.4rem; }
-main { grid-area: feed; padding: 0.2rem 1.3rem 2rem; }
-.rail { grid-area: rail; padding: 1rem 1rem 2rem; border-left: 1px solid #eff3f4; }
-h1 { font-size: 22px; line-height: 1.25; margin: 0 0 0.25rem; }
-.tagline { margin: 0; font-size: 15px; color: #536471; }
-.disclosure { display: block; margin: 0.55rem 0 0; font-size: 15px; line-height: 1.4; font-weight: 700; color: #536471; }
-.partner-line, .contacts { margin: 0.45rem 0 0; font-size: 15px; line-height: 1.45; }
-.seats { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.75rem 0 0.2rem; }
-.seat { border: 1px solid #cfd9de; border-radius: 999px; padding: 0.22rem 0.7rem; font-size: 15px; background: #fff; }
-.rail h2 { font-size: 17px; margin: 0 0 0.45rem; }
-.rail-box { background: #eff3f4; border: 1px solid #eff3f4; border-radius: 16px; overflow: hidden; }
-.card { display: block; padding: 0.65rem 0.9rem; text-decoration: none; border-bottom: 1px solid #fff; }
-.card:hover { background: #e7eced; }
-.sponsored-label, .staff-label { display: inline-block; font-size: 15px; font-weight: 700; color: #0f1419; }
-.card h3 { font-size: 15px; margin: 0.12rem 0; }
-.card p, .post p { margin: 0.15rem 0 0; font-size: 15px; }
-.rail-note { margin: 0.45rem 0 0; font-size: 15px; color: #536471; }
-.post { display: flex; gap: 0.7rem; padding: 0.75rem 0; border-bottom: 1px solid #eff3f4; }
-.avatar { width: 42px; height: 42px; border-radius: 50%; background: #2f3336; color: #e7e9ea;
-  display: flex; align-items: center; justify-content: center; font-weight: 700; flex: none; }
-.wm { font-size: 15px; font-weight: 700; margin-left: 0.35rem; }
-.wm-ai { color: #000000; }
-.wm-human { color: #1E7B34; }
-.foot { margin-top: 1rem; font-size: 15px; color: #536471; }
-.rules { padding: 1.2rem 1.3rem 2rem; max-width: 40rem; }
-.rules li { margin: 0.35rem 0; }
-@media (max-width: 800px) {
-  .wrap { display: block; }
-  .rail { border-left: 0; }
-}
-"""
+ROOM_PATH = '/partners/dogacademy/'
+ARTICLES = os.path.join(ROOM, 'articles.json')
+ARTICLE_DIR = 'partners/dogacademy/articles'
+CLAIM = re.compile(r'\b(cure|cures|guarantee|guaranteed|testimonial)\b|\$|\bpays\b', re.I)
 
 
-def render_pages(site, brand, whomark):
+def load_articles(path=None):
+    path = path or ARTICLES
+    data = load(path)
+    arts = data.get('articles') or []
+    if not (5 <= len(arts) <= 6):
+        raise RoomError('the room needs 5 or 6 articles')
+    slugs = []
+    for a in arts:
+        slug = a.get('slug') or ''
+        if not re.fullmatch(r'[a-z0-9-]{1,60}', slug):
+            raise RoomError('article slug is not a plain path piece')
+        slugs.append(slug)
+        words = len(' '.join(a.get('paragraphs') or []).split())
+        if not (300 <= words <= 500):
+            raise RoomError('article %s is %d words; keep the body between 300 and 500' % (slug, words))
+        blob = json.dumps(a, ensure_ascii=False)
+        if DASH.search(blob) or CLAIM.search(blob):
+            raise RoomError('article %s has a dash or a banned claim' % slug)
+        if 'qualified trainer' not in blob or 'veterinarian' not in blob:
+            raise RoomError('article %s must point aggression or health worries to a trainer or a vet' % slug)
+    if len(set(slugs)) != len(slugs):
+        raise RoomError('article slugs must be unique')
+    # The room name is filled at render time. Article source must not repeat it.
+    # Caller passes the current displayName when it knows it.
+    if not str(data.get('sourceUrl') or '').startswith('https://www.cesarmillan.com/'):
+        raise RoomError('article source must be a public page on his official site')
+    for key in ('attribution', 'nonAffiliation', 'sourceLabel'):
+        if not str(data.get(key) or '').strip():
+            raise RoomError('articles.json is missing %s' % key)
+    if 'Not affiliated' not in data['nonAffiliation'] or 'endorsed' not in data['nonAffiliation']:
+        raise RoomError('articles need the not affiliated line')
+    return data
+
+
+def article_rel(slug):
+    return '%s/%s.html' % (ARTICLE_DIR, slug)
+
+
+def room_page_rels():
+    data = load_articles()
+    return ['partners/dogacademy/index.html'] + [article_rel(a['slug']) for a in data['articles']]
+
+
+def fragments(site, brand, whomark):
+    """Escaped room pieces. The visible name always comes from displayName."""
     name = validate(site, brand, whomark)
     ai = whomark['tiers']['ai']
     human = whomark['tiers']['human']
     disclosure = fill(site['disclosure'], name)
     staff = fill(site['staffLabel'], name)
     partner_line = fill(site['partnerLine'], name)
-    seats = ''.join('<span class="seat">%s</span>' % esc(n['label']) for n in site['nests'])
     cards = []
     for c in site['rail']['outbound']:
         cards.append(
-            '<a class="card" href="%s"><span class="sponsored-label">Sponsored</span>'
-            '<h3>%s</h3><p>%s</p>'
-            '<span class="disclosure">%s</span></a>'
+            '<a class="news-item" href="%s"><div class="sponsored-label">Sponsored</div>'
+            '<div class="news-item-headline">%s</div><div class="news-item-snippet">%s</div>'
+            '<div class="partner-disclosure">%s</div></a>'
             % (esc(c['url']), esc(c['headline']), esc(c['snippet']), esc(disclosure)))
     posts = []
-    for p in site['feed']:
-        if p['whomark'] == 'ai':
+    first_seat = {}
+    for i, p in enumerate(site['feed']):
+        if p.get('seat') and p['seat'] not in first_seat:
+            first_seat[p['seat']] = 'post-%d' % (i + 1)
+    for i, p in enumerate(site['feed']):
+        if p.get('whomark') == 'ai':
             mark = '<span class="wm wm-ai">%s</span>' % esc(ai['stewardLabel'])
+            who_initials = 'AI'
         else:
             mark = '<span class="wm wm-human">%s</span>' % esc(human['textLabel'])
+            who_initials = initials(name)
         if p['kind'] == 'staff':
             who = '<span class="staff-label">%s</span>' % esc(staff)
         elif p['kind'] == 'partner':
             who = '<span class="sponsored-label">Sponsored</span>'
+        elif p['kind'] == 'example':
+            who = '<span class="example-label">Example</span>'
         else:
             who = '<span class="staff-label">AI steward</span>'
+        seat = ('<span class="seat-pill">%s</span>' % esc(p['seat'])) if p.get('seat') else ''
         extra = ''
         if p['kind'] == 'partner':
-            extra = '<a href="%s">%s</a>' % (esc(p['href']), esc(p['href']))
-            extra = '<p>%s</p><span class="disclosure">%s</span>' % (extra, esc(disclosure))
+            extra = '<p><a href="%s">%s</a></p><span class="partner-disclosure">%s</span>' % (
+                esc(p['href']), esc(p['href']), esc(disclosure))
         posts.append(
-            '<article class="post"><div class="avatar" aria-hidden="true">%s</div><div>'
-            '<div>%s%s</div><p>%s</p>%s</div></article>'
-            % (esc(initials(name if p['kind'] != 'steward' else 'AI')), who, mark, esc(p['text']), extra))
+            '<article class="post" id="post-%d"><div class="post-avatar" style="background:#2f3336" aria-hidden="true">%s</div>'
+            '<div class="post-body"><div class="post-meta">%s%s%s</div><p class="post-text">%s</p>%s</div></article>'
+            % (i + 1, who_initials, who, mark, seat, esc(p['text']), extra))
+    seats = ''.join(
+        '<a class="room-seat" href="#%s">%s</a>' % (first_seat.get(n['label'], 'room-feed'), esc(n['label']))
+        for n in site['nests'])
+    pack = load_articles()
+    if name in json.dumps(pack, ensure_ascii=False):
+        raise RoomError('articles must not hardcode the room name')
+    article_bits = []
+    feed_bits = []
+    for a in pack['articles']:
+        href = '/' + article_rel(a['slug'])
+        article_bits.append(
+            '<a class="news-item" href="%s"><div class="staff-label">%s</div>'
+            '<div class="news-item-headline">%s</div><div class="news-item-snippet">%s</div></a>'
+            % (esc(href), esc(staff), esc(a['title']), esc(a['dek'])))
+        feed_bits.append(
+            '<article class="post"><div class="post-avatar" style="background:#2f3336" aria-hidden="true">%s</div>'
+            '<div class="post-body"><div class="post-meta"><span class="staff-label">%s</span>'
+            '<span class="wm wm-human">%s</span></div>'
+            '<p class="post-text"><a href="%s">%s</a></p><p class="post-text">%s</p>'
+            '<span class="partner-disclosure">%s</span></div></article>'
+            % (esc(initials(name)), esc(staff), esc(human['textLabel']), esc(href), esc(a['title']), esc(a['dek']), esc(disclosure)))
+    rules = ''.join('<li>%s</li>' % esc(g) for g in site['guidelines'])
     contacts = 'Operated by %s. <a href="mailto:%s">%s</a>. %s.' % (
-        esc(site['operator']), esc(site['takedownEmail']), esc(site['takedownEmail']), esc(site['contactPhone']))
+        esc(brand['legalEntity']), esc(brand['takedownEmail']), esc(brand['takedownEmail']), esc(brand['contactPhone']))
+    return {
+        'name': name,
+        'disclosure': disclosure,
+        'staff': staff,
+        'partner_line': partner_line,
+        'seats': seats,
+        'cards': ''.join(cards),
+        'posts': ''.join(feed_bits) + ''.join(posts),
+        'article_section': ''.join(article_bits),
+        'rules': rules,
+        'article_pack': pack,
+        'contacts': contacts,
+        'initials': initials(name),
+        'tagline': site['tagline'],
+        'rail_footer': site['rail']['footer'],
+        'ai_label': ai['stewardLabel'],
+        'ai_text': ai['textLabel'],
+        'ai_color': ai['color'],
+        'human_label': human['textLabel'],
+        'hybrid_label': whomark['tiers']['hybrid']['textLabel'],
+        'operator': brand['legalEntity'],
+        'email': brand['takedownEmail'],
+        'phone': brand['contactPhone'],
+    }
+
+
+def body_html(fr):
+    """X-style room shell: left nav, banner and avatar, centered feed, right rail. No empty band above the feed."""
+    e = esc
+    return '''<button class="hamburger" id="hamburger" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><span></span><span></span><span></span></button>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <a href="%s" class="brand-mark" aria-label="%s home"><span class="room-nav-avatar" aria-hidden="true">%s</span></a>
+    <div class="brand-title">%s</div>
+    <div class="brand-sub">%s</div>
+  </div>
+  <nav aria-label="Room">
+    <ul>
+      <li><a class="nav-social-link active" href="%s">Home</a></li>
+      <li><a class="nav-social-link" href="%s#seats">Explore</a></li>
+      <li><a class="nav-social-link" href="%s#articles">Articles</a></li>
+      <li><a class="nav-social-link" href="%s#guidelines">Guidelines</a></li>
+      <li><a class="nav-social-link" href="/">Hub</a></li>
+    </ul>
+    <button type="button" class="hub-theme-toggle" id="hub-theme-toggle" aria-pressed="false">Lights out</button>
+    <div class="nav-legal"><a href="/terms.html">Terms</a> <a href="/privacy.html">Privacy</a> <a href="/report.html">Report</a> <a href="/about.html">About</a></div>
+  </nav>
+</aside>
+<main class="main">
+  <div class="room-banner" role="img" aria-label="Room banner"></div>
+  <div class="room-id">
+    <div class="room-avatar" aria-hidden="true">%s</div>
+    <div>
+      <h1>%s</h1>
+      <p class="room-tagline">%s</p>
+    </div>
+  </div>
+  <div class="room-meta">
+    <span class="partner-disclosure">%s</span>
+    <p class="partner-line">%s</p>
+    <p class="contacts">%s</p>
+  </div>
+  <div class="room-seats" id="seats">%s</div>
+  <section class="room-articles" id="articles">
+    <h2>Articles</h2>
+    <div class="right-panel-body article-list">%s</div>
+  </section>
+  <div class="room-feed" id="room-feed">%s</div>
+  <section class="room-guidelines" id="guidelines">
+    <h2>Room guidelines</h2>
+    <ul>%s</ul>
+  </section>
+</main>
+<aside class="right-panel" id="right-panel" aria-label="Room Brief">
+  <div class="right-panel-header">
+    <div class="right-panel-kicker">In the room</div>
+    <div class="right-panel-title">Room Brief</div>
+  </div>
+  <div class="right-panel-body" id="room-rail">%s</div>
+  <div class="right-panel-footer"><p>%s</p></div>
+</aside>''' % (
+        ROOM_PATH, e(fr['name']), e(fr['initials']), e(fr['name']), e(fr['tagline']),
+        ROOM_PATH, ROOM_PATH, ROOM_PATH,
+        ROOM_PATH, e(fr['initials']), e(fr['name']), e(fr['tagline']),
+        e(fr['disclosure']), e(fr['partner_line']), fr['contacts'],
+        fr['seats'], fr['article_section'], fr['posts'], fr['rules'], fr['cards'], e(fr['rail_footer']))
+
+
+def article_html(fr, article):
+    """Same shell as the room home, with one article in the center column."""
+    e = esc
+    pack = fr['article_pack']
+    paras = ''.join('<p>%s</p>' % e(p) for p in article['paragraphs'])
+    href = '/' + article_rel(article['slug'])
+    others = ''.join(
+        '<a class="news-item" href="/%s"><div class="news-item-headline">%s</div></a>'
+        % (article_rel(a['slug']), e(a['title'])) for a in pack['articles'])
+    credit = (
+        '<p class="article-byline"><span class="staff-label">%s</span> <span class="wm wm-human">%s</span></p>'
+        '<p class="partner-disclosure">%s</p>'
+        '<p class="article-credit">%s</p>'
+        '<p><a href="%s" rel="noopener">%s</a></p>'
+        '<p class="article-credit">%s</p>'
+        % (e(fr['staff']), e(fr['human_label']), e(fr['disclosure']),
+           e(pack['attribution']), e(pack['sourceUrl']), e(pack['sourceLabel']), e(pack['nonAffiliation'])))
+    main = '''<div class="room-banner" role="img" aria-label="Room banner"></div>
+  <div class="room-id">
+    <div class="room-avatar" aria-hidden="true">%s</div>
+    <div><p class="room-tagline"><a href="%s">%s</a></p><h1>%s</h1></div>
+  </div>
+  <article class="article-body">%s%s</article>''' % (
+        e(fr['initials']), ROOM_PATH, e(fr['name']), e(article['title']), credit, paras)
+    # Reuse the home shell's nav by swapping the main and rail of a fresh home and... build directly.
+    home = body_html(fr)
+    start = home.find('<main class="main">')
+    end = home.find('</main>')
+    page = home[:start] + '<main class="main">\n  ' + main + '\n</main>' + home[end + len('</main>'):]
+    page = re.sub(
+        r'(<div class="right-panel-body" id="room-rail">).*?(</div>\s*<div class="right-panel-footer">)',
+        lambda m: m.group(1) + others + m.group(2),
+        page, count=1, flags=re.S)
+    page = page.replace('<div class="right-panel-title">Room Brief</div>', '<div class="right-panel-title">Articles</div>', 1)
+    page = page.replace('Room Brief links open the sponsor site. Not a news ingest.', 'More from this room.', 1)
+    page = page.replace('nav-social-link active', 'nav-social-link', 1)
+    return page
+
+
+def render_pages(site, brand, whomark):
+    fr = fragments(site, brand, whomark)
+    name = fr['name']
+    body = body_html(fr)
     index = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -236,59 +420,32 @@ def render_pages(site, brand, whomark):
 <meta name="description" content="%s %s">
 <meta property="og:title" content="%s">
 <meta property="og:description" content="%s">
-<style>%s</style>
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/nests.css">
+<link rel="stylesheet" href="/hub.css">
+<style>.wm-ai { color: #000000; }</style>
 </head>
-<body>
-<div class="wrap">
-<header>
-  <h1>%s</h1>
-  <p class="tagline">%s</p>
-  <span class="disclosure">%s</span>
-  <p class="partner-line">%s</p>
-  <p class="contacts">%s</p>
-  <div class="seats" aria-label="Explore seats">%s</div>
-  <p class="foot"><a href="guidelines.html">Room guidelines</a></p>
-</header>
-<aside class="rail" aria-label="Room Brief">
-  <h2>Room Brief</h2>
-  <div class="rail-box">%s</div>
-  <p class="rail-note">%s</p>
-</aside>
-<main>
-  <h2>Room</h2>
-  %s
-</main>
-</div>
+<body class="partner-room-home">
+%s
 </body>
 </html>
-""" % (
-        esc(name), esc(site['tagline']), esc(disclosure), esc(name), esc(site['tagline']), CSS,
-        esc(name), esc(site['tagline']), esc(disclosure), esc(partner_line), contacts, seats,
-        ''.join(cards), esc(site['rail']['footer']), ''.join(posts))
-    rules = ''.join('<li>%s</li>' % esc(g) for g in site['guidelines'])
+""" % (esc(name), esc(fr['tagline']), esc(fr['disclosure']), esc(name), esc(fr['tagline']), body)
     guidelines = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Guidelines, %s</title>
-<meta name="description" content="Room guidelines for %s. Do not post diagnoses.">
-<meta property="og:title" content="Guidelines, %s">
-<meta property="og:description" content="Room guidelines for %s.">
-<style>%s</style>
 </head>
-<body>
-<article class="rules">
-  <h1>Guidelines for %s</h1>
-  <span class="disclosure">%s</span>
-  <ul>%s</ul>
-  <p class="contacts">%s</p>
-  <p><a href="index.html">Back to %s</a></p>
-</article>
+<body class="partner-room-home">
+<h1>Guidelines for %s</h1>
+<span class="partner-disclosure">%s</span>
+<ul>%s</ul>
+<p class="contacts">%s</p>
+<p><a href="index.html">Back to %s</a></p>
 </body>
 </html>
-""" % (esc(name), esc(name), esc(name), esc(name), CSS, esc(name), esc(disclosure), rules, contacts, esc(name))
+""" % (esc(name), esc(name), esc(fr['disclosure']), fr['rules'], fr['contacts'], esc(name))
     llms = """# %s
 
 > %s (%s) is a community room operated by %s.
@@ -307,9 +464,9 @@ def render_pages(site, brand, whomark):
 
 Domain: TBD. This file is a room prototype. It grants no license to copy content.
 """ % (
-        name, name, site['tagline'], site['operator'], disclosure, staff,
-        human['textLabel'], ai['textLabel'], whomark['tiers']['hybrid']['textLabel'], ai['color'],
-        site['operator'], site['takedownEmail'], site['contactPhone'])
+        name, name, fr['tagline'], fr['operator'], fr['disclosure'], fr['staff'],
+        fr['human_label'], fr['ai_text'], fr['hybrid_label'], fr['ai_color'],
+        fr['operator'], fr['email'], fr['phone'])
     return {'index.html': index, 'guidelines.html': guidelines, 'llms.txt': llms}
 
 
