@@ -108,9 +108,13 @@ for rel in new_files:
 rooms = json.load(open(os.path.join(SRC, 'rooms.json'), encoding='utf-8'))
 ok('usserviceanimals' not in rooms.get('featuredRooms', []) and 'usserviceanimals' not in rooms.get('roomOrder', []),
    'room is not in featuredRooms or roomOrder')
-for rel in ('index.html', 'rooms.html', 'about.html'):
-    page = read(os.path.join(SITE, rel))
-    ok('/partners/usserviceanimals' not in page and EXPECTED not in page, '%s does not list this partner room' % rel)
+home = read(os.path.join(SITE, 'index.html'))
+rooms_page = read(os.path.join(SITE, 'rooms.html'))
+ok('href="/partners/usserviceanimals/"' in home and ('Sponsored by %s' % EXPECTED) in home and '>Sponsored<' in home,
+   'home lists this partner room with Sponsored and the disclosure')
+ok('href="/partners/usserviceanimals/"' in rooms_page and ('Sponsored by %s' % EXPECTED) in rooms_page,
+   'rooms page lists this partner room above the organic list')
+ok(EXPECTED not in read(os.path.join(SITE, 'about.html')), 'about does not name this partner room')
 sm = read(os.path.join(SITE, 'sitemap.xml'))
 ok('/partners/' not in sm, 'sitemap does not list the partner room')
 site = json.load(open(os.path.join(SITE, 'site.json'), encoding='utf-8'))
@@ -126,7 +130,9 @@ with tempfile.TemporaryDirectory() as t:
     out = os.path.join(t, 'site')
     BR.render(src=src, out=out)
     renamed = read(os.path.join(out, PAGE))
-    ok(EXPECTED not in renamed, 'renamed render drops the old room name')
+    renamed_home = read(os.path.join(out, 'index.html'))
+    ok(EXPECTED not in renamed and EXPECTED not in renamed_home, 'renamed render drops the old room name')
+    ok(('Sponsored by %s' % PROBE) in renamed_home, 'renamed home disclosure follows displayName')
     ok('<title>%s' % PROBE in renamed, 'renamed title follows displayName')
     ok('<h1 class="partner-name">%s</h1>' % PROBE in renamed, 'renamed header follows displayName')
     ok('property="og:title" content="%s"' % PROBE in renamed, 'renamed og:title follows displayName')

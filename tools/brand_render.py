@@ -134,13 +134,15 @@ CSP_AUTH = '; '.join(['script-src ' + ' '.join(CSP_AUTH_SCRIPT), 'connect-src ' 
 # or the render is a preview that forces the flag on. Never written into hub/site by --preview-partners.
 PARTNER_CAP = 2
 DISPLAY_REF = re.compile(r'^@rooms/([a-z0-9-]+)/site\.json#displayName$')
+PARTNER_CFG_REF = re.compile(r'^@partners/([a-z0-9-]+)/config\.json#displayName$')
+LOCAL_PATH = re.compile(r'^/partners/[a-z0-9-]+/$')
 
 
 def partner_initials(name):
     parts = re.findall(r'[A-Za-z0-9]+', name or '')
     if not parts:
         return '?'
-    if len(parts) == 1:
+    if len(parts) == 1 or len(parts[0]) <= 2:
         return parts[0][:2].upper()
     return (parts[0][0] + parts[-1][0]).upper()
 
@@ -177,23 +179,35 @@ def load_partner_config(hub_rooms_path, rooms_root):
         if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(p['since'])):
             raise RenderError('partner room %s since must be YYYY-MM-DD' % room)
         ref = p['displayName']
+        path = p.get('path')
+        if not isinstance(path, str) or not LOCAL_PATH.fullmatch(path):
+            raise RenderError('partner room %s path must be /partners/<slug>/' % room)
+        if re.search(r'https?:|usserviceanimals\.org|dogacademy\.org', path, re.I):
+            raise RenderError('partner room %s path must stay on this hub' % room)
         m = DISPLAY_REF.fullmatch(ref if isinstance(ref, str) else '')
-        if not m or m.group(1) != room:
-            raise RenderError('partner room %s displayName must reference rooms/%s/site.json#displayName' % (room, room))
-        site_path = os.path.join(rooms_root, room, 'site.json')
+        cfg_m = PARTNER_CFG_REF.fullmatch(ref if isinstance(ref, str) else '')
+        if m and m.group(1) == room:
+            site_path = os.path.join(rooms_root, room, 'site.json')
+        elif cfg_m and cfg_m.group(1) == room:
+            site_path = os.path.join(os.path.dirname(hub_rooms_path), 'partners', room, 'config.json')
+        else:
+            raise RenderError('partner room %s displayName must reference its single config field' % room)
         if not os.path.isfile(site_path):
-            raise RenderError('partner room %s has no site.json' % room)
+            raise RenderError('partner room %s config is missing' % room)
         site = json.load(open(site_path, encoding='utf-8'))
         name = site.get('displayName')
         if not isinstance(name, str) or not name.strip() or name != name.strip() or '\n' in name:
-            raise RenderError('rooms/%s/site.json displayName must be a single non-empty line' % room)
+            raise RenderError('partner room %s displayName must be a single non-empty line' % room)
         if re.search(r'[\u2013\u2014]', name):
             raise RenderError('displayName must not use an en or em dash')
         tagline = site.get('tagline') if isinstance(site.get('tagline'), str) else ''
+        if re.search(r'[\u2013\u2014]', tagline):
+            raise RenderError('partner room %s tagline must not use an en or em dash' % room)
         out.append({
             'room': room,
             'name': name,
             'tagline': tagline,
+            'path': path,
             'sponsor': name,
             'label': 'Sponsored',
             'disclosure': 'Sponsored by ' + name,
@@ -212,26 +226,36 @@ def shown_partners(entries, preview):
     return shown
 
 
-def partner_widget_html(shown):
-    """Partner rooms widget. Empty when nothing is enabled (the live hub). No logos, no brand colors."""
-    if not shown:
-        return ''
+def partner_cards_html(shown):
+    """One card per room. Sponsored and Sponsored by <name> are in the HTML, not behind a hover."""
     rows = []
     for p in shown:
         tag = ('<span class="partner-room-tagline">%s</span>' % html_attr(p['tagline'])) if p['tagline'] else ''
         rows.append(
-            '<a class="partner-room" href="/partners.html">'
+            '<a class="partner-room" href="%s">'
             '<span class="post-avatar" style="background:#2f3336" aria-hidden="true">%s</span>'
             '<span class="partner-room-text">'
+            '<span class="sponsored-label">Sponsored</span>'
             '<span class="partner-room-name">%s</span>%s'
             '<span class="partner-disclosure">%s</span>'
-            '</span></a>' % (html_attr(p['initials']), html_attr(p['name']), tag, html_attr(p['disclosure'])))
+            '</span></a>' % (html_attr(p['path']), html_attr(p['initials']), html_attr(p['name']), tag, html_attr(p['disclosure'])))
+    return ''.join(rows)
+
+
+def partner_section_html(shown, extra_class, section_id):
+    if not shown:
+        return ''
     return (
-        '<section class="partner-rooms" id="partner-rooms" aria-label="Partner rooms">'
+        '<section class="partner-rooms %s" id="%s" aria-label="Partner rooms">'
         '<h2 class="partner-rooms-title">Partner rooms</h2>'
         '<div class="partner-rooms-body">%s</div>'
         '<p class="partner-rooms-why"><a href="/partners.html">Why am I seeing this?</a></p>'
-        '</section>' % ''.join(rows))
+        '</section>' % (extra_class, section_id, partner_cards_html(shown)))
+
+
+def partner_widget_html(shown):
+    """Desktop rail. Empty only when nothing is enabled."""
+    return partner_section_html(shown, 'partner-rooms-rail', 'partner-rooms')
 
 
 def partner_list_html(shown, legal_entity):
@@ -308,6 +332,10 @@ class Renderer:
                 return footer_links(ctx)
             if k == 'partner:widget':
                 return partner_widget_html(self.partner_shown)
+            if k == 'partner:feed':
+                return partner_section_html(self.partner_shown, 'partner-rooms-feed', 'partner-rooms-feed')
+            if k == 'partner:roomsTab':
+                return partner_section_html(self.partner_shown, 'partner-rooms-directory', 'partner-rooms-directory')
             if k == 'partner:list':
                 return partner_list_html(self.partner_shown, self.ctx['brand']['legalEntity'])
             if k == 'partner:ogTitle':

@@ -127,12 +127,16 @@
         <button class="thoughts-tab" data-hub-tab="rooms" role="tab" aria-selected="false" type="button">{{brand.roomNoun.Many}}</button>
       </div>
     </header>
+    {{partner:feed}}
     <section class="hub-stories" id="hub-stories" hidden aria-label="Stories from live {{brand.roomNoun.many}}">
       <div class="hub-stories-row" id="hub-stories-row">
         <button type="button" class="hub-story is-add" id="hub-story-add" aria-haspopup="dialog"><span class="hub-story-ring"><span class="hub-story-avatar">+</span></span><span class="hub-story-label">Add story</span></button>
       </div>
     </section>
     <div class="hub-feed" id="hub-feed" aria-live="polite"><div class="empty-note">Loading highlights…</div></div>
+    <div id="hub-rooms-partner" hidden>
+    {{partner:roomsTab}}
+    </div>
     <div class="hub-rooms" id="hub-rooms" hidden></div>
     <div class="thoughts-tabs" role="tablist">
       <button class="thoughts-tab active" data-thoughts-tab="foryou" role="tab">For You</button>
@@ -288,12 +292,12 @@
 
 <!-- ── Right rail ───────────────────────────────────── -->
 <aside class="right-panel" id="right-panel">
+  {{partner:widget}}
   <div class="right-panel-header">
     <div class="right-panel-kicker">Live {{brand.name}} rooms</div>
     <div class="right-panel-title">Suggested rooms</div>
   </div>
   <div class="right-panel-body" id="news-feed"></div>
-  {{partner:widget}}
   <div class="right-panel-footer">
     <p>Each room has its own rules. Paused rooms are not listed.</p>
   </div>
