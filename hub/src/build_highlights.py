@@ -279,7 +279,9 @@ def write_rail(suggest):
         json.dump(rail, fh, indent=1, ensure_ascii=False); fh.write('\n')
 
 def refilter():
-    bad = bad_taglines(json.load(open(os.path.join(HERE, 'rooms.json'), encoding='utf-8')))
+    cfg = json.load(open(os.path.join(HERE, 'rooms.json'), encoding='utf-8'))
+    assert_partners_not_ranked(cfg)
+    bad = bad_taglines(cfg)
     rp = os.path.join(DATA, 'rooms.json')
     rd = json.load(open(rp, encoding='utf-8'))
     cleared = [r['room'] for r in rd['rooms'] if r.get('tagline') and tagline_rule(r['tagline'])]
@@ -374,6 +376,19 @@ def build_stories(cfg, no_live_check=False, allow_members=False):
         print('  %-20s kept %-2s fetched %-3s %s %s' % (room, rep.get('kept'), rep.get('fetched'), rep.get('skipped', ''), rep.get('dropped') or ''))
     return 0
 
+def assert_partners_not_ranked(cfg):
+    """Partner rooms stay out of the organic list. featuredRooms and roomOrder are visitor rank, not a sponsor slot."""
+    ids = set()
+    for p in cfg.get('partnerRooms') or []:
+        if isinstance(p, dict) and isinstance(p.get('room'), str):
+            ids.add(p['room'])
+    organic = {r.get('room') for r in cfg.get('rooms') or [] if isinstance(r, dict)}
+    featured = set(cfg.get('featuredRooms') or [])
+    order = set(cfg.get('roomOrder') or [])
+    bad = ids & (organic | featured | order)
+    if bad:
+        raise SystemExit('partner rooms must stay out of the organic rooms list, featuredRooms, and roomOrder: %s' % ', '.join(sorted(bad)))
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--fetch', type=int, default=40)
@@ -391,6 +406,7 @@ def main():
         return refilter()
 
     cfg = json.load(open(os.path.join(HERE, 'rooms.json')))
+    assert_partners_not_ranked(cfg)
     if a.stories_only:
         return build_stories(cfg, a.no_live_check, a.allow_member_stories)
     featured = [x for x in cfg.get('featuredRooms', [])]
