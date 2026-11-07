@@ -11,9 +11,9 @@
   },
   "files": {
     "factory.js": {
-      "bytes": 260929,
-      "sha256": "38a9575f0eab15642d5ffbc48ea13fd82c7af6eb9d8961a5d0a1306ad6a3916b",
-      "integrity": "sha384-QmkXv3bVD3XxtcS/nZY5LDaisMvfraaPv5BZe/kAItmWCDMWVU+mI4HVLbxSl6ue"
+      "bytes": 261873,
+      "sha256": "e3a8df039c327664679121a12213a0d5018a3fc64fac4722e275e2ea72c1e4ae",
+      "integrity": "sha384-4Y9qhZtUuotZlpMbi3fm3JmxAtWXgqf3qZN56jZRtTC9dPVTf6v+CqvEUFQsqCbl"
     },
     "factory-gp.js": {
       "bytes": 34934,

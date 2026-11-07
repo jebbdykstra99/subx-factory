@@ -1044,6 +1044,7 @@
   }
 
   var authStateKnown = false;
+  var authBootFailed = false;
   var redirectSettled = false;
   var signedOutApplied = false;
   var authOpenWhenReady = false;
@@ -1078,10 +1079,13 @@
     storageDel(sessionStorage, GOOGLE_REDIRECT_KEY);
     storageDel(localStorage, GOOGLE_REDIRECT_KEY);
   }
-  function showGooglePopupBlocked() {
+  function showAuthUnavailable() {
+    composeErr('Sign-in is unavailable right now. Please reload.');
+  }
+  function showGooglePopupBlocked(msg) {
     var err = document.getElementById('cv-login-err');
     if (!err) return;
-    err.textContent = 'Google popup was blocked. Allow popups for this site, or use email.';
+    err.textContent = msg || 'Google sign-in did not complete. Try again or use email.';
     err.classList.add('show');
   }
   function clearAuthAction() {
@@ -1122,7 +1126,7 @@
     flushingAuth = true;
     clearAuthAction();
     try {
-      if (desc.t === 'like') toggleLike(desc.id);
+      if (desc.t === 'like') toggleLike(desc.id, true);
       else if (desc.t === 'reply') startReply(desc.id);
     } catch (e3) { console.warn('auth action', e3); }
     flushingAuth = false;
@@ -1322,6 +1326,10 @@
       return false;
     }
     if (!isLiveUser()) {
+      if (authBootFailed) {
+        showAuthUnavailable();
+        return false;
+      }
       var signInMsg = 'Sign in to ' + (action || 'post') + '. Guest can only browse.';
       if (!authReadyForGate()) {
         authOpenWhenReady = true;
@@ -4819,6 +4827,10 @@
     }
   }
   function openAuth(tab) {
+    if (authBootFailed) {
+      showAuthUnavailable();
+      return;
+    }
     ensureJoinAuthLayout();
     var modeHint = tab || 'join';
     if (modeHint === 'login') modeHint = 'join';
@@ -5169,7 +5181,11 @@
     });
   }
 
-  function toggleLike(postId) {
+  function toggleLike(postId, onlyLike) {
+    if (authBootFailed && !isLiveUser()) {
+      showAuthUnavailable();
+      return;
+    }
     if (!isLiveUser()) rememberAuthAction({ t: 'like', id: postId });
     var uid = liveUid();
     if (!requireVerified('like')) return;
@@ -5186,6 +5202,7 @@
       return;
     }
     var likedBy = (post && post.likedBy) || {};
+    if (onlyLike && likedBy[uid]) return;
     var patch = {};
     if (likedBy[uid]) {
       patch['likes.' + uid] = firebase.firestore.FieldValue.delete();
@@ -5331,6 +5348,10 @@
   function startReply(postId) {
     if (!postId) return;
     if (!isLiveUser()) {
+      if (authBootFailed) {
+        showAuthUnavailable();
+        return;
+      }
       rememberAuthAction({ t: 'reply', id: postId });
       composeErr('Sign in to reply. Guest can only browse.');
       openAuth('join');
@@ -5796,7 +5817,7 @@
      }
      function redirectGoogle() {
        rememberGoogleRedirect();
-       showGooglePopupBlocked();
+       showGooglePopupBlocked('Google popup sign-in could not open. Trying another sign-in method.');
        return fbAuth.signInWithRedirect(provider).catch(function (e2) {
          clearGoogleRedirect();
          failGoogle(e2);
@@ -6708,7 +6729,15 @@
     try { if (!sessionStorage.getItem('subx.hit.'+SITE_ID)) { sessionStorage.setItem('subx.hit.'+SITE_ID,'1'); sendPixel(); } } catch (e) {}
 
     fbReadyPromise.then(function () {
-      if (fbAuth) {
+      var wantedAuth = false;
+      if (!fbAuth) {
+        authBootFailed = true;
+        wantedAuth = !!(authOpenWhenReady || deferredAuthMsg || deferredAuthQ || readAuthAction());
+        authOpenWhenReady = false;
+        deferredAuthMsg = '';
+        deferredAuthQ = '';
+        clearAuthAction();
+      } else {
         fbAuth.getRedirectResult().then(function (cred) {
           var u = cred && cred.user;
           if (u) {
@@ -6761,6 +6790,7 @@
       listenHides();
       listenLivePosts();
       initStories();
+      if (wantedAuth) showAuthUnavailable();
     });
   }
 

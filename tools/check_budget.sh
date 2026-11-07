@@ -2,7 +2,7 @@
 # Core factory.js byte budget (lean audit 2026-10-22). Fails above the budget.
 #   tools/check_budget.sh [path/to/factory.js] [budget_bytes]
 # Defaults: factory/factory.js, 265000 B. Opt-in files (factory-gp.js, factory-rail.js, factory-reports.js) are reported, not budgeted.
-# v1.2.9 sign-in fix is 260929 B and does not fit the old 255000 cap.
+# v1.2.9 sign-in fix is 261873 B and does not fit the old 255000 cap.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 F=${1:-factory/factory.js}

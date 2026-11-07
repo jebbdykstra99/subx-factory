@@ -49,11 +49,12 @@
        })
        .catch(function (e) { console.warn('subx-skins init', e); });
    }
-@@ -1027,6 +1043,130 @@
+@@ -1027,6 +1043,134 @@
      return !!(fbAuth && fbAuth.currentUser);
    }
  
 +  var authStateKnown = false;
++  var authBootFailed = false;
 +  var redirectSettled = false;
 +  var signedOutApplied = false;
 +  var authOpenWhenReady = false;
@@ -88,10 +89,13 @@
 +    storageDel(sessionStorage, GOOGLE_REDIRECT_KEY);
 +    storageDel(localStorage, GOOGLE_REDIRECT_KEY);
 +  }
-+  function showGooglePopupBlocked() {
++  function showAuthUnavailable() {
++    composeErr('Sign-in is unavailable right now. Please reload.');
++  }
++  function showGooglePopupBlocked(msg) {
 +    var err = document.getElementById('cv-login-err');
 +    if (!err) return;
-+    err.textContent = 'Google popup was blocked. Allow popups for this site, or use email.';
++    err.textContent = msg || 'Google sign-in did not complete. Try again or use email.';
 +    err.classList.add('show');
 +  }
 +  function clearAuthAction() {
@@ -132,7 +136,7 @@
 +    flushingAuth = true;
 +    clearAuthAction();
 +    try {
-+      if (desc.t === 'like') toggleLike(desc.id);
++      if (desc.t === 'like') toggleLike(desc.id, true);
 +      else if (desc.t === 'reply') startReply(desc.id);
 +    } catch (e3) { console.warn('auth action', e3); }
 +    flushingAuth = false;
@@ -180,11 +184,15 @@
    function sessionSeedPosts() { // factory-gp.js
      if (PLUGIN.sessionSeedPosts) return PLUGIN.sessionSeedPosts.apply(null, arguments);
      return [];
-@@ -1182,7 +1322,13 @@
+@@ -1182,7 +1326,17 @@
        return false;
      }
      if (!isLiveUser()) {
 -      gateErr('Sign in to ' + (action || 'post') + '. Guest can only browse.');
++      if (authBootFailed) {
++        showAuthUnavailable();
++        return false;
++      }
 +      var signInMsg = 'Sign in to ' + (action || 'post') + '. Guest can only browse.';
 +      if (!authReadyForGate()) {
 +        authOpenWhenReady = true;
@@ -195,9 +203,14 @@
        openAuth('join');
        return false;
      }
-@@ -4674,6 +4820,17 @@
+@@ -4673,7 +4827,22 @@
+     }
    }
    function openAuth(tab) {
++    if (authBootFailed) {
++      showAuthUnavailable();
++      return;
++    }
      ensureJoinAuthLayout();
 +    var modeHint = tab || 'join';
 +    if (modeHint === 'login') modeHint = 'join';
@@ -213,7 +226,7 @@
      var draft = peekCompose();
      const ov = document.getElementById('cv-auth-overlay');
      if (!ov) return;
-@@ -4732,6 +4889,7 @@
+@@ -4732,6 +4901,7 @@
      listenMemberNests(null);
      teardownPeopleSocial();
      if (fbAuth && fbAuth.currentUser) fbAuth.signOut();
@@ -221,15 +234,21 @@
      currentUser = null;
      saveJSON(LS_USER, null);
      renderSidebarAuth();
-@@ -5012,6 +5170,7 @@
+@@ -5011,7 +5181,12 @@
+     });
    }
  
-   function toggleLike(postId) {
+-  function toggleLike(postId) {
++  function toggleLike(postId, onlyLike) {
++    if (authBootFailed && !isLiveUser()) {
++      showAuthUnavailable();
++      return;
++    }
 +    if (!isLiveUser()) rememberAuthAction({ t: 'like', id: postId });
      var uid = liveUid();
      if (!requireVerified('like')) return;
      if (!uid) {
-@@ -5019,6 +5178,7 @@
+@@ -5019,6 +5194,7 @@
        openAuth('join');
        return;
      }
@@ -237,13 +256,25 @@
      if (!fbDb || !postId) return;
      var post = findPost(postId);
      if (isSessionSeedPost(post)) {
-@@ -5168,6 +5328,40 @@
+@@ -5026,6 +5202,7 @@
+       return;
+     }
+     var likedBy = (post && post.likedBy) || {};
++    if (onlyLike && likedBy[uid]) return;
+     var patch = {};
+     if (likedBy[uid]) {
+       patch['likes.' + uid] = firebase.firestore.FieldValue.delete();
+@@ -5168,6 +5345,44 @@
     });
    }
  
 +  function startReply(postId) {
 +    if (!postId) return;
 +    if (!isLiveUser()) {
++      if (authBootFailed) {
++        showAuthUnavailable();
++        return;
++      }
 +      rememberAuthAction({ t: 'reply', id: postId });
 +      composeErr('Sign in to reply. Guest can only browse.');
 +      openAuth('join');
@@ -278,7 +309,7 @@
    function wireEvents() {
     document.addEventListener('click', function (e) {
       if (e.target.closest('#nav-nest-add')) {
-@@ -5351,25 +5545,9 @@
+@@ -5351,25 +5566,9 @@
         return;
       }
       if (e.target.closest('[data-act="reply"]')) {
@@ -305,7 +336,7 @@
         return;
       }
       if (e.target.closest('[data-act="share"]')) {
-@@ -5526,6 +5704,7 @@
+@@ -5526,6 +5725,7 @@
     document.getElementById('cv-login-btn').addEventListener('click', function () {
       const err = document.getElementById('cv-login-err');
       runWithAuth(err, function () {
@@ -313,7 +344,7 @@
         const email = (document.getElementById('cv-login-email').value || '').trim();
         const pw = document.getElementById('cv-login-pw').value || '';
         err.textContent = '';
-@@ -5534,11 +5713,13 @@
+@@ -5534,11 +5734,13 @@
           err.textContent = (e && e.message) ? e.message : 'Sign-in failed.';
           err.classList.add('show');
         });
@@ -327,7 +358,7 @@
         const name = (document.getElementById('cv-reg-name').value || '').trim();
         const email = (document.getElementById('cv-reg-email').value || '').trim();
         const pw = document.getElementById('cv-reg-pw').value || '';
-@@ -5568,11 +5749,16 @@
+@@ -5568,11 +5770,16 @@
           err.textContent = (e && e.message) ? e.message : 'Could not create account.';
           err.classList.add('show');
         });
@@ -345,7 +376,7 @@
       if (!accountsOpen() && !document.documentElement.classList.contains('acc-stew')) { err.textContent = ACC_CLOSED; err.classList.add('show'); return; }
       var age = document.getElementById('cv-google-age');
       if (!age || !age.checked) {
-@@ -5583,11 +5769,10 @@
+@@ -5583,11 +5790,10 @@
       err.textContent = '';
       err.classList.remove('show');
       markAuthLand();
@@ -359,7 +390,7 @@
         var u = cred && cred.user;
         if (u && !accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut().then(function () { throw new Error(ACC_CLOSED); });
         if (fbDb && u) {
-@@ -5609,16 +5794,21 @@
+@@ -5609,16 +5815,21 @@
         err.textContent = msg;
         err.classList.add('show');
       }
@@ -373,7 +404,7 @@
 -         failGoogle(e);
 +     function redirectGoogle() {
 +       rememberGoogleRedirect();
-+       showGooglePopupBlocked();
++       showGooglePopupBlocked('Google popup sign-in could not open. Trying another sign-in method.');
 +       return fbAuth.signInWithRedirect(provider).catch(function (e2) {
 +         clearGoogleRedirect();
 +         failGoogle(e2);
@@ -389,8 +420,20 @@
       });
     });
     document.getElementById('cv-guest-login').addEventListener('click', function () { stubSignIn('Guest', skin('guestHandle', 'guest')); });
-@@ -6521,36 +6711,50 @@
-       if (fbAuth) {
+@@ -6518,45 +6729,68 @@
+     try { if (!sessionStorage.getItem('subx.hit.'+SITE_ID)) { sessionStorage.setItem('subx.hit.'+SITE_ID,'1'); sendPixel(); } } catch (e) {}
+ 
+     fbReadyPromise.then(function () {
+-      if (fbAuth) {
++      var wantedAuth = false;
++      if (!fbAuth) {
++        authBootFailed = true;
++        wantedAuth = !!(authOpenWhenReady || deferredAuthMsg || deferredAuthQ || readAuthAction());
++        authOpenWhenReady = false;
++        deferredAuthMsg = '';
++        deferredAuthQ = '';
++        clearAuthAction();
++      } else {
          fbAuth.getRedirectResult().then(function (cred) {
            var u = cred && cred.user;
 -          if (u && !accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut();
@@ -467,3 +510,10 @@
          });
        }
        listenKillSwitch();
+       listenHides();
+       listenLivePosts();
+       initStories();
++      if (wantedAuth) showAuthUnavailable();
+     });
+   }
+ 

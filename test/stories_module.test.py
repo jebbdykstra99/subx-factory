@@ -44,11 +44,16 @@ ok(read('shell', 'v1.2.9', 'factory.js') == fx, 'shell/v1.2.9/factory.js equals 
 ok('fbAuth.signInWithPopup(provider)' in fx, 'factory.js: Google calls signInWithPopup in the tap')
 ok('isiOS' not in fx and 'auth/cancelled-popup-request' not in fx, 'factory.js: no iOS or Safari redirect branch, and a cancelled popup does not redirect')
 ok("code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment'" in fx, 'factory.js: redirect only when the popup is blocked or unsupported')
-ok("err.textContent = 'Google popup was blocked. Allow popups for this site, or use email.';" in fx, 'factory.js: blocked-popup message')
+ok("err.textContent = msg || 'Google sign-in did not complete. Try again or use email.';" in fx, 'factory.js: default Google sign-in message')
+ok("showGooglePopupBlocked('Google popup sign-in could not open. Trying another sign-in method.')" in fx, 'factory.js: redirect fallback says the popup could not open')
+ok('popup was blocked' not in fx, 'factory.js: no popup-was-blocked copy')
 ok('var modes = [P.LOCAL, P.SESSION, P.NONE];' in fx, 'factory.js: persistence falls back LOCAL, SESSION, then NONE')
 ok("if (modeHint === 'join' && isLiveUser())" in fx, 'factory.js: openAuth does not reopen the join sheet when currentUser is set')
 ok('if (!redirectSettled)' in fx, 'factory.js: auth listener ignores a premature null until redirect settles')
-ok("if (desc.t === 'like') toggleLike(desc.id);" in fx and "else if (desc.t === 'reply') startReply(desc.id);" in fx, 'factory.js: pending Like or Reply runs once after sign-in')
+ok("if (desc.t === 'like') toggleLike(desc.id, true);" in fx and "else if (desc.t === 'reply') startReply(desc.id);" in fx, 'factory.js: pending Like or Reply runs once after sign-in')
+ok('if (onlyLike && likedBy[uid]) return;' in fx, 'factory.js: pending Like writes a like only when not already liked')
+ok("composeErr('Sign-in is unavailable right now. Please reload.');" in fx, 'factory.js: Firebase start failure tells the person to reload')
+ok('if (authBootFailed)' in fx and 'showAuthUnavailable();' in fx, 'factory.js: Join, Like, and Reply do not reopen the sheet when auth failed to start')
 
 # hub
 st = json.loads(read('hub', 'site', 'stories.json'))
