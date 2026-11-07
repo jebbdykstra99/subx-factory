@@ -11,6 +11,7 @@ spell the brand; they use tokens:
   {{shell.firebaseVersion}}                            the exact Firebase compat SDK version the shell page loads
   {{page.title}} {{page.description}}  per-page values from hub/src/config.json "pages"
   {{asset:/path}}                     /path?v=<sha256[:10] of the rendered file> (cache-bust, rendered first)
+  {{asset:brand.KEY}}                 same, but the path is a brand.json string (the cat mark and its sizes)
   {{> name}}                          hub/src/partials/name.html
   {{footer:links}}                    brand.footer with Terms / Privacy / Report / the takedown email linked
   {{url:brand.KEY}}                   a brand value percent-encoded for a URL (mailto subject, ...)
@@ -41,7 +42,7 @@ Usage: python3 tools/brand_render.py [--check] [--brand PATH] [--out DIR] [--src
 import argparse, base64, filecmp, hashlib, json, os, re, sys, tempfile, urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import topic_slug, topic_status  # noqa: E402
+import topic_slug, topic_status, logo_mask  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # hub fork of the shared shell (EXCEPTIONS.md E21): the one header line that names the source repo is replaced
@@ -301,6 +302,10 @@ class Renderer:
             k = m.group(1)
             if k.startswith('asset:'):
                 path = k[6:]
+                if path.startswith('brand.'):
+                    if not KEY_RE.fullmatch(path):
+                        raise RenderError('%s: bad token {{%s}}' % (where, k))
+                    path = expand(lookup(ctx, path), ctx)
                 if path not in self.assets:
                     raise RenderError('%s: {{%s}} names no rendered asset' % (where, k))
                 return path + '?v=' + self.assets[path]
@@ -396,9 +401,34 @@ class Renderer:
         self.partner_entries = entries
         self.partner_shown = shown_partners(entries, self.preview_partners)
 
+    def emit_logo(self):
+        """Copy brand.logo files into the site. Bytes are unchanged. Sizes are the files
+        named in brand.json, not a resample, so a new drawing is a file drop."""
+        try:
+            pairs = logo_mask.plan(self.ctx['brand'])
+        except logo_mask.LogoError as e:
+            raise RenderError(str(e))
+        root = os.path.realpath(ROOT)
+        for rel, href, px in pairs:
+            full = os.path.realpath(os.path.join(ROOT, rel))
+            if not full.startswith(root + os.sep) or not os.path.isfile(full):
+                raise RenderError('brand.logo file is missing: %s' % rel)
+            data = open(full, 'rb').read()
+            try:
+                w, h = logo_mask.png_wh(data)
+            except logo_mask.LogoError as e:
+                raise RenderError('%s: %s' % (rel, e))
+            if px is not None and (w, h) != (px, px):
+                raise RenderError('%s is %dx%d, brand.logo expects %d' % (rel, w, h, px))
+            if w < 1 or h < 1 or w > 4096 or h > 4096:
+                raise RenderError('%s has an unexpected size' % rel)
+            self.write(href.lstrip('/'), data)
+            self.assets[href] = hashlib.sha256(data).hexdigest()[:10]
+
     def run(self):
         os.makedirs(self.out, exist_ok=True)
         self.prepare_partners()
+        self.emit_logo()
         cfg = self.cfg
         # 1. vendored shared files (byte copies, re-branded only when the brand differs)
         for v in cfg.get('vendor', []):

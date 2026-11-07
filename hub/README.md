@@ -13,6 +13,18 @@ comes from `brand/brand.json`; templates hold `{{brand.*}}` tokens only.
 The rename test renders the hub with a dummy brand and fails if any brand literal is
 left outside `brand/brand.json` (allowed: the Firebase project/site ids).
 
+## Logo
+
+The hub mark is the lower-nose SubX cat. `brand/brand.json` `logo.mask` is the one mask master (`brand/assets/cat-mask.png`). The header paints that file as a CSS mask (`mask-image`, `mask-size: cover`, `mask-position: center`) filled with `background-color`. There is no per-page path and no offset for this drawing.
+
+Light color is `logo.color` (`#000000`), written to `--subx-cat-color`. Dark color is `logo.colorDark` (`#e7e9ea`), written to `--subx-cat-color-dark`. `#e7e9ea` is the hub dark theme primary text color (`--text` and `--nav-text` in `styles.css`). It is near white, so the cat matches that text on the black background. For pure white, set `logo.colorDark` to `#ffffff`.
+
+To change a color: edit that one field in `brand/brand.json` and run `python3 tools/brand_render.py`.
+
+Square sizes sit next to the mask and are copied, not redrawn: `cat-16.png`, `cat-24.png`, `cat-32.png`, `cat-48.png`, `cat-128.png`, `cat-256.png`. Their public paths are `logo.icon16` through `logo.icon256`. Favicons use 16, 24, 32, and 48. The apple touch icon is the 256 square, because this set has no 180. A browser tab does not follow the hub theme, so the favicon stays the black raster.
+
+To swap the drawing: replace `logo.mask` and those size files in the same folder, keep the paths, and re-render. Do not add a CSS offset. `cover` plus `center` shows this wide master without letterboxing its empty side margins, and a square file dropped at the same path is shown whole.
+
 ## Shell and CSP
 
 - `index.html` runs the shared shell `shell/v1.2.6/factory.js`, self-hosted at
