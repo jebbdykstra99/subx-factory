@@ -4,12 +4,13 @@
 The mask master and the square sizes are copied, not redrawn. A color change is a brand.json edit.
 Offline. Temp dirs only.
 """
-import hashlib, json, os, re, sys, tempfile
+import base64, hashlib, json, os, re, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import brand_render as BR  # noqa: E402
 import logo_mask  # noqa: E402
+import og_card  # noqa: E402
 
 BRAND = os.path.join(ROOT, 'brand', 'brand.json')
 SITE = os.path.join(ROOT, 'hub', 'site')
@@ -82,11 +83,78 @@ ok('object-position' not in block and 'translate' not in block and 'drop-shadow'
    'no drawing offset, outline, or drop shadow on the mark')
 ok(logo['publicMask'] + '?v=' in block, 'the mask URL is the configured public path')
 
+def rgba_of(data):
+    w, h, mode, rgba = og_card.decode_png(data)
+    return w, h, mode, rgba
+
+
+def alpha_of(rgba):
+    return bytes(rgba[i + 3] for i in range(0, len(rgba), 4))
+
+
 idx = read(os.path.join(SITE, 'index.html'))
 ok('alt="SubX"' in idx and 'class="brand-icon"' in idx, 'header logo alt text is SubX')
-ok('favicon.svg' not in idx and 'icon32' not in idx, 'home no longer links the old svg favicon')
+ok('href="/favicon.svg' not in idx and 'href="favicon.svg' not in idx and 'icon32' not in idx,
+   'home does not link the old root favicon.svg')
+icons = re.findall(r'<link rel="(?:icon|apple-touch-icon)"[^>]*>', idx)
+ok(icons and icons[0].startswith('<link rel="icon" type="image/svg+xml"')
+   and '/assets/brand/cat-favicon.svg?v=' in icons[0] and 'media=' not in icons[0],
+   'the svg icon link is first and has no media attribute')
 for key in ('icon16', 'icon24', 'icon32', 'icon48', 'icon128', 'icon256'):
     ok(logo[key] + '?v=' in idx, 'home links %s from brand.json' % key)
+for px in logo_mask.FAVICON_PX:
+    light = '/assets/brand/cat-%d.png?v=' % px
+    dark_name = '/assets/brand/cat-%d-dark.png' % px
+    ok(light in idx, 'home links the black %d favicon' % px)
+    dark_links = [t for t in icons if dark_name in t]
+    ok(len(dark_links) == 1 and 'media="(prefers-color-scheme: dark)"' in dark_links[0]
+       and 'sizes="%dx%d"' % (px, px) in dark_links[0] and 'type="image/png"' in dark_links[0],
+       'home links the dark-tab %d favicon with a dark media query' % px)
+    src = open(os.path.join(ROOT, 'brand', 'assets', 'cat-%d.png' % px), 'rb').read()
+    dark = open(os.path.join(SITE, dark_name.lstrip('/')), 'rb').read()
+    sw, sh, smode, srgba = rgba_of(src)
+    dw, dh, dmode, drgba = rgba_of(dark)
+    ok((sw, sh) == (dw, dh) == (px, px) and smode == dmode == 'RGBA' and alpha_of(srgba) == alpha_of(drgba),
+       'cat-%d-dark.png keeps the approved size and alpha' % px)
+    ok(all(drgba[i:i + 3] == b'\xff\xff\xff' for i in range(0, len(drgba), 4)),
+       'cat-%d-dark.png RGB is logo.colorDark' % px)
+    ok(dark != src, 'cat-%d-dark.png is not a copy of the black file' % px)
+ok(not os.path.isfile(os.path.join(SITE, 'assets', 'brand', 'cat-256-dark.png')),
+   'no dark apple-touch raster is written')
+apple = [t for t in icons if 'apple-touch-icon' in t]
+ok(len(apple) == 1 and 'cat-256.png?v=' in apple[0] and 'media=' not in apple[0] and 'cat-256-dark' not in idx,
+   'apple touch icon stays the black 256 with no media query')
+svg = read(os.path.join(SITE, 'assets', 'brand', 'cat-favicon.svg'))
+b48 = open(os.path.join(ROOT, 'brand', 'assets', 'cat-48.png'), 'rb').read()
+d48 = open(os.path.join(SITE, 'assets', 'brand', 'cat-48-dark.png'), 'rb').read()
+ok('prefers-color-scheme: dark' in svg and 'color-scheme: light dark' in svg
+   and '.cat-light' in svg and '.cat-dark' in svg,
+   'svg switches the embedded cats with prefers-color-scheme')
+ok(base64.b64encode(b48).decode('ascii') in svg and base64.b64encode(d48).decode('ascii') in svg,
+   'svg embeds the approved 48px black png and the painted dark png')
+ok('#ffffff' not in svg and '#000000' not in svg and 'SubX' not in svg,
+   'svg does not hardcode the cat colors or the brand name')
+ok(logo_mask.SVG_EMBED_PX == 48 and 'width="48"' in svg and 'height="48"' in svg,
+   'svg embed is the 48px square, the closest approved size to 64')
+mask_src = open(os.path.join(ROOT, 'brand', 'assets', 'cat-mask.png'), 'rb').read()
+_mw, _mh, _mm, mask_rgba = rgba_of(mask_src)
+ok(_mm == 'RGBA' and alpha_of(mask_rgba), 'mask master alpha is the approved RGBA file')
+page_miss = []
+for base, _, names_ in os.walk(SITE):
+    for name in names_:
+        if not name.endswith('.html'):
+            continue
+        text = read(os.path.join(base, name))
+        rel = os.path.relpath(os.path.join(base, name), SITE)
+        if '/assets/brand/cat-favicon.svg?v=' not in text or 'media="(prefers-color-scheme: dark)"' not in text:
+            page_miss.append(rel)
+        if 'cat-256-dark' in text:
+            page_miss.append(rel + ':dark256')
+ok(not page_miss, 'every rendered page links the svg and a dark-tab png (%s)' % page_miss[:4])
+py_src = read(os.path.join(ROOT, 'tools', 'logo_mask.py'))
+ok('#ffffff' not in py_src and '#000000' not in py_src, 'logo_mask.py does not hardcode the cat colors')
+ok("logo['colorDark']" in read(os.path.join(ROOT, 'tools', 'brand_render.py')),
+   'the renderer reads the dark favicon color from brand.json')
 desc = re.search(r'<meta name="description" content="([^"]*)">', idx)
 ok(desc is not None and desc.group(1).strip() != '', 'index.html has a meta description')
 og = re.search(r'<meta property="og:image" content="([^"]+)">', idx)
@@ -126,6 +194,21 @@ with tempfile.TemporaryDirectory() as t:
     copied = open(os.path.join(out, 'assets', 'brand', 'cat-mask.png'), 'rb').read()
     ok(copied == open(os.path.join(ROOT, logo['mask']), 'rb').read(),
        'a color edit does not rewrite the mask file')
+    black48 = open(os.path.join(out, 'assets', 'brand', 'cat-48.png'), 'rb').read()
+    ok(black48 == b48, 'a color edit does not rewrite the approved black favicon')
+    painted = open(os.path.join(out, 'assets', 'brand', 'cat-48-dark.png'), 'rb').read()
+    pw, ph, pmode, prgba = rgba_of(painted)
+    ok((pw, ph) == (48, 48) and pmode == 'RGBA' and alpha_of(prgba) == alpha_of(rgba_of(b48)[3])
+       and all(prgba[i:i + 3] == bytes.fromhex('abcdef') for i in range(0, len(prgba), 4)),
+       'a colorDark edit repaints the dark favicon and keeps the approved alpha')
+    svg2 = read(os.path.join(out, 'assets', 'brand', 'cat-favicon.svg'))
+    ok(base64.b64encode(b48).decode('ascii') in svg2 and base64.b64encode(painted).decode('ascii') in svg2,
+       'the svg embed follows the colorDark edit and still uses the approved black png')
+    ok(base64.b64encode(d48).decode('ascii') not in svg2, 'the previous white embed is not left in the svg')
+    idx2 = read(os.path.join(out, 'index.html'))
+    ok('/assets/brand/cat-favicon.svg?v=' in idx2 and 'cat-48-dark.png?v=' in idx2
+       and 'media="(prefers-color-scheme: dark)"' in idx2,
+       'a color edit still emits the svg link and the dark-tab png links')
 
 # New prose has no em or en dash. The README title line is older and is left as it is.
 logo_doc = read(os.path.join(ROOT, 'hub', 'README.md')).split('## Logo\n', 1)[1]

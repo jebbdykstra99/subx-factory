@@ -3,8 +3,12 @@
 
 tools/brand_render.py copies those PNGs into hub/site. It does not redraw them.
 Replace the files at the configured paths and re-render. No CSS offset.
+
+Dark-tab favicon PNGs are not source files. The renderer paints them from the
+alpha already in the square PNGs and from logo.colorDark. The SVG favicon
+embeds the 48px pair and switches on prefers-color-scheme.
 """
-import os, re, struct
+import base64, os, re, struct, zlib
 
 class LogoError(Exception):
     pass
@@ -15,6 +19,11 @@ HREF = re.compile(r'^/assets/brand/[a-z0-9.-]+\.png$')
 ICON_KEY = re.compile(r'^icon([1-9][0-9]|[1-9][0-9]{2}|1024)$')
 KNOWN = ('mask', 'color', 'colorDark', 'publicMask')
 OPTIONAL = ('ogBackground', 'ogImage')
+# Squares linked as rel=icon. 256 is the apple touch icon and stays the copied file.
+FAVICON_PX = (16, 24, 32, 48, 128)
+# Closest approved square to 64px. The SVG embeds this pair. Not a resample.
+SVG_EMBED_PX = 48
+FAVICON_SVG = '/assets/brand/cat-favicon.svg'
 
 
 def png_wh(data):
@@ -73,3 +82,72 @@ def plan(brand):
         raise LogoError('brand.logo needs icon sizes')
     icons.sort(key=lambda row: row[2])
     return out + icons
+
+
+def _chunk(tag, payload):
+    return struct.pack('>I', len(payload)) + tag + payload + struct.pack('>I', zlib.crc32(tag + payload) & 0xffffffff)
+
+
+def encode_rgba(w, h, rgba):
+    """RGBA bytes to a PNG. Filter None, zlib level 9. Straight alpha, not premultiplied."""
+    if len(rgba) != w * h * 4:
+        raise LogoError('rgba buffer has the wrong length')
+    raw = bytearray()
+    stride = w * 4
+    for y in range(h):
+        raw.append(0)
+        raw += rgba[y * stride:(y + 1) * stride]
+    ihdr = struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0)
+    return b'\x89PNG\r\n\x1a\n' + _chunk(b'IHDR', ihdr) + _chunk(b'IDAT', zlib.compress(bytes(raw), 9)) + _chunk(b'IEND', b'')
+
+
+def dark_href(href):
+    """Public path of the dark-tab twin. /assets/brand/cat-16.png -> cat-16-dark.png."""
+    if not isinstance(href, str) or not href.endswith('.png') or not HREF.fullmatch(href):
+        raise LogoError('dark favicon href must be an /assets/brand/*.png path')
+    out = href[:-4] + '-dark.png'
+    if out == href or not HREF.fullmatch(out):
+        raise LogoError('dark favicon href is not an /assets/brand/*.png path')
+    return out
+
+
+def paint(data, color):
+    """Same width, height, and alpha bytes. RGB becomes color. No resample."""
+    if not HEX.fullmatch(str(color)):
+        raise LogoError('paint color must be #RRGGBB')
+    import og_card
+    w, h, mode, rgba = og_card.decode_png(data)
+    if mode != 'RGBA':
+        raise LogoError('logo png must be RGBA')
+    r = int(color[1:3], 16)
+    g = int(color[3:5], 16)
+    b = int(color[5:7], 16)
+    out = bytearray(len(rgba))
+    for i in range(0, len(rgba), 4):
+        out[i] = r
+        out[i + 1] = g
+        out[i + 2] = b
+        out[i + 3] = rgba[i + 3]
+    return encode_rgba(w, h, bytes(out))
+
+
+def favicon_svg(light_png, dark_png, px):
+    """SVG icon. Embeds the approved light PNG and the painted dark PNG at px."""
+    if png_wh(light_png) != (px, px) or png_wh(dark_png) != (px, px):
+        raise LogoError('favicon svg embed must be %dx%d' % (px, px))
+    light = base64.b64encode(light_png).decode('ascii')
+    dark = base64.b64encode(dark_png).decode('ascii')
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">\n'
+        '<style>\n'
+        ':root { color-scheme: light dark; }\n'
+        '.cat-dark { display: none; }\n'
+        '@media (prefers-color-scheme: dark) {\n'
+        '  .cat-light { display: none; }\n'
+        '  .cat-dark { display: block; }\n'
+        '}\n'
+        '</style>\n'
+        '<image class="cat-light" width="%d" height="%d" href="data:image/png;base64,%s"/>\n'
+        '<image class="cat-dark" width="%d" height="%d" href="data:image/png;base64,%s"/>\n'
+        '</svg>\n'
+    ) % (px, px, px, px, px, px, light, px, px, dark)
