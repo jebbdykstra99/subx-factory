@@ -1,0 +1,144 @@
+--- rules/firestore.rules.hub-signin.proposed
++++ rules/firestore.rules.hub-signin.proposed.v2
+@@ -19,6 +19,17 @@
+ // HUB DM TOGGLE (2026-11-04): hubDmOn() is a single-line switch: false (OFF) in firestore.rules.hub-signin.proposed,
+ // true (ON) in firestore.rules.hub-signin.proposed.dm-on. It only gates conversations/messages docs with siteId 'subx'.
+ // Room DMs (siteId in factorySite()) are allowed by factorySite() alone in both files, so they do not change.
++// UNDER-18 FIELD LOCK (2026-11-07, draft, NOT published): amended copy of firestore.rules.hub-signin.proposed.
++// Owner writes cannot drop or rewrite a persisted deletionQueuedAt, cannot change a persisted
++// suspendedReason or profileHidden on an already-restricted users/{uid} doc, and cannot transition
++// ageConfirmed or ageAttested18 to true while restricted. Restricted means suspended:true,
++// suspendedReason == 'under18', or deletionQueuedAt present, on the existing doc OR the resulting doc.
++// An unchanged legacy ageConfirmed:true stays writable. Applies on create. suspendOk's isAdmin()
++// exemption is unchanged. Not deployed.
++// HANDLES (2026-11-07, draft, NOT published): 27chat PR 53 (824dfbe5). Signed-in read of
++// handles/{handle}; create only when the doc is new; no update; delete only by the claim's uid.
++// users.handle may be set or changed only when handles/{handle}.uid == auth.uid after the write
++// (existsAfter/getAfter, so the claim may be created in the same transaction). Not deployed.
+ service cloud.firestore {
+   match /databases/{database}/documents {
+     function signedIn() {
+@@ -209,6 +220,15 @@
+         && !h.matches('^(admin|moderator|official|subx|jebb).*')
+         && !h.matches('.*(adm1n|4dmin|0fficial|st3ward).*');
+     }
++    // HANDLES document id. Same charset, exact blocklist, and leetspeak as handleOk / factory.js
++    // handleOk (27chat 824dfbe5). Reserved prefixes are the client's (admin|moderator|official|subx|jebb)
++    // and are allowed only for isAdmin() (uid o774wL9hUVSi19EkDCgLqQomP8i2, the factory ADMIN_UID).
++    function claimHandleOk(h) {
++      return h is string && h.matches('^[a-z0-9_]{1,15}$')
++        && !(h in ['mod', 'mods', 'staff', 'support', 'steward', 'system', 'root', 'team'])
++        && !h.matches('.*(adm1n|4dmin|0fficial|st3ward).*')
++        && (isAdmin() || !h.matches('^(admin|moderator|official|subx|jebb).*'));
++    }
+     function postKeysOk(d) {
+       return d.keys().hasOnly([
+         'siteId', 'parentId', 'authorUid', 'authorName', 'authorHandle', 'text',
+@@ -297,7 +317,42 @@
+       return isAdmin() || !exists(/databases/$(database)/documents/users/$(request.auth.uid))
+         || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('suspended', false) != true;
+     }
++    // Restricted when this map carries an under-18 marker.
++    function under18Restricted(data) {
++      return data.get('suspended', false) == true
++        || data.get('suspendedReason', '') == 'under18'
++        || data.keys().hasAny(['deletionQueuedAt']);
++    }
++    // True only when this write makes the field boolean true. A value that is already true
++    // (legacy ageConfirmed left in place by the under-18 merge) is not a transition.
++    function ageConfirmedBecomesTrue() {
++      return request.resource.data.get('ageConfirmed', false) == true
++        && (resource == null || resource.data.get('ageConfirmed', false) != true);
++    }
++    function ageAttestedBecomesTrue() {
++      return request.resource.data.get('ageAttested18', false) == true
++        && (resource == null || resource.data.get('ageAttested18', false) != true);
++    }
++    // Once the field is persisted on an already-restricted doc, keep that exact value.
++    // A missing field may be filled. Called only when resource != null.
++    function queuePreserved(d) {
++      return !resource.data.keys().hasAny(['deletionQueuedAt'])
++        || (d.keys().hasAny(['deletionQueuedAt'])
++            && d.deletionQueuedAt == resource.data.deletionQueuedAt);
++    }
++    function reasonPreserved(d) {
++      return !resource.data.keys().hasAny(['suspendedReason'])
++        || (d.keys().hasAny(['suspendedReason'])
++            && d.suspendedReason == resource.data.suspendedReason);
++    }
++    function hiddenPreserved(d) {
++      return !resource.data.keys().hasAny(['profileHidden'])
++        || (d.keys().hasAny(['profileHidden'])
++            && d.profileHidden == resource.data.profileHidden);
++    }
+     // A member may set suspended:true on themself (R2 self-report under 18) but never clear it.
++    // UNDER-18 FIELD LOCK: isAdmin() remains the only exemption. The new checks also run on create
++    // (resource == null). Deleting a marker cannot evade them, because the existing doc is checked too.
+     function suspendOk(d) {
+       return isAdmin() || (
+         (!d.keys().hasAny(['suspended']) || d.suspended == true)
+@@ -306,8 +361,33 @@
+         && (!d.keys().hasAny(['ageAttested18']) || d.ageAttested18 is bool)
+         && !(d.get('ageAttested18', false) == true && d.get('suspended', false) == true)
+         && !d.keys().hasAny(['dob', 'birthDate', 'dateOfBirth'])
++        && (
++          !(
++            (resource != null && under18Restricted(resource.data))
++            || under18Restricted(d)
++          )
++          || (!ageConfirmedBecomesTrue() && !ageAttestedBecomesTrue())
++        )
++        && (
++          resource == null
++          || !under18Restricted(resource.data)
++          || (queuePreserved(d) && reasonPreserved(d) && hiddenPreserved(d))
++        )
+       );
+     }
++    // users/{uid} has no key allowlist; profileOk already accepts a handle string that passes handleOk.
++    // Setting or changing handle requires handles/{handle}.uid == auth.uid after this write, so the
++    // claim can be created in the same transaction (getAfter). An unchanged handle does not, so a
++    // profile that already stored one stays writable before a claim exists.
++    function handleLinkOk(d) {
++      return !d.keys().hasAny(['handle'])
++        || (resource != null
++            && resource.data.keys().hasAny(['handle'])
++            && resource.data.handle == d.handle)
++        || (d.handle is string
++            && existsAfter(/databases/$(database)/documents/handles/$(d.handle))
++            && getAfter(/databases/$(database)/documents/handles/$(d.handle)).data.uid == request.auth.uid);
++    }
+     // ===== END PREVIEW-LIFT GUARD helpers =====
+ 
+     match /posts/{postId} {
+@@ -352,6 +432,7 @@
+         && memberSite(request.resource.data)                       // HUB SIGN-IN
+         && !request.resource.data.keys().hasAny(['email', 'phone', 'phoneNumber'])
+         && profileOk(request.resource.data)                        // PREVIEW-LIFT GUARD
++        && handleLinkOk(request.resource.data)                     // HANDLES claim
+         && suspendOk(request.resource.data);                       // GPCHAT LIFT R2
+ 
+       match /blocks/{targetUid} {
+@@ -427,6 +508,22 @@
+       }
+     }
+ 
++    // HANDLES (27chat PR 53, 824dfbe5). No match existed, so every client claim was denied.
++    // The document id is the handle. Body is { uid, siteId? } only. Create is new docs only
++    // (a second set is an update and is denied). Delete is the owner uid. isAdmin() may claim
++    // reserved prefixes; it may not update or delete someone else's claim.
++    match /handles/{handle} {
++      allow read: if signedIn();
++      allow create: if signedIn()
++        && claimHandleOk(handle)
++        && request.resource.data.keys().hasAll(['uid'])
++        && request.resource.data.keys().hasOnly(['uid', 'siteId'])
++        && request.resource.data.uid == request.auth.uid
++        && (!request.resource.data.keys().hasAny(['siteId']) || memberSite(request.resource.data));
++      allow update: if false;
++      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
++    }
++
+     match /reports/{reportId} {
+       allow read: if isAdmin()
+         || (signedIn() && resource.data.reporterUid == request.auth.uid);
