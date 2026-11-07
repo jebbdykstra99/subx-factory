@@ -84,19 +84,54 @@ ok(src.count(sentence) == 1 and site.count(sentence) == 1, 'the partners page us
 ok('Fees are flat' not in src and 'Fees are flat' not in site, 'the fee sentence is gone')
 ok('Member data is never shared with a brand.' not in site, 'the replaced member-data sentence is gone')
 
+styles = read(os.path.join(ROOT, 'hub', 'src', 'templates', 'styles.css'))
 hub_css = read(os.path.join(ROOT, 'hub', 'src', 'templates', 'hub.css'))
-m = re.search(r'html\[data-hub-theme="dark"\] \.partner-disclosure \{ color: (#[0-9A-Fa-f]{6}); \}', hub_css)
-ok(m is not None and ratio(m.group(1), '#000000') >= 4.5, 'dark partner-disclosure on #000 is at least 4.5:1 (%s)' % (None if not m else round(ratio(m.group(1), '#000000'), 2)))
-block = re.search(r'html\[data-hub-theme="dark"\] body\.partner-room-home \.sponsored-label,.*?\{([^}]+)\}', hub_css, re.S)
-color = re.search(r'color:\s*(#[0-9A-Fa-f]{6})', block.group(1)) if block else None
-ok(color is not None and ratio(color.group(1), '#000000') >= 4.5, 'dark Sponsored label on #000 is at least 4.5:1')
-usa = read(os.path.join(ROOT, 'hub', 'src', 'templates', 'partner-room.css'))
-chip = re.search(r'html\[data-hub-theme="dark"\] \.partner-chip \{([^}]+)\}', usa, re.S)
-if not chip:
-    chip = re.search(r'html\[data-hub-theme="dark"\] \.partner-disclosure,\s*html\[data-hub-theme="dark"\] \.partner-chip \{([^}]+)\}', usa, re.S)
-fg = re.search(r'color:\s*(#[0-9A-Fa-f]{6})', chip.group(1)) if chip else None
-bg = re.search(r'background:\s*(#[0-9A-Fa-f]{6})', chip.group(1)) if chip else None
-ok(fg and bg and ratio(fg.group(1), bg.group(1)) >= 4.5, 'dark partner Sponsored chip contrast is at least 4.5:1')
+room_css = read(os.path.join(ROOT, 'hub', 'src', 'templates', 'partner-room.css'))
+
+
+def token_block(css, selector):
+    m = re.search(re.escape(selector) + r'\s*\{([^}]+)\}', css)
+    return m.group(1) if m else ''
+
+
+def token(block, name):
+    m = re.search(r'%s:\s*(#[0-9A-Fa-f]{6})' % name, block)
+    return m.group(1) if m else ''
+
+
+light = token_block(styles, ':root')
+dark = token_block(styles, 'html[data-hub-theme="dark"]')
+pairs = (
+    ('light text on page', token(light, '--text'), token(light, '--bg')),
+    ('light text on widget', token(light, '--text'), token(light, '--widget')),
+    ('dark text on page', token(dark, '--text'), token(dark, '--bg')),
+    ('dark text on widget', token(dark, '--text'), token(dark, '--widget')),
+)
+for label, fg, bg in pairs:
+    ok(fg and bg and ratio(fg, bg) >= 4.5, 'hub %s contrast is at least 4.5:1 (%s on %s = %s)' % (label, fg, bg, None if not (fg and bg) else round(ratio(fg, bg), 2)))
+def uses_text(css, selector):
+    return re.search(re.escape(selector) + r'[^{]*\{[^}]*color:\s*var\(--text\)', css) is not None
+
+
+ok(uses_text(hub_css, '.partner-disclosure'), 'partner disclosure uses the hub text token')
+ok(uses_text(hub_css, '.sponsored-label'), 'Sponsored label uses the hub text token')
+ok(uses_text(room_css, '.partner-disclosure'), 'partner room disclosure uses the hub text token')
+ok(uses_text(room_css, '.partner-chip'), 'partner room Sponsored chip uses the hub text token')
+ok('@media (prefers-color-scheme' not in styles and '@media (prefers-color-scheme' not in hub_css and '@media (prefers-color-scheme' not in room_css,
+   'partner theme does not add a prefers-color-scheme rule the hub home does not use')
+page_bg = []
+for rel in ('hub/src/templates/partner-room.css',):
+    if re.search(r'background\s*:\s*#000(?:000)?\b', read(os.path.join(ROOT, rel))):
+        page_bg.append(rel)
+home_rules = hub_css.split('body.partner-room-home')[1]
+if re.search(r'background\s*:\s*#000(?:000)?\b', home_rules):
+    page_bg.append('hub.css partner-room-home')
+for rel in ('hub/site/partners/dogacademy/index.html', 'hub/site/partners/usserviceanimals/index.html', 'hub/site/partners.html'):
+    html = read(os.path.join(ROOT, rel))
+    ok('/theme.js' in html and '/styles.css' in html and '/hub.css' in html, '%s loads the shared hub theme' % rel)
+    if re.search(r'background\s*:\s*#000(?:000)?\b', html):
+        page_bg.append(rel)
+ok(not page_bg, 'partner pages have no hardcoded #000 page background (%s)' % page_bg)
 
 print('\n%d failure(s)' % len(fails))
 raise SystemExit(1 if fails else 0)
