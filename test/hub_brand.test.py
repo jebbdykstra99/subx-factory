@@ -55,8 +55,8 @@ FB_SDK = ['app', 'app-check', 'auth', 'firestore', 'storage']
 # ---- brand.json ----
 want_keys = ['name', 'legalEntity', 'primaryDomain', 'shortName', 'tagline', 'takedownEmail', 'topicPathPrefix',
              'reviewerLine', 'taglineOptions', 'contactPhone', 'mailingAddress', 'roomNoun', 'topicNoun',
-             'disclosureMark', 'nonAffiliation', 'nonAffiliationGov', 'notAdvice', 'footer']
-ok(list(brand) == want_keys, 'brand.json has the 18 keys (17 of the brand.json draft plus nonAffiliationGov), in order, and no _draft (%s)' % list(brand))
+             'disclosureMark', 'nonAffiliation', 'nonAffiliationGov', 'notAdvice', 'footer', 'logo']
+ok(list(brand) == want_keys, 'brand.json has the 19 keys (the previous 18 plus logo), in order, and no _draft (%s)' % list(brand))
 ok(brand['nonAffiliationGov'] == 'Not affiliated with, endorsed by, or speaking for any government agency.', 'brand.nonAffiliationGov has the exact text')
 ok(brand['tagline'] == 'Small rooms for big interests.' and brand['tagline'] in brand['taglineOptions'], 'brand.json tagline is the chosen option')
 ok(brand['legalEntity'] == 'SubX, LLC' and brand['takedownEmail'] == 'takedown@subx.it', 'brand.json legal entity + takedown email')
@@ -544,7 +544,7 @@ dummy.update({'name': 'Quillnest', 'legalEntity': 'Quillnest Labs, Inc.', 'prima
               'footer': '(c) {{year}} {{brand.legalEntity}} · Terms · Privacy · Report: {{brand.takedownEmail}}'})
 # internal ids that are not brand copy: the pin's repo path, the siteId / project ids, a storage key
 ALLOW = ['jebbdykstra99/subx-factory', 'subx-factory', '"siteId": "subx"', 'subx-skins', 'subx.vid',
-         'subx-hub-theme', 'subxSetHubTheme']
+         'subx-hub-theme', 'subxSetHubTheme', '--subx-cat-color']
 with tempfile.TemporaryDirectory() as t:
     bp = os.path.join(t, 'brand.json'); json.dump(dummy, open(bp, 'w'))
     out = os.path.join(t, 'site')
