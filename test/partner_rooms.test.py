@@ -32,7 +32,13 @@ entry = hub['partnerRooms'][0]
 brand = json.load(open(os.path.join(ROOT, 'brand', 'brand.json'), encoding='utf-8'))
 ok(site.get('operator') == brand['legalEntity'] and site.get('takedownEmail') == brand['takedownEmail'] and site.get('contactPhone') == brand['contactPhone'],
    'room file contacts match brand.json')
-ok(entry['enabled'] is False, 'partner entry is flagged off')
+ok(entry['enabled'] is True and all(p.get('enabled') is True for p in hub['partnerRooms']) and len(hub['partnerRooms']) == 2,
+   'both partner rooms are enabled')
+ok(hub['partnerRooms'][1]['room'] == 'usserviceanimals'
+   and hub['partnerRooms'][1]['displayName'] == '@partners/usserviceanimals/config.json#displayName'
+   and hub['partnerRooms'][1]['path'] == '/partners/usserviceanimals/'
+   and hub['partnerRooms'][0]['path'] == '/partners/dogacademy/',
+   'the second partner displayName references its config field and both cards link on this hub')
 ok(entry['displayName'] == '@rooms/%s/site.json#displayName' % entry['room'], 'hub displayName references the room site.json field')
 ok(entry['sponsor'] == '@displayName' and entry['disclosure'] == 'Sponsored by {{displayName}}', 'sponsor and disclosure fill from displayName')
 ok(name not in read(HUB_ROOMS), 'hub/src/rooms.json does not copy the room name')
@@ -68,7 +74,7 @@ for dirpath, dirs, files in os.walk(ROOT):
             continue
         if rel == 'rooms/dogacademy-partner/site.json':
             text = text.replace(json.dumps(name, ensure_ascii=False), '""', 1)
-        if rel.startswith('hub/site/partners/dogacademy/'):
+        if rel.startswith('hub/site/'):
             continue
         if name in text:
             hits.append(rel)
@@ -116,9 +122,10 @@ with tempfile.TemporaryDirectory() as t:
     part = read(os.path.join(hub_out, 'partners.html'))
     ok('id="partner-rooms"' in idx and ('>%s</span>' % alt) in idx and ('Sponsored by %s' % alt) in idx
        and 'Why am I seeing this?' in idx and name not in idx, 'preview hub widget renders the swapped name')
-    ok(alt in part and ('<title>%s, Why am I seeing this?' % alt) in part and name not in part
-       and 'property="og:title" content="%s, Why am I seeing this?' % alt in part, 'partners page title, meta, and og follow displayName')
-    ok(idx.index('id="news-feed"') < idx.index('id="partner-rooms"'), 'partner widget is under Suggested rooms')
+    usa_name = json.load(open(os.path.join(ROOT, 'hub', 'src', 'partners', 'usserviceanimals', 'config.json'), encoding='utf-8'))['displayName']
+    ok(alt in part and ('<title>%s, %s, Why am I seeing this?' % (alt, usa_name)) in part and name not in part
+       and 'property="og:title" content="%s, %s, Why am I seeing this?' % (alt, usa_name) in part, 'partners page title, meta, and og follow displayName')
+    ok(idx.index('id="partner-rooms"') < idx.index('id="news-feed"'), 'partner rail sits above Suggested rooms')
     artp = read(os.path.join(hub_out, 'partners', 'dogacademy', 'articles', 'calm-steady-presence.html'))
     ok('SubX editorial' in artp and 'Example partner post' in artp and ('Sponsored by %s' % alt) in artp
        and artp.count('>Sponsored<') >= 1 and name not in artp and 'Millan' not in artp and 'cesarmillan' not in artp,
@@ -127,7 +134,15 @@ with tempfile.TemporaryDirectory() as t:
 live = BR.render(out=os.path.join(tempfile.mkdtemp(), 'live'))
 live_idx = read(os.path.join(live.out, 'index.html'))
 live_part = read(os.path.join(live.out, 'partners.html'))
-ok('id="partner-rooms"' not in live_idx and name not in live_idx and name not in live_part, 'flag off: hub home does not show the room')
+usa_live = json.load(open(os.path.join(ROOT, 'hub', 'src', 'partners', 'usserviceanimals', 'config.json'), encoding='utf-8'))['displayName']
+cards = re.findall(r'<a class="partner-room"[\s\S]*?</a>', live_idx)
+ok(len(cards) >= 4 and all('>Sponsored<' in c and 'class="partner-disclosure">' in c and 'Sponsored by ' in c for c in cards),
+   'every partner card in the home HTML contains Sponsored and its disclosure')
+ok(('Sponsored by %s' % name) in live_idx and ('Sponsored by %s' % usa_live) in live_idx, 'home shows both sponsor lines')
+ok('href="/partners/dogacademy/"' in live_idx and 'href="/partners/usserviceanimals/"' in live_idx, 'cards link to the hub room pages')
+ok('Why am I seeing this?' in live_idx and 'href="/partners.html"' in live_idx, 'Why am I seeing this links to /partners.html')
+ok('dogacademy.org' not in live_idx and 'usserviceanimals.org' not in live_idx, 'home cards do not link out to the sponsors')
+ok(name in live_part and usa_live in live_part, 'partners page lists both enabled rooms')
 room_home = read(os.path.join(live.out, 'partners', 'dogacademy', 'index.html'))
 ok('class="room-banner"' in room_home and 'class="sidebar"' in room_home and name in room_home and 'noindex,nofollow' in room_home,
    'flag off still publishes the noindex room home')
@@ -143,8 +158,8 @@ ok('Fees are flat' not in live_part, 'partners page does not state a fee')
 ok('labeled Sponsored' in live_part, 'partners page keeps the Sponsored label')
 css = read(os.path.join(ROOT, 'hub', 'src', 'templates', 'hub.css'))
 ok('#eff3f4' in css and '#536471' in css and '.partner-disclosure' in css and 'font-size: 15px' in css
-   and 'body.hub-home:has(.partner-rooms) .right-panel' in css and 'position: static' in css,
-   'widget uses #eff3f4 and a 15px #536471 disclosure, and follows organic rooms on a narrow screen')
+   and '.partner-rooms-feed { display: block; }' in css and 'text-overflow: clip' in css and 'ellipsis' not in css.split('.partner-disclosure')[1][:220],
+   'widget uses hub tokens, a 15px disclosure, a mobile feed row, and no ellipsis on the disclosure')
 rc = __import__('subprocess').run([sys.executable, os.path.join(ROOT, 'tools', 'brand_render.py'), '--preview-partners'], capture_output=True, text=True)
 ok(rc.returncode == 2, 'preview flag refuses to write the live hub/site')
 

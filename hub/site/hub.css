@@ -335,20 +335,19 @@ html[data-hub-theme="dark"] .whomark { background: #eff3f4; color: #0f1419; padd
 .partner-room:hover { background: var(--hover-surface); }
 .partner-room-name { display: block; font-size: 15px; font-weight: 700; line-height: 1.35; color: var(--text); }
 .partner-room-tagline { display: block; font-size: 15px; line-height: 1.4; color: var(--text-muted); margin-top: 0.12rem; }
-.partner-disclosure { display: block; font-size: 15px; line-height: 1.4; font-weight: 700; color: var(--text); margin-top: 0.28rem; }
+.partner-disclosure { display: block; font-size: 15px; line-height: 1.4; font-weight: 700; color: var(--text); margin-top: 0.28rem; white-space: normal; overflow: visible; text-overflow: clip; }
+.sponsored-label { white-space: normal; overflow: visible; text-overflow: clip; }
+.partner-room-name,
+.partner-room-tagline { white-space: normal; overflow: visible; text-overflow: clip; }
 .partner-rooms-why { margin: 0.45rem 0 0; font-size: 15px; line-height: 1.4; }
 .partner-rooms-why a { color: var(--text); font-weight: 700; }
 .legal-doc .partner-disclosure { margin-top: 0; }
+.partner-rooms-rail { padding: 0.85rem 0.85rem 0.35rem; border-bottom: 1px solid var(--border); }
+.partner-rooms-feed { display: none; padding: 0.55rem 0.85rem 0.35rem; border-bottom: 1px solid var(--border); }
+.partner-rooms-directory { padding: 0.4rem 0 0.8rem; }
 @media (max-width: 1100px) {
-  /* Stack the rail under the page. A row flex would squeeze the feed beside a full-width rail. */
-  body.hub-home:has(.partner-rooms) { display: block; overflow: auto; height: auto; }
-  body.hub-home:has(.partner-rooms) .main {
-    height: auto; max-height: none; overflow: visible; margin-right: 0; width: auto;
-  }
-  body.hub-home:has(.partner-rooms) .right-panel {
-    display: flex; position: static; width: 100%; height: auto;
-    inset: auto; bottom: auto; border-left: none; z-index: 1;
-  }
+  .partner-rooms-feed { display: block; }
+  .partner-rooms-rail { display: none; }
 }
 
 /* Partner room prototype. Same X shell as the hub: left nav, banner, centered feed, right rail. */

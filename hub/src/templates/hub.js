@@ -222,6 +222,8 @@
     });
     if (feed && feed.hidden !== (t !== 'highlights')) feed.hidden = t !== 'highlights';
     if (roomsEl && roomsEl.hidden !== (t !== 'rooms')) roomsEl.hidden = t !== 'rooms';
+    var partnerTab = document.getElementById('hub-rooms-partner');
+    if (partnerTab && partnerTab.hidden !== (t !== 'rooms')) partnerTab.hidden = t !== 'rooms';
     var roomsNav = document.getElementById('nav-rooms'), homeNav = document.getElementById('nav-home');
     setOn(roomsNav, t === 'rooms');
     if (roomsNav) {
