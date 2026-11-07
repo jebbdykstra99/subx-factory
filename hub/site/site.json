@@ -202,7 +202,7 @@
       },
       {
         "file": "hub.js",
-        "sha256": "7299718683b4f46e09f1099673ace737cf14252f330be7eddc8cfb501b2ac3d1",
+        "sha256": "0c34c066703fbcca9cc0f23b8d25d988d7f031f417d7d4b2894396badb1f913a",
         "reason": "hub: renders highlights.json + rooms.json, and the header Sign in / Join button that opens the shell sign-in (no writes of its own)",
         "noShellOk": true
       },
@@ -282,6 +282,7 @@
       "t/board-games/index.html",
       "t/photography/index.html",
       "t/books/index.html",
+      "partners/usserviceanimals/index.html",
       "partners/dogacademy/articles/calm-steady-presence.html",
       "partners/dogacademy/articles/move-then-rule-then-affection.html",
       "partners/dogacademy/articles/set-the-walk.html",

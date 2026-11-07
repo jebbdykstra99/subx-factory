@@ -39,8 +39,8 @@ def read(p):
 
 brand = json.load(open(BRAND, encoding='utf-8'))
 logo = brand['logo']
-ok(logo['color'] == '#000000' and logo['colorDark'] == '#e7e9ea',
-   'logo.color is #000000 and logo.colorDark is #e7e9ea (dark theme primary text)')
+ok(logo['color'] == '#000000' and logo['colorDark'] == '#ffffff',
+   'logo.color is #000000 and logo.colorDark is #ffffff')
 ok(logo['mask'] == 'brand/assets/cat-mask.png' and logo['publicMask'] == '/assets/brand/cat-mask.png',
    'one mask path in brand.json')
 ok(list(logo) == ['mask', 'color', 'colorDark', 'publicMask', 'icon16', 'icon24', 'icon32', 'icon48', 'icon128', 'icon256'],
@@ -70,7 +70,7 @@ for rel, href, px in pairs:
         ok((w, h) == (px, px), '%s is %dx%d' % (rel, px, px))
 
 css = read(os.path.join(SITE, 'styles.css'))
-ok('--subx-cat-color: #000000;' in css and '--subx-cat-color-dark: #e7e9ea;' in css,
+ok('--subx-cat-color: #000000;' in css and '--subx-cat-color-dark: #ffffff;' in css,
    'rendered CSS variables are the brand.json colors')
 block = css.split('.brand-icon {', 1)[1].split('}', 1)[0]
 ok('var(--subx-cat-color)' in block and 'mask-size: cover' in block and 'mask-position: center' in block,
@@ -100,7 +100,7 @@ with tempfile.TemporaryDirectory() as t:
     css2 = read(os.path.join(out, 'styles.css'))
     ok('--subx-cat-color: #123456;' in css2 and '--subx-cat-color-dark: #abcdef;' in css2,
        'a brand.json color edit changes the rendered variables')
-    ok('--subx-cat-color: #000000;' not in css2 and '--subx-cat-color-dark: #e7e9ea;' not in css2,
+    ok('--subx-cat-color: #000000;' not in css2 and '--subx-cat-color-dark: #ffffff;' not in css2,
        'the previous cat colors are not left hardcoded')
     copied = open(os.path.join(out, 'assets', 'brand', 'cat-mask.png'), 'rb').read()
     ok(copied == open(os.path.join(ROOT, logo['mask']), 'rb').read(),

@@ -248,7 +248,19 @@
    "label": "Sponsored",
    "disclosure": "Sponsored by {{displayName}}",
    "since": "2026-11-07",
-   "enabled": false
+   "enabled": true,
+   "path": "/partners/dogacademy/"
+  },
+  {
+   "_note": "displayName is a reference. The room name string lives only in that room config.json displayName field.",
+   "room": "usserviceanimals",
+   "displayName": "@partners/usserviceanimals/config.json#displayName",
+   "sponsor": "@displayName",
+   "label": "Sponsored",
+   "disclosure": "Sponsored by {{displayName}}",
+   "since": "2026-11-07",
+   "enabled": true,
+   "path": "/partners/usserviceanimals/"
   }
  ]
 }

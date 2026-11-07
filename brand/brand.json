@@ -35,7 +35,7 @@
   "logo": {
     "mask": "brand/assets/cat-mask.png",
     "color": "#000000",
-    "colorDark": "#e7e9ea",
+    "colorDark": "#ffffff",
     "publicMask": "/assets/brand/cat-mask.png",
     "icon16": "/assets/brand/cat-16.png",
     "icon24": "/assets/brand/cat-24.png",

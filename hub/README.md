@@ -17,7 +17,7 @@ left outside `brand/brand.json` (allowed: the Firebase project/site ids).
 
 The hub mark is the lower-nose SubX cat. `brand/brand.json` `logo.mask` is the one mask master (`brand/assets/cat-mask.png`). The header paints that file as a CSS mask (`mask-image`, `mask-size: cover`, `mask-position: center`) filled with `background-color`. There is no per-page path and no offset for this drawing.
 
-Light color is `logo.color` (`#000000`), written to `--subx-cat-color`. Dark color is `logo.colorDark` (`#e7e9ea`), written to `--subx-cat-color-dark`. `#e7e9ea` is the hub dark theme primary text color (`--text` and `--nav-text` in `styles.css`). It is near white, so the cat matches that text on the black background. For pure white, set `logo.colorDark` to `#ffffff`.
+Light color is `logo.color` (`#000000`), written to `--subx-cat-color`. Dark color is `logo.colorDark` (`#ffffff`), written to `--subx-cat-color-dark`.
 
 To change a color: edit that one field in `brand/brand.json` and run `python3 tools/brand_render.py`.
 
