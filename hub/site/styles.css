@@ -112,7 +112,7 @@ button, input, select, textarea { font-family: inherit; }
 .sidebar-search-btn:hover { opacity: 1; background: var(--hover-surface); }
 .brand-mark { display: inline-block; }
 .brand-icon {
-  display: block; width: 44px; height: 44px; margin: 0 auto 0.55rem;
+  display: block; width: 52px; height: 52px; margin: 0 auto 0.55rem;
   padding: 0; border: 0; background-color: var(--subx-cat-color);
   -webkit-mask-image: url("/assets/brand/cat-mask.png?v=45acca35be");
   mask-image: url("/assets/brand/cat-mask.png?v=45acca35be");
