@@ -7,12 +7,15 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
 import fs from 'fs';
 const FV = firebase.firestore.FieldValue, TS = firebase.firestore.Timestamp;
+const rulesText = fs.readFileSync(process.env.RULES, 'utf8');
 const env = await initializeTestEnvironment({ projectId: 'demo-subx-hub',
-  firestore: { rules: fs.readFileSync(process.env.RULES, 'utf8'), host: '127.0.0.1', port: 8080 } });
+  firestore: { rules: rulesText, host: '127.0.0.1', port: 8080 } });
 const HUB = process.env.MODE !== 'live';  // MODE=live: the same suite against the live rules, where hub writes must fail
 const DM_ON = process.env.DM === 'on';     // DM=on: the .dm-on file (hubDmOn() true); default off
+// v2 (handleLinkOk) denies users.handle unless handles/{handle} is owned. No live client writes that field.
+const HANDLE_CLAIM = /function handleLinkOk\(/.test(rulesText);
 if (!['on', 'off', undefined].includes(process.env.DM)) throw new Error('DM must be on or off');
-console.log('variant: MODE=' + (HUB ? 'proposed' : 'live') + ' DM=' + (DM_ON ? 'on' : 'off'));
+console.log('variant: MODE=' + (HUB ? 'proposed' : 'live') + ' DM=' + (DM_ON ? 'on' : 'off') + ' handleClaim=' + (HANDLE_CLAIM ? 'on' : 'off'));
 const db = (uid, verified = true) => env.authenticatedContext(uid, { email_verified: verified, email: uid + '@x.com' }).firestore();
 const anon = () => env.unauthenticatedContext().firestore();
 const results = []; let failN = 0;
@@ -30,7 +33,11 @@ await env.withSecurityRulesDisabled(async (c) => { const s = c.firestore();
 
 // accounts: the shell's ensurePublicProfile write ({ siteId, displayName }, merge)
 await t('H1 hub profile create (siteId subx, displayName)', hub(db('h1').doc('users/h1').set({ siteId: 'subx', displayName: 'Hub Fan' }, { merge: true })));
-await t('H1b hub profile update (handle)', hub(db('h1').doc('users/h1').set({ siteId: 'subx', handle: 'hubfan' }, { merge: true })));
+// H1b is not a live hub write. ensurePublicProfile never sends users.handle.
+// On the hub-signin proposal the synthetic write is still allowed. On v2 it is denied:
+// a new or changed users.handle requires an owned handles/{handle} claim (27chat PR 53).
+await t('H1b hub profile update (handle) ' + (HANDLE_CLAIM ? 'denied without a claim' : 'ok'),
+  (HANDLE_CLAIM ? assertFails : hub)(db('h1').doc('users/h1').set({ siteId: 'subx', handle: 'hubfan' }, { merge: true })));
 await t('H1c own profile read', assertSucceeds(db('h1').doc('users/h1').get()));
 await t('H2 hub profile for another uid fails', assertFails(db('h1').doc('users/h2').set({ siteId: 'subx', displayName: 'X' })));
 await t('H3 hub profile with email field fails', assertFails(db('h3').doc('users/h3').set({ siteId: 'subx', email: 'a@b.com' })));
