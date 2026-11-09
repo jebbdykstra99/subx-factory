@@ -54,5 +54,23 @@ service firebase.storage {
         && request.auth.uid == userId
         && factorySiteId(siteId);
     }
+
+    // Profile avatar + banner (2026-11-09 draft). Owner write only; public read.
+    // fileName must be exactly "avatar" or "banner". Caps: avatar 2MB, banner 5MB.
+    match /users/{uid}/{fileName} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email_verified == true
+        && fileName in ['avatar', 'banner']
+        && request.resource.contentType.matches('image/.*')
+        && (
+          (fileName == 'avatar' && request.resource.size < 2 * 1024 * 1024)
+          || (fileName == 'banner' && request.resource.size < 5 * 1024 * 1024)
+        );
+      allow delete: if request.auth != null
+        && request.auth.uid == uid
+        && fileName in ['avatar', 'banner'];
+    }
   }
 }

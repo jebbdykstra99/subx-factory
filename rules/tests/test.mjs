@@ -99,5 +99,12 @@ for (const sid of ['booze', 'buffet', 'boyfriend', 'cia', 'cobra', '311chat', 'a
   await t('34 allowlist: legacy post on ' + sid + ' ok', assertSucceeds(db('a' + sid).collection('posts').add(base('a' + sid, sid))));
 }
 await t('34b unknown siteId denied', assertFails(db('u46').collection('posts').add(base('u46', 'notaroom'))));
+await t('35 profile bio+location+website ok', assertSucceeds(db('u50').doc('users/u50').set({ siteId: 'gpchat', displayName: 'Fan', bio: 'Hello paddock', location: 'Austin', website: 'https://example.com', provider: 'google' }, { merge: true })));
+await t('35b bio over 160 denied', assertFails(db('u50').doc('users/u50').set({ siteId: 'gpchat', displayName: 'Fan', bio: 'x'.repeat(161) }, { merge: true })));
+await t('35c website not http(s) denied', assertFails(db('u50').doc('users/u50').set({ siteId: 'gpchat', displayName: 'Fan', website: 'javascript:alert(1)' }, { merge: true })));
+await t('35d avatarUrl https storage ok', assertSucceeds(db('u50').doc('users/u50').set({ siteId: 'gpchat', displayName: 'Fan', avatarUrl: 'https://firebasestorage.googleapis.com/v0/b/subx-skins.firebasestorage.app/o/users%2Fu50%2Favatar' }, { merge: true })));
+await t('35e avatarUrl non-storage denied', assertFails(db('u50').doc('users/u50').set({ siteId: 'gpchat', displayName: 'Fan', avatarUrl: 'https://evil.example/a.png' }, { merge: true })));
+await t('35f bannerUrl https storage ok', assertSucceeds(db('u50').doc('users/u50').set({ siteId: 'gpchat', displayName: 'Fan', bannerUrl: 'https://firebasestorage.googleapis.com/v0/b/subx-skins.firebasestorage.app/o/users%2Fu50%2Fbanner' }, { merge: true })));
+await t('35g location over 30 denied', assertFails(db('u50').doc('users/u50').set({ siteId: 'gpchat', displayName: 'Fan', location: 'x'.repeat(31) }, { merge: true })));
 console.log(results.join('\n')); console.log(failN ? `\n${failN} FAILED` : '\nALL PASS');
 await env.cleanup(); process.exit(failN ? 1 : 0);

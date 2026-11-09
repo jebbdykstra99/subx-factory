@@ -35,6 +35,14 @@ for (const sid of [...OLD, ...NEW]) {
 await t('unknown room denied', assertFails(up(st('u1'), 'posts/notarealsite/u1/1.jpg', 100, 'image/png')));
 await t('short alias "atm" not in storage list (rooms upload with full siteId)', assertFails(up(st('u1'), 'posts/atm/u1/1.jpg', 100, 'image/png')));
 await t('public read of a post image ok', assertSucceeds(env.unauthenticatedContext().storage().ref(`posts/gpchat/u1/1.jpg`).getMetadata()));
+
+const upUser = (ctx, path, n, type) => ctx.ref(path).put(bytes(n), { contentType: type });
+await t('profile avatar upload ok', assertSucceeds(upUser(st('u1'), 'users/u1/avatar', 1000, 'image/jpeg')));
+await t('profile banner upload ok', assertSucceeds(upUser(st('u1'), 'users/u1/banner', 1000, 'image/jpeg')));
+await t('profile avatar too big denied', assertFails(upUser(st('u1'), 'users/u1/avatar', 2 * 1024 * 1024 + 10, 'image/jpeg')));
+await t('profile other user avatar denied', assertFails(upUser(st('u2'), 'users/u1/avatar', 100, 'image/jpeg')));
+await t('profile bad filename denied', assertFails(upUser(st('u1'), 'users/u1/headshot', 100, 'image/jpeg')));
+await t('profile public read avatar ok', assertSucceeds(env.unauthenticatedContext().storage().ref('users/u1/avatar').getMetadata()));
 console.log(results.join('\n'));
 console.log(`\n${results.length - failN}/${results.length} pass (${BASELINE ? 'BASELINE' : 'PROPOSED'})`);
 await env.cleanup();

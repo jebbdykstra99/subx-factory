@@ -2,7 +2,7 @@
   "siteId": "subx",
   "domain": "subx.it",
   "name": "SubX",
-  "tagline": "Small rooms for big interests.",
+  "tagline": "Small rooms\nfor big interests.",
   "accountsOpen": true,
   "pixel": false,
   "whoMark": true,
@@ -81,7 +81,7 @@
       {
         "tag": "Featured room",
         "headline": "27chat",
-        "snippet": "The work didn’t stop.",
+        "snippet": "The work didn\u2019t stop.",
         "meta": "27chat.com",
         "url": "https://27chat.com/"
       },
@@ -197,7 +197,7 @@
       {
         "file": "assets/whomark/whomark.js",
         "sha256": "78ce0941f6ff8385b0831fdef2ddcac315b5099f27c587dc65392ffbd0a6348f",
-        "reason": "WHOMARK™ disclosure marks, final-v4.1 art (vendored from hub/src/whomark, re-branded only when brand.json changes)",
+        "reason": "WHOMARK\u2122 disclosure marks, final-v4.1 art (vendored from hub/src/whomark, re-branded only when brand.json changes)",
         "noShellOk": true
       },
       {

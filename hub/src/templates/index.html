@@ -23,7 +23,7 @@
       <img class="brand-icon" alt="{{brand.name}}" width="36" height="36" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
     </a>
     <div class="brand-title">{{brand.name}}</div>
-    <div class="brand-sub">{{brand.tagline}}</div>
+    <div class="brand-sub brand-tagline">{{brand.tagline}}</div>
   </div>
 
   <div class="sidebar-rule"></div>
@@ -247,16 +247,42 @@
     <div class="profile-banner" id="profile-banner"></div>
     <div class="profile-header-row">
       <div class="profile-avatar" id="profile-avatar">G</div>
-      <button class="ghost-btn" id="profile-edit-btn" type="button">Edit profile</button>
+      <div class="profile-header-actions">
+        <button class="ghost-btn" id="profile-edit-btn" type="button">Edit profile</button>
+      </div>
     </div>
     <div class="profile-id">
       <div class="profile-display-name" id="profile-display-name">Guest</div>
       <div class="profile-handle" id="profile-handle">@guest</div>
       <p class="profile-bio" id="profile-bio">Just visiting the hub.</p>
-      <div class="profile-meta" id="profile-meta">{{brand.name}} hub</div>
+      <div class="profile-meta" id="profile-meta" hidden>{{brand.name}} hub</div>
+      <div class="profile-meta-row" id="profile-meta-row">
+        <span id="profile-location" hidden></span>
+        <a id="profile-website" hidden rel="nofollow ugc noopener" target="_blank"></a>
+        <span id="profile-joined" hidden></span>
+      </div>
+      <div class="profile-counts">
+        <button type="button" class="count-btn" id="profile-following-btn" disabled><strong id="profile-following-count">0</strong> Following</button>
+        <button type="button" class="count-btn" id="profile-followers-btn" hidden disabled><strong id="profile-followers-count">0</strong> Followers</button>
+      </div>
     </div>
-    <div class="profile-posts" id="profile-pane-posts">
+    <div class="profile-tabs" id="profile-tabs" role="tablist">
+      <button type="button" class="profile-tab active" role="tab" data-profile-tab="posts" aria-selected="true">Posts</button>
+      <button type="button" class="profile-tab" role="tab" data-profile-tab="replies" aria-selected="false">Replies</button>
+      <button type="button" class="profile-tab" role="tab" data-profile-tab="media" aria-selected="false">Media</button>
+      <button type="button" class="profile-tab" role="tab" data-profile-tab="likes" aria-selected="false">Likes</button>
+    </div>
+    <div class="profile-posts profile-tab-pane" id="profile-pane-posts">
       <div class="empty-note" id="profile-posts-empty">Posts live in the {{brand.roomNoun.many}}.</div>
+    </div>
+    <div class="profile-posts profile-tab-pane" id="profile-pane-replies" hidden>
+      <div class="empty-note">No replies yet.</div>
+    </div>
+    <div class="profile-posts profile-tab-pane" id="profile-pane-media" hidden>
+      <div class="empty-note">No media yet.</div>
+    </div>
+    <div class="profile-posts profile-tab-pane" id="profile-pane-likes" hidden>
+      <div class="empty-note">Likes are not listed here yet.</div>
     </div>
   </div>
 </div>
