@@ -1309,8 +1309,27 @@
     var brandSub = document.querySelector('.brand-sub');
     var brandMark = document.querySelector('.brand-mark');
     if (brandTitle && !(skin('keepBrandTitle', '') === 'true' && brandTitle.tagName === 'H1')) brandTitle.textContent = title;
-    if (brandSub) brandSub.textContent = tag;
-    if (brandMark) brandMark.setAttribute('aria-label', title + ' home');
+    if (brandSub) {
+      // Keep SubX hub tagline on two lines without changing the words.
+      if (tag === 'Small rooms for big interests.') {
+        brandSub.textContent = '';
+        brandSub.appendChild(document.createTextNode('Small rooms'));
+        brandSub.appendChild(document.createElement('br'));
+        brandSub.appendChild(document.createTextNode('for big interests.'));
+      } else {
+        brandSub.textContent = tag;
+      }
+    }
+    if (brandMark) {
+      // SubX cat / hub mark links to subx.it; keep its aria as "SubX home".
+      // Room-specific logos keep "<room> home".
+      var markHref = brandMark.getAttribute('href') || '';
+      if (/^https:\/\/subx\.it\/?$/i.test(markHref) || /^https:\/\/subx\.it\/#/i.test(markHref)) {
+        brandMark.setAttribute('aria-label', 'SubX home');
+      } else {
+        brandMark.setAttribute('aria-label', title + ' home');
+      }
+    }
     var profileSub = document.getElementById('profile-topbar-posts');
     if (profileSub) profileSub.textContent = title + ' · ' + tag;
     var homeH1 = document.querySelector('#page-thoughts .home-h1');
@@ -2249,7 +2268,18 @@
       ? ((nest.label || nest.slug) + ', ' + title)
       : (tag ? (title + ', ' + tag) : title);
     var brandSub = document.querySelector('.brand-sub');
-    if (brandSub) brandSub.textContent = nest ? (nest.label || nest.slug) : tag;
+    if (brandSub) {
+      if (nest) {
+        brandSub.textContent = nest.label || nest.slug;
+      } else if (tag === 'Small rooms for big interests.') {
+        brandSub.textContent = '';
+        brandSub.appendChild(document.createTextNode('Small rooms'));
+        brandSub.appendChild(document.createElement('br'));
+        brandSub.appendChild(document.createTextNode('for big interests.'));
+      } else {
+        brandSub.textContent = tag;
+      }
+    }
     var input = document.getElementById('thoughts-compose-input');
     if (input) {
       var ph = nest

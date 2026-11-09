@@ -110,7 +110,16 @@ button, input, select, textarea { font-family: inherit; }
   display: flex; align-items: center; justify-content: center;
 }
 .sidebar-search-btn:hover { opacity: 1; background: var(--hover-surface); }
-.brand-mark { display: inline-block; }
+.brand-mark {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 10px;
+}
+.brand-mark:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
 .brand-icon {
   display: block; width: 52px; height: 52px; margin: 0 auto 0.55rem;
   padding: 0; border: 0; background-color: var(--subx-cat-color);
@@ -135,9 +144,12 @@ html[data-hub-theme="dark"] .brand-icon {
   color: var(--nav-active);
   line-height: 1; margin-bottom: 0.28rem;
 }
-.brand-sub {
+.brand-sub,
+.brand-tagline {
   font-size: 0.78rem; font-weight: 400;
   letter-spacing: 0.04em; color: var(--nav-text);
+  line-height: 1.35;
+  white-space: normal;
 }
 .sidebar-rule { width: 36px; height: 1px; background: var(--border); margin: 0.7rem auto 0.45rem; border-radius: 2px; }
 
