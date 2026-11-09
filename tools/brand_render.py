@@ -470,12 +470,14 @@ class Renderer:
 
     def emit_logo(self):
         """Copy brand.logo files into the site. Bytes are unchanged. Sizes are the files
-        named in brand.json, not a resample, so a new drawing is a file drop."""
+        named in brand.json, not a resample, so a new drawing is a file drop.
+        Dark-tab favicon PNGs and the SVG icon are painted from those alphas."""
         try:
             pairs = logo_mask.plan(self.ctx['brand'])
         except logo_mask.LogoError as e:
             raise RenderError(str(e))
         mask_bytes = None
+        sized = {}
         root = os.path.realpath(ROOT)
         for rel, href, px in pairs:
             full = os.path.realpath(os.path.join(ROOT, rel))
@@ -494,6 +496,8 @@ class Renderer:
             self.assets[href] = hashlib.sha256(data).hexdigest()[:10]
             if px is None:
                 mask_bytes = data
+            else:
+                sized[px] = (href, data)
         try:
             card = og_card.build(self.ctx['brand'], mask_bytes)
         except og_card.CardError as e:
@@ -503,6 +507,39 @@ class Renderer:
             raise RenderError('brand.logo.ogImage must be a site path')
         self.write(og_href.lstrip('/'), card)
         self.assets[og_href] = hashlib.sha256(card).hexdigest()[:10]
+        self.emit_favicon_theme(sized)
+
+    def emit_favicon_theme(self, sized):
+        """Paint one dark-tab PNG per favicon size from the copied alpha and logo.colorDark.
+        Write cat-favicon.svg with the 48px pair embedded. Apple touch stays the copied 256."""
+        logo = self.ctx['brand']['logo']
+        color = str(logo['colorDark'])
+        embed = None
+        for px in logo_mask.FAVICON_PX:
+            if px not in sized:
+                raise RenderError('favicon size %d is missing from brand.logo' % px)
+            href, data = sized[px]
+            try:
+                twin = logo_mask.dark_href(href)
+                dark = logo_mask.paint(data, color)
+            except logo_mask.LogoError as e:
+                raise RenderError(str(e))
+            self.write(twin.lstrip('/'), dark)
+            self.assets[twin] = hashlib.sha256(dark).hexdigest()[:10]
+            logo['icon%dDark' % px] = twin
+            if px == logo_mask.SVG_EMBED_PX:
+                embed = (data, dark)
+        if embed is None:
+            raise RenderError('favicon svg embed size is not a favicon size')
+        try:
+            svg = logo_mask.favicon_svg(embed[0], embed[1], logo_mask.SVG_EMBED_PX)
+        except logo_mask.LogoError as e:
+            raise RenderError(str(e))
+        href = logo_mask.FAVICON_SVG
+        raw = svg.encode('utf-8')
+        self.write(href.lstrip('/'), raw)
+        self.assets[href] = hashlib.sha256(raw).hexdigest()[:10]
+        logo['favicon'] = href
 
     def run(self):
         os.makedirs(self.out, exist_ok=True)

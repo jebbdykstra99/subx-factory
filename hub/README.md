@@ -21,7 +21,7 @@ Light color is `logo.color` (`#000000`), written to `--subx-cat-color`. Dark col
 
 To change a color: edit that one field in `brand/brand.json` and run `python3 tools/brand_render.py`.
 
-Square sizes sit next to the mask and are copied, not redrawn: `cat-16.png`, `cat-24.png`, `cat-32.png`, `cat-48.png`, `cat-128.png`, `cat-256.png`. Their public paths are `logo.icon16` through `logo.icon256`. Favicons use 16, 24, 32, and 48. The apple touch icon is the 256 square, because this set has no 180. A browser tab does not follow the hub theme, so the favicon stays the black raster.
+Square sizes sit next to the mask and are copied, not redrawn: `cat-16.png`, `cat-24.png`, `cat-32.png`, `cat-48.png`, `cat-128.png`, `cat-256.png`. Their public paths are `logo.icon16` through `logo.icon256`. Favicons use 16, 24, 32, 48, and 128. The apple touch icon is the 256 square, because this set has no 180. A tab follows `prefers-color-scheme`, not the hub theme toggle. `tools/brand_render.py` paints a dark-tab PNG for each favicon size from that file's alpha and `logo.colorDark`, and writes `/assets/brand/cat-favicon.svg`. The SVG is the first icon link. It embeds the 48px black PNG and the matching dark-tab PNG and switches them with `prefers-color-scheme: dark`. Each dark-tab PNG is also linked with that media query. The apple touch icon stays the black 256 square.
 
 To swap the drawing: replace `logo.mask` and those size files in the same folder, keep the paths, and re-render. Do not add a CSS offset. `cover` plus `center` shows this wide master without letterboxing its empty side margins, and a square file dropped at the same path is shown whole.
 
