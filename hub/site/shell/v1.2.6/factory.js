@@ -4680,9 +4680,9 @@
     if (postsPane) postsPane.classList.add('profile-tab-pane');
     var actions = content.querySelector('.profile-header-actions');
     if (!actions) {
-      var row = content.querySelector('.profile-header-row');
+      var headerRow = content.querySelector('.profile-header-row');
       var edit = document.getElementById('profile-edit-btn');
-      if (row && edit) {
+      if (headerRow && edit) {
         actions = document.createElement('div');
         actions.className = 'profile-header-actions';
         edit.parentNode.insertBefore(actions, edit);
