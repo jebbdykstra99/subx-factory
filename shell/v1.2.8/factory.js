@@ -1309,7 +1309,14 @@
     var brandSub = document.querySelector('.brand-sub');
     var brandMark = document.querySelector('.brand-mark');
     if (brandTitle && !(skin('keepBrandTitle', '') === 'true' && brandTitle.tagName === 'H1')) brandTitle.textContent = title;
-    if (brandSub) brandSub.textContent = tag;
+    if (brandSub) {
+      brandSub.classList.add('brand-tagline');
+      if (tag.indexOf('\n') >= 0) {
+        brandSub.innerHTML = escapeHtml(tag).replace(/\n/g, '<br>');
+      } else {
+        brandSub.textContent = tag;
+      }
+    }
     if (brandMark) brandMark.setAttribute('aria-label', title + ' home');
     var profileSub = document.getElementById('profile-topbar-posts');
     if (profileSub) profileSub.textContent = title + ' · ' + tag;
@@ -1539,6 +1546,11 @@
       name: idn.name,
       handle: idn.handle,
       bio: '',
+      location: '',
+      website: '',
+      avatarUrl: '',
+      bannerUrl: '',
+      joinedMs: 0,
       live: true
     };
     saveJSON(LS_USER, currentUser);
@@ -1548,6 +1560,25 @@
     hideDummyChrome();
     syncChatChrome();
     syncProfile();
+    loadOwnUserDoc().then(function (data) {
+      if (!data || !currentUser || currentUser.uid !== user.uid) return;
+      if (data.displayName || data.name) {
+        var n = String(data.displayName || data.name || '').trim();
+        if (n && nameOk(n)) {
+          currentUser.name = n;
+          currentUser.handle = handleFromName(n);
+        }
+      }
+      if (typeof data.bio === 'string') currentUser.bio = data.bio.slice(0, 160);
+      if (typeof data.location === 'string') currentUser.location = data.location.slice(0, 30);
+      if (typeof data.website === 'string') currentUser.website = safeHttpUrl(data.website);
+      if (typeof data.avatarUrl === 'string') currentUser.avatarUrl = data.avatarUrl;
+      if (typeof data.bannerUrl === 'string') currentUser.bannerUrl = data.bannerUrl;
+      if (data.createdAt && data.createdAt.toMillis) currentUser.joinedMs = data.createdAt.toMillis();
+      saveJSON(LS_USER, currentUser);
+      renderSidebarAuth();
+      syncProfile();
+    });
     listenBlocks(user.uid);
     listenFollowing(user.uid);
     listenNotifs(user.uid);
@@ -4428,6 +4459,553 @@
     document.getElementById('explore-overlay').classList.add('active');
     highlightSocial('explore');
   }
+  function ensureProfileCss() {
+    if (document.getElementById('subx-profile-x-css')) return;
+    var st = document.createElement('style');
+    st.id = 'subx-profile-x-css';
+    st.textContent =
+      '.profile-banner{position:relative;width:100%;aspect-ratio:3/1;max-height:200px;background:var(--surface,#eff3f4);overflow:hidden;}' +
+      '.profile-banner img{width:100%;height:100%;object-fit:cover;display:block;}' +
+      '.profile-header-row{display:flex;justify-content:space-between;align-items:flex-end;padding:0 1.4rem;margin-top:-67px;position:relative;z-index:1;}' +
+      '.profile-avatar{width:134px;height:134px;border-radius:50%;border:4px solid var(--bg,#fff);background:#2f3336;color:#e7e9ea;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:2rem;overflow:hidden;flex-shrink:0;}' +
+      '.profile-avatar img{width:100%;height:100%;object-fit:cover;display:block;}' +
+      '.profile-header-actions{display:flex;gap:0.5rem;align-items:center;margin-bottom:0.35rem;}' +
+      '.profile-edit-btn,.profile-header-actions .ghost-btn{border-radius:999px;font-weight:700;}' +
+      '.profile-display-name{font-weight:800;font-size:1.35rem;line-height:1.2;}' +
+      '.profile-handle{color:var(--text-light,#536471);font-size:0.95rem;margin:0.15rem 0 0.55rem;}' +
+      '.profile-bio{margin:0 0 0.65rem;white-space:pre-wrap;word-break:break-word;}' +
+      '.profile-meta-row{display:flex;flex-wrap:wrap;gap:0.75rem 1.1rem;color:var(--text-muted,#536471);font-size:0.88rem;margin-bottom:0.55rem;}' +
+      '.profile-meta-row a{color:var(--accent,#1d9bf0);text-decoration:none;}' +
+      '.profile-meta-row a:hover{text-decoration:underline;}' +
+      '.profile-counts{display:flex;gap:1.15rem;margin-top:0.35rem;}' +
+      '.profile-counts .count-btn{background:none;border:0;padding:0;cursor:default;font:inherit;color:var(--text-muted,#536471);}' +
+      '.profile-counts .count-btn strong{color:var(--text,#0f1419);font-weight:700;}' +
+      '.profile-counts .count-btn[hidden]{display:none!important;}' +
+      '.profile-tabs{display:flex;border-bottom:1px solid var(--border,#eff3f4);margin-top:0.85rem;}' +
+      '.profile-tab{flex:1;background:none;border:0;border-bottom:2px solid transparent;padding:0.85rem 0.5rem;font:inherit;font-weight:600;color:var(--text-muted,#536471);cursor:pointer;}' +
+      '.profile-tab.active{color:var(--text,#0f1419);border-bottom-color:var(--accent,#1d9bf0);}' +
+      '.profile-tab-pane[hidden]{display:none!important;}' +
+      '.profile-edit-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:1rem;}' +
+      '.profile-edit-overlay[hidden]{display:none!important;}' +
+      '.profile-edit-card{background:var(--bg,#fff);color:var(--text,#0f1419);border-radius:16px;width:min(34rem,100%);max-height:90vh;overflow:auto;padding:1.1rem 1.2rem 1.25rem;box-shadow:0 12px 40px rgba(0,0,0,.2);}' +
+      '.profile-edit-card h2{margin:0 0 0.85rem;font-size:1.2rem;}' +
+      '.profile-edit-field{margin:0 0 0.75rem;}' +
+      '.profile-edit-field label{display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.25rem;color:var(--text-muted,#536471);}' +
+      '.profile-edit-field input,.profile-edit-field textarea{width:100%;box-sizing:border-box;border:1px solid var(--border,#cfd9de);border-radius:10px;padding:0.55rem 0.7rem;font:inherit;background:var(--surface,#f7f9f9);color:inherit;}' +
+      '.profile-edit-field textarea{min-height:5rem;resize:vertical;}' +
+      '.profile-edit-count{font-size:0.75rem;color:var(--text-light,#536471);text-align:right;margin-top:0.2rem;}' +
+      '.profile-edit-actions{display:flex;justify-content:flex-end;gap:0.55rem;margin-top:0.9rem;}' +
+      '.profile-edit-err{min-height:1.1rem;color:var(--accent,#e10600);font-size:0.82rem;margin-top:0.35rem;}' +
+      '.profile-edit-uploads{display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.75rem;}' +
+      '.profile-edit-upload{flex:1;min-width:9rem;}' +
+      '.profile-edit-upload input{display:block;width:100%;font-size:0.8rem;}' +
+      '.subx-cat-link{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:0 auto 0.45rem;border-radius:999px;text-decoration:none;color:inherit;}' +
+      '.subx-cat-link:focus-visible{outline:2px solid var(--focus,#1d9bf0);outline-offset:3px;}' +
+      '.subx-cat-link img,.subx-cat-link .subx-cat-icon{width:28px;height:28px;display:block;}' +
+      '.sidebar-brand-logos{display:flex;align-items:center;justify-content:center;gap:0.55rem;margin:0 auto 0.45rem;}' +
+      '.sidebar-brand-logos .brand-mark{margin:0;}' +
+      '.sidebar-brand-logos .brand-icon{margin:0;}' +
+      '@media (max-width:900px){.profile-avatar{width:80px;height:80px;font-size:1.35rem;border-width:3px;}.profile-header-row{margin-top:-40px;}}';
+    document.head.appendChild(st);
+  }
+
+  function ensureSubxCatMark() {
+    var brand = document.querySelector('.sidebar-brand');
+    if (!brand || brand.querySelector('.subx-cat-link')) return;
+    var mark = brand.querySelector('.brand-mark');
+    if (!mark) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'sidebar-brand-logos';
+    var a = document.createElement('a');
+    a.href = 'https://subx.it/';
+    a.className = 'subx-cat-link';
+    a.setAttribute('aria-label', 'SubX home');
+    var light = '/assets/brand/cat-32.png';
+    var dark = '/assets/brand/cat-32-dark.png';
+    // Fall back to the live hub assets when the room has not vendored the cat yet.
+    a.innerHTML =
+      '<picture>' +
+      '<source srcset="' + dark + '" media="(prefers-color-scheme: dark)" onerror="">' +
+      '<img class="subx-cat-icon" src="' + light + '" width="28" height="28" alt="" ' +
+      'onerror="this.onerror=null;this.src=\'https://subx.it/assets/brand/cat-32.png\';">' +
+      '</picture>';
+    mark.parentNode.insertBefore(wrap, mark);
+    wrap.appendChild(a);
+    wrap.appendChild(mark);
+  }
+
+  function safeHttpUrl(raw) {
+    var s = String(raw || '').trim();
+    if (!s) return '';
+    if (!/^https?:\/\//i.test(s)) return '';
+    try {
+      var u = new URL(s);
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
+      return u.toString().slice(0, 100);
+    } catch (e) { return ''; }
+  }
+
+  function monthYearLabel(ms) {
+    if (!ms) return '';
+    var d = new Date(ms);
+    if (isNaN(d.getTime())) return '';
+    try {
+      return d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+    } catch (e2) {
+      return d.getFullYear() + '';
+    }
+  }
+
+  function setAvatarEl(el, name, url) {
+    if (!el) return;
+    el.textContent = '';
+    if (url) {
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      img.onerror = function () {
+        el.textContent = initials(name || 'M');
+      };
+      el.appendChild(img);
+    } else {
+      el.textContent = initials(name || 'M');
+    }
+  }
+
+  function setBannerEl(el, url) {
+    if (!el) return;
+    el.textContent = '';
+    if (url) {
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      img.onerror = function () { el.textContent = ''; };
+      el.appendChild(img);
+    }
+  }
+
+  function ensureProfileEditModal() {
+    if (document.getElementById('profile-edit-overlay')) return;
+    var ov = document.createElement('div');
+    ov.id = 'profile-edit-overlay';
+    ov.className = 'profile-edit-overlay';
+    ov.hidden = true;
+    ov.innerHTML =
+      '<div class="profile-edit-card" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title">' +
+      '<h2 id="profile-edit-title">Edit profile</h2>' +
+      '<div class="profile-edit-uploads">' +
+      '<div class="profile-edit-upload"><label for="profile-edit-avatar">Profile photo</label><input type="file" id="profile-edit-avatar" accept="image/jpeg,image/png,image/webp,image/*"></div>' +
+      '<div class="profile-edit-upload"><label for="profile-edit-banner">Banner</label><input type="file" id="profile-edit-banner" accept="image/jpeg,image/png,image/webp,image/*"></div>' +
+      '</div>' +
+      '<div class="profile-edit-field"><label for="profile-edit-name">Name</label><input id="profile-edit-name" maxlength="50" autocomplete="nickname"></div>' +
+      '<div class="profile-edit-field"><label for="profile-edit-bio">Bio</label><textarea id="profile-edit-bio" maxlength="160"></textarea><div class="profile-edit-count"><span id="profile-edit-bio-count">0</span>/160</div></div>' +
+      '<div class="profile-edit-field"><label for="profile-edit-location">Location</label><input id="profile-edit-location" maxlength="30"></div>' +
+      '<div class="profile-edit-field"><label for="profile-edit-website">Website</label><input id="profile-edit-website" maxlength="100" placeholder="https://"></div>' +
+      '<div class="profile-edit-err" id="profile-edit-err"></div>' +
+      '<div class="profile-edit-actions"><button type="button" class="ghost-btn" id="profile-edit-cancel">Cancel</button><button type="button" class="accent-btn" id="profile-edit-save">Save</button></div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function (e) { if (e.target === ov) closeProfileEdit(); });
+    var bio = document.getElementById('profile-edit-bio');
+    if (bio) bio.addEventListener('input', function () {
+      var c = document.getElementById('profile-edit-bio-count');
+      if (c) c.textContent = String((bio.value || '').length);
+    });
+    var cancel = document.getElementById('profile-edit-cancel');
+    if (cancel) cancel.addEventListener('click', closeProfileEdit);
+    var save = document.getElementById('profile-edit-save');
+    if (save) save.addEventListener('click', saveProfileEdit);
+  }
+
+  function ensureProfileStructure() {
+    var content = document.getElementById('profile-content');
+    if (!content) return;
+    if (!document.getElementById('profile-meta-row')) {
+      var id = content.querySelector('.profile-id');
+      if (id) {
+        var meta = document.getElementById('profile-meta');
+        var row = document.createElement('div');
+        row.className = 'profile-meta-row';
+        row.id = 'profile-meta-row';
+        row.innerHTML =
+          '<span id="profile-location" hidden></span>' +
+          '<a id="profile-website" hidden rel="nofollow ugc noopener" target="_blank"></a>' +
+          '<span id="profile-joined" hidden></span>';
+        if (meta && meta.parentNode) meta.parentNode.insertBefore(row, meta.nextSibling);
+        else id.appendChild(row);
+      }
+    }
+    if (!document.getElementById('profile-following-count')) {
+      var counts = content.querySelector('.profile-counts');
+      if (!counts) {
+        counts = document.createElement('div');
+        counts.className = 'profile-counts';
+        var id2 = content.querySelector('.profile-id');
+        if (id2) id2.appendChild(counts);
+      }
+      counts.innerHTML =
+        '<button type="button" class="count-btn" id="profile-following-btn" disabled><strong id="profile-following-count">0</strong> Following</button>' +
+        '<button type="button" class="count-btn" id="profile-followers-btn" hidden disabled><strong id="profile-followers-count">0</strong> Followers</button>';
+    }
+    if (!document.getElementById('profile-tabs')) {
+      var tabs = document.createElement('div');
+      tabs.className = 'profile-tabs';
+      tabs.id = 'profile-tabs';
+      tabs.setAttribute('role', 'tablist');
+      tabs.innerHTML =
+        '<button type="button" class="profile-tab active" role="tab" data-profile-tab="posts" aria-selected="true">Posts</button>' +
+        '<button type="button" class="profile-tab" role="tab" data-profile-tab="replies" aria-selected="false">Replies</button>' +
+        '<button type="button" class="profile-tab" role="tab" data-profile-tab="media" aria-selected="false">Media</button>' +
+        '<button type="button" class="profile-tab" role="tab" data-profile-tab="likes" aria-selected="false">Likes</button>';
+      var posts = document.getElementById('profile-pane-posts');
+      if (posts && posts.parentNode) posts.parentNode.insertBefore(tabs, posts);
+      else content.appendChild(tabs);
+      tabs.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-profile-tab]');
+        if (!btn) return;
+        setProfileTab(btn.getAttribute('data-profile-tab'));
+      });
+    }
+    ['replies', 'media', 'likes'].forEach(function (tab) {
+      if (!document.getElementById('profile-pane-' + tab)) {
+        var pane = document.createElement('div');
+        pane.className = 'profile-tab-pane profile-posts';
+        pane.id = 'profile-pane-' + tab;
+        pane.hidden = true;
+        pane.innerHTML = '<div class="empty-note">Nothing here yet.</div>';
+        content.appendChild(pane);
+      }
+    });
+    var postsPane = document.getElementById('profile-pane-posts');
+    if (postsPane) postsPane.classList.add('profile-tab-pane');
+    var actions = content.querySelector('.profile-header-actions');
+    if (!actions) {
+      var headerRow = content.querySelector('.profile-header-row');
+      var edit = document.getElementById('profile-edit-btn');
+      if (headerRow && edit) {
+        actions = document.createElement('div');
+        actions.className = 'profile-header-actions';
+        edit.parentNode.insertBefore(actions, edit);
+        actions.appendChild(edit);
+        var follow = document.getElementById('profile-follow-btn');
+        var msg = document.getElementById('profile-message-btn');
+        if (follow) actions.appendChild(follow);
+        if (msg) actions.appendChild(msg);
+      }
+    }
+    ensureProfileEditModal();
+  }
+
+  var profileTab = 'posts';
+  var profileDraftFiles = { avatar: null, banner: null };
+
+  function setProfileTab(tab) {
+    profileTab = tab || 'posts';
+    document.querySelectorAll('#profile-tabs .profile-tab').forEach(function (b) {
+      var on = b.getAttribute('data-profile-tab') === profileTab;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    ['posts', 'replies', 'media', 'likes'].forEach(function (t) {
+      var pane = document.getElementById('profile-pane-' + t);
+      if (pane) pane.hidden = t !== profileTab;
+    });
+    paintProfilePanes(window.__subxProfileUid || liveUid());
+  }
+
+  function paintProfilePanes(uid) {
+    if (!uid) return;
+    var posts = livePosts.filter(function (p) {
+      return p.authorUid && p.authorUid === uid && !isPostHidden(p) && !p.parentId;
+    });
+    var replies = livePosts.filter(function (p) {
+      return p.authorUid && p.authorUid === uid && !isPostHidden(p) && !!p.parentId;
+    });
+    var media = livePosts.filter(function (p) {
+      return p.authorUid && p.authorUid === uid && !isPostHidden(p) && !!p.imageUrl;
+    });
+    var panePosts = document.getElementById('profile-pane-posts');
+    if (panePosts) {
+      if (!posts.length) {
+        panePosts.innerHTML = '<div class="empty-note" id="profile-posts-empty">' + escapeHtml(skin('profileEmpty', (site && site.emptyState) || 'No posts yet.')) + '</div>';
+      } else {
+        panePosts.innerHTML = posts.map(function (p) { return renderPost(p, false); }).join('');
+      }
+    }
+    var paneReplies = document.getElementById('profile-pane-replies');
+    if (paneReplies) {
+      paneReplies.innerHTML = replies.length
+        ? replies.map(function (p) { return renderPost(p, true); }).join('')
+        : '<div class="empty-note">No replies yet.</div>';
+    }
+    var paneMedia = document.getElementById('profile-pane-media');
+    if (paneMedia) {
+      paneMedia.innerHTML = media.length
+        ? media.map(function (p) { return renderPost(p, !!p.parentId); }).join('')
+        : '<div class="empty-note">No media yet.</div>';
+    }
+    var paneLikes = document.getElementById('profile-pane-likes');
+    if (paneLikes) {
+      // Likes of others' posts by this user are not loaded in the room feed; keep honest empty state.
+      paneLikes.innerHTML = '<div class="empty-note">Likes are not listed here yet.</div>';
+    }
+  }
+
+  function paintProfile(name, handle, bio, uid, extra) {
+    ensureProfileCss();
+    ensureProfileStructure();
+    extra = extra || {};
+    window.__subxProfileUid = uid || null;
+    var top = document.getElementById('profile-topbar-name');
+    if (top) top.textContent = name;
+    var dn = document.getElementById('profile-display-name');
+    if (dn) dn.textContent = name;
+    var h = document.getElementById('profile-handle');
+    if (h) h.textContent = '@' + handle;
+    setAvatarEl(document.getElementById('profile-avatar'), name, extra.avatarUrl || '');
+    setBannerEl(document.getElementById('profile-banner'), extra.bannerUrl || '');
+    var b = document.getElementById('profile-bio');
+    if (b) b.textContent = bio || '';
+    var loc = document.getElementById('profile-location');
+    if (loc) {
+      if (extra.location) { loc.hidden = false; loc.textContent = extra.location; }
+      else { loc.hidden = true; loc.textContent = ''; }
+    }
+    var web = document.getElementById('profile-website');
+    if (web) {
+      var href = safeHttpUrl(extra.website || '');
+      if (href) {
+        web.hidden = false;
+        web.href = href;
+        web.textContent = href.replace(/^https?:\/\//i, '');
+      } else {
+        web.hidden = true;
+        web.removeAttribute('href');
+        web.textContent = '';
+      }
+    }
+    var joined = document.getElementById('profile-joined');
+    if (joined) {
+      var label = monthYearLabel(extra.joinedMs);
+      if (label) { joined.hidden = false; joined.textContent = 'Joined ' + label; }
+      else { joined.hidden = true; joined.textContent = ''; }
+    }
+    var oldMeta = document.getElementById('profile-meta');
+    if (oldMeta) oldMeta.hidden = true;
+    var fol = document.getElementById('profile-following-count');
+    if (fol && typeof extra.followingCount === 'number') fol.textContent = String(extra.followingCount);
+    var folBtn = document.getElementById('profile-followers-btn');
+    var folN = document.getElementById('profile-followers-count');
+    if (folBtn && folN) {
+      if (typeof extra.followersCount === 'number') {
+        folBtn.hidden = false;
+        folN.textContent = String(extra.followersCount);
+      } else {
+        folBtn.hidden = true;
+      }
+    }
+    paintProfilePanes(uid);
+  }
+
+  function followingCountFor(uid) {
+    if (!uid) return 0;
+    if (uid === liveUid() && followingUids) return Object.keys(followingUids).length;
+    return 0;
+  }
+
+  function tryPublicAvatarUrl(uid) {
+    return new Promise(function (resolve) {
+      if (!uid || typeof firebase === 'undefined' || !firebase.storage) { resolve(''); return; }
+      try {
+        firebase.storage().ref('users/' + uid + '/avatar').getDownloadURL()
+          .then(function (url) { resolve(url || ''); })
+          .catch(function () { resolve(''); });
+      } catch (e) { resolve(''); }
+    });
+  }
+
+  function tryPublicBannerUrl(uid) {
+    return new Promise(function (resolve) {
+      if (!uid || typeof firebase === 'undefined' || !firebase.storage) { resolve(''); return; }
+      try {
+        firebase.storage().ref('users/' + uid + '/banner').getDownloadURL()
+          .then(function (url) { resolve(url || ''); })
+          .catch(function () { resolve(''); });
+      } catch (e) { resolve(''); }
+    });
+  }
+
+  function loadOwnUserDoc() {
+    if (!fbDb || !liveUid()) return Promise.resolve(null);
+    return fbDb.collection('users').doc(liveUid()).get().then(function (snap) {
+      return snap.exists ? (snap.data() || {}) : null;
+    }).catch(function () { return null; });
+  }
+
+  function openProfileEdit() {
+    if (!isLiveUser() || !currentUser || !currentUser.live) { openAuth('register'); return; }
+    ensureProfileCss();
+    ensureProfileEditModal();
+    profileDraftFiles = { avatar: null, banner: null };
+    var ov = document.getElementById('profile-edit-overlay');
+    var err = document.getElementById('profile-edit-err');
+    if (err) err.textContent = '';
+    document.getElementById('profile-edit-name').value = currentUser.name || '';
+    document.getElementById('profile-edit-bio').value = currentUser.bio || '';
+    document.getElementById('profile-edit-bio-count').textContent = String((currentUser.bio || '').length);
+    document.getElementById('profile-edit-location').value = currentUser.location || '';
+    document.getElementById('profile-edit-website').value = currentUser.website || '';
+    var avIn = document.getElementById('profile-edit-avatar');
+    var bnIn = document.getElementById('profile-edit-banner');
+    if (avIn) avIn.value = '';
+    if (bnIn) bnIn.value = '';
+    if (avIn) avIn.onchange = function () { profileDraftFiles.avatar = avIn.files && avIn.files[0] ? avIn.files[0] : null; };
+    if (bnIn) bnIn.onchange = function () { profileDraftFiles.banner = bnIn.files && bnIn.files[0] ? bnIn.files[0] : null; };
+    ov.hidden = false;
+  }
+
+  function closeProfileEdit() {
+    var ov = document.getElementById('profile-edit-overlay');
+    if (ov) ov.hidden = true;
+    profileDraftFiles = { avatar: null, banner: null };
+  }
+
+  function readImageFile(file) {
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onload = function () {
+        var img = new Image();
+        img.onload = function () { resolve(img); };
+        img.onerror = function () { reject(new Error('Could not read that image.')); };
+        img.src = fr.result;
+      };
+      fr.onerror = function () { reject(new Error('Could not read that image.')); };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  function canvasToBlob(canvas, type, quality) {
+    return new Promise(function (resolve) {
+      if (canvas.toBlob) {
+        canvas.toBlob(function (b) { resolve(b); }, type, quality);
+      } else {
+        var data = canvas.toDataURL(type, quality);
+        var bin = atob(data.split(',')[1]);
+        var arr = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        resolve(new Blob([arr], { type: type }));
+      }
+    });
+  }
+
+  function resizeImageFile(file, w, h, maxBytes) {
+    return readImageFile(file).then(function (img) {
+      var canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      var scale = Math.max(w / img.width, h / img.height);
+      var sw = w / scale;
+      var sh = h / scale;
+      var sx = (img.width - sw) / 2;
+      var sy = (img.height - sh) / 2;
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+      var tryType = (file.type === 'image/webp') ? 'image/webp' : 'image/jpeg';
+      var q = 0.9;
+      function encode() {
+        return canvasToBlob(canvas, tryType, q).then(function (blob) {
+          if (!blob) return null;
+          if (blob.size <= maxBytes || q <= 0.5) return blob;
+          q -= 0.1;
+          return encode();
+        });
+      }
+      return encode();
+    });
+  }
+
+  function uploadProfileImage(kind, file) {
+    if (!file || !fbAuth || !fbAuth.currentUser) return Promise.resolve('');
+    var uid = fbAuth.currentUser.uid;
+    var isAvatar = kind === 'avatar';
+    var maxBytes = isAvatar ? 2 * 1024 * 1024 : 5 * 1024 * 1024;
+    var dims = isAvatar ? [400, 400] : [1500, 500];
+    return resizeImageFile(file, dims[0], dims[1], maxBytes).then(function (blob) {
+      if (!blob) throw new Error('Could not process that image.');
+      if (blob.size > maxBytes) throw new Error('That image is still too large after resize.');
+      var ref = firebase.storage().ref('users/' + uid + '/' + kind);
+      return ref.put(blob, { contentType: blob.type || 'image/jpeg' }).then(function () {
+        return ref.getDownloadURL();
+      });
+    });
+  }
+
+  function saveProfileEdit() {
+    var err = document.getElementById('profile-edit-err');
+    var user = fbAuth && fbAuth.currentUser;
+    if (!user) { if (err) err.textContent = 'Sign in first.'; return; }
+    var name = String((document.getElementById('profile-edit-name') || {}).value || '').trim();
+    var bio = String((document.getElementById('profile-edit-bio') || {}).value || '').trim().slice(0, 160);
+    var location = String((document.getElementById('profile-edit-location') || {}).value || '').trim().slice(0, 30);
+    var website = safeHttpUrl((document.getElementById('profile-edit-website') || {}).value || '');
+    if (!nameOk(name)) { if (err) err.textContent = 'That display name is reserved.'; return; }
+    var handle = handleFromName(name);
+    if (!handleOk(handle)) { if (err) err.textContent = 'That handle is reserved.'; return; }
+    if (err) err.textContent = '';
+    var uploadNote = '';
+    var avatarUrl = currentUser.avatarUrl || '';
+    var bannerUrl = currentUser.bannerUrl || '';
+    var chain = Promise.resolve();
+    if (profileDraftFiles.avatar) {
+      chain = chain.then(function () {
+        return uploadProfileImage('avatar', profileDraftFiles.avatar).then(function (url) {
+          avatarUrl = url;
+        }).catch(function () {
+          uploadNote = 'Photo uploads are coming soon.';
+        });
+      });
+    }
+    if (profileDraftFiles.banner) {
+      chain = chain.then(function () {
+        return uploadProfileImage('banner', profileDraftFiles.banner).then(function (url) {
+          bannerUrl = url;
+        }).catch(function () {
+          uploadNote = 'Photo uploads are coming soon.';
+        });
+      });
+    }
+    chain.then(function () {
+      var extra = {
+        displayName: name,
+        bio: bio,
+        location: location,
+        website: website
+      };
+      if (avatarUrl) extra.avatarUrl = avatarUrl;
+      if (bannerUrl) extra.bannerUrl = bannerUrl;
+      return ensurePublicProfile(user, name, extra).then(function () {
+        if (currentUser) {
+          currentUser.name = name;
+          currentUser.handle = handle;
+          currentUser.bio = bio;
+          currentUser.location = location;
+          currentUser.website = website;
+          if (avatarUrl) currentUser.avatarUrl = avatarUrl;
+          if (bannerUrl) currentUser.bannerUrl = bannerUrl;
+          saveJSON(LS_USER, currentUser);
+        }
+        renderSidebarAuth();
+        syncProfile();
+        closeProfileEdit();
+        if (uploadNote) composeErr(uploadNote);
+        else composeErr('Profile saved.');
+      });
+    }).catch(function (e) {
+      if (err) err.textContent = guardPublicErr(e, 'Could not save profile.');
+    });
+  }
+
+
   function openProfile() {
     viewingProfile = null;
     closeSocialOverlays();
@@ -4450,28 +5028,10 @@
     syncProfile();
   }
 
-  function paintProfile(name, handle, bio, uid) {
-    var top = document.getElementById('profile-topbar-name');
-    if (top) top.textContent = name;
-    var dn = document.getElementById('profile-display-name');
-    if (dn) dn.textContent = name;
-    var h = document.getElementById('profile-handle');
-    if (h) h.textContent = '@' + handle;
-    var av = document.getElementById('profile-avatar');
-    if (av) av.textContent = initials(name);
-    var b = document.getElementById('profile-bio');
-    if (b) b.textContent = bio || '';
-    const pane = document.getElementById('profile-pane-posts');
-    if (!pane) return;
-    const mine = livePosts.filter(function (p) { return p.authorUid && p.authorUid === uid && !isPostHidden(p); });
-    if (!mine.length) {
-      pane.innerHTML = '<div class="empty-note" id="profile-posts-empty">' + escapeHtml(skin('profileEmpty', (site && site.emptyState) || 'No posts yet.')) + '</div>';
-    } else {
-      pane.innerHTML = mine.map(function (p) { return renderPost(p, !!p.parentId); }).join('');
-    }
-  }
-
   function syncProfile() {
+    ensureProfileCss();
+    ensureProfileStructure();
+    ensureSubxCatMark();
     const prompt = document.getElementById('profile-signin-prompt');
     const content = document.getElementById('profile-content');
     var editBtn = document.getElementById('profile-edit-btn');
@@ -4486,7 +5046,26 @@
         msgBtn.hidden = !dmsOn();
         msgBtn.disabled = false;
       }
-      paintProfile(viewingProfile.name || 'Member', viewingProfile.handle || 'member', '', viewingProfile.uid);
+      var uid = viewingProfile.uid;
+      var base = {
+        name: viewingProfile.name || 'Member',
+        handle: viewingProfile.handle || 'member',
+        bio: viewingProfile.bio || '',
+        location: viewingProfile.location || '',
+        website: viewingProfile.website || '',
+        joinedMs: viewingProfile.joinedMs || 0,
+        avatarUrl: viewingProfile.avatarUrl || '',
+        bannerUrl: viewingProfile.bannerUrl || '',
+        followingCount: 0
+      };
+      paintProfile(base.name, base.handle, base.bio, uid, base);
+      Promise.all([tryPublicAvatarUrl(uid), tryPublicBannerUrl(uid)]).then(function (urls) {
+        if (urls[0]) base.avatarUrl = urls[0];
+        if (urls[1]) base.bannerUrl = urls[1];
+        if (viewingProfile && viewingProfile.uid === uid) {
+          paintProfile(base.name, base.handle, base.bio, uid, base);
+        }
+      });
       syncFollowButton();
       return;
     }
@@ -4504,11 +5083,20 @@
     }
     if (prompt) prompt.hidden = true;
     if (content) content.hidden = false;
+    var extra = {
+      avatarUrl: currentUser.avatarUrl || '',
+      bannerUrl: currentUser.bannerUrl || '',
+      location: currentUser.location || '',
+      website: currentUser.website || '',
+      joinedMs: currentUser.joinedMs || 0,
+      followingCount: followingCountFor(currentUser.uid)
+    };
     paintProfile(
       currentUser.name,
       currentUser.handle,
       currentUser.bio || skin('bioDefault', ''),
-      currentUser.uid
+      currentUser.uid,
+      extra
     );
     syncFollowButton();
   }
@@ -5499,9 +6087,13 @@
    var chatSearch = document.getElementById('chat-search-input');
    if (chatSearch) chatSearch.addEventListener('input', renderThreads);
 
-   document.getElementById('profile-edit-btn').addEventListener('click', function () {
-     openAuth('register');
+   var profileEditBtn = document.getElementById('profile-edit-btn');
+   if (profileEditBtn) profileEditBtn.addEventListener('click', function () {
+     openProfileEdit();
    });
+   ensureProfileCss();
+   ensureSubxCatMark();
+   ensureProfileStructure();
 
    const compose = document.getElementById('thoughts-compose-input');
    const postBtn = document.getElementById('thoughts-post-btn');

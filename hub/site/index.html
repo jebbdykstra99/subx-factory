@@ -34,10 +34,10 @@
   <link rel="icon" type="image/png" sizes="128x128" href="/assets/brand/cat-128-dark.png?v=18d671ba0d" media="(prefers-color-scheme: dark)">
   <link rel="apple-touch-icon" sizes="256x256" href="/assets/brand/cat-256.png?v=f4b692783e">
   <script src="/theme.js?v=93492d78a0"></script>
-  <link rel="stylesheet" href="/styles.css?v=3cb5c0e9e6">
+  <link rel="stylesheet" href="/styles.css?v=1688614534">
   <link rel="stylesheet" href="/nests.css?v=a67c57a6bb">
   <link rel="stylesheet" href="/hub.css?v=1a4bca6d90">
-  <link rel="preload" href="/site.json?v=e726aaa152" as="fetch" crossorigin="anonymous">
+  <link rel="preload" href="/site.json?v=ff5322f443" as="fetch" crossorigin="anonymous">
 </head>
 <body class="hub-home">
 
@@ -58,7 +58,7 @@
       <img class="brand-icon" alt="SubX" width="36" height="36" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
     </a>
     <div class="brand-title">SubX</div>
-    <div class="brand-sub">Small rooms for big interests.</div>
+    <div class="brand-sub brand-tagline">Small rooms<br>for big interests.</div>
   </div>
 
   <div class="sidebar-rule"></div>
@@ -282,16 +282,42 @@
     <div class="profile-banner" id="profile-banner"></div>
     <div class="profile-header-row">
       <div class="profile-avatar" id="profile-avatar">G</div>
-      <button class="ghost-btn" id="profile-edit-btn" type="button">Edit profile</button>
+      <div class="profile-header-actions">
+        <button class="ghost-btn" id="profile-edit-btn" type="button">Edit profile</button>
+      </div>
     </div>
     <div class="profile-id">
       <div class="profile-display-name" id="profile-display-name">Guest</div>
       <div class="profile-handle" id="profile-handle">@guest</div>
       <p class="profile-bio" id="profile-bio">Just visiting the hub.</p>
-      <div class="profile-meta" id="profile-meta">SubX hub</div>
+      <div class="profile-meta" id="profile-meta" hidden>SubX hub</div>
+      <div class="profile-meta-row" id="profile-meta-row">
+        <span id="profile-location" hidden></span>
+        <a id="profile-website" hidden rel="nofollow ugc noopener" target="_blank"></a>
+        <span id="profile-joined" hidden></span>
+      </div>
+      <div class="profile-counts">
+        <button type="button" class="count-btn" id="profile-following-btn" disabled><strong id="profile-following-count">0</strong> Following</button>
+        <button type="button" class="count-btn" id="profile-followers-btn" hidden disabled><strong id="profile-followers-count">0</strong> Followers</button>
+      </div>
     </div>
-    <div class="profile-posts" id="profile-pane-posts">
+    <div class="profile-tabs" id="profile-tabs" role="tablist">
+      <button type="button" class="profile-tab active" role="tab" data-profile-tab="posts" aria-selected="true">Posts</button>
+      <button type="button" class="profile-tab" role="tab" data-profile-tab="replies" aria-selected="false">Replies</button>
+      <button type="button" class="profile-tab" role="tab" data-profile-tab="media" aria-selected="false">Media</button>
+      <button type="button" class="profile-tab" role="tab" data-profile-tab="likes" aria-selected="false">Likes</button>
+    </div>
+    <div class="profile-posts profile-tab-pane" id="profile-pane-posts">
       <div class="empty-note" id="profile-posts-empty">Posts live in the rooms.</div>
+    </div>
+    <div class="profile-posts profile-tab-pane" id="profile-pane-replies" hidden>
+      <div class="empty-note">No replies yet.</div>
+    </div>
+    <div class="profile-posts profile-tab-pane" id="profile-pane-media" hidden>
+      <div class="empty-note">No media yet.</div>
+    </div>
+    <div class="profile-posts profile-tab-pane" id="profile-pane-likes" hidden>
+      <div class="empty-note">Likes are not listed here yet.</div>
     </div>
   </div>
 </div>
@@ -411,7 +437,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" integrity="sha384-TnlRYaR4JYz/lpaGuaiU61PjNberSA4vjLjtF+oRC/IkohkJqnWxw5EmDSOt1vA1" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" integrity="sha384-qn4Jh88HhJA8dplNQyGjOh9OGI4izVhrfj/qIFgaKcdgOE06pXqIKGlsCILZcLAC" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js" integrity="sha384-6I0gWsz4FIAr30c0TxIxJnPQuJiZ1FfILdZrgJdjxTH3R8dgPGTvexbyqTvReV6Z" crossorigin="anonymous"></script>
-<script src="/shell/v1.2.6/factory.js" integrity="sha384-cM7IaWgQSt566TAOeQhWb52C9hsLBFOPRSGK1KBMSXDqoz1pmfgcwBWGrzVB90Lu" crossorigin="anonymous" data-site="/site.json?v=e726aaa152"></script>
+<script src="/shell/v1.2.6/factory.js" integrity="sha384-68t82nU3PfNqPXj+klUxzi6rshUBg50jGQNOiuEQV61RniEndo73z1GeIWWbvNv/" crossorigin="anonymous" data-site="/site.json?v=ff5322f443"></script>
 <script src="/hub.js?v=0c34c06670" defer></script>
 <script src="/takedown.js?v=34894c915e" defer></script>
 </body>

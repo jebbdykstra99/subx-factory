@@ -2,7 +2,7 @@
   "siteId": "subx",
   "domain": "subx.it",
   "name": "SubX",
-  "tagline": "Small rooms for big interests.",
+  "tagline": "Small rooms\nfor big interests.",
   "accountsOpen": true,
   "pixel": false,
   "whoMark": true,
@@ -81,7 +81,7 @@
       {
         "tag": "Featured room",
         "headline": "27chat",
-        "snippet": "The work didn’t stop.",
+        "snippet": "The work didn\u2019t stop.",
         "meta": "27chat.com",
         "url": "https://27chat.com/"
       },
@@ -197,7 +197,7 @@
       {
         "file": "assets/whomark/whomark.js",
         "sha256": "78ce0941f6ff8385b0831fdef2ddcac315b5099f27c587dc65392ffbd0a6348f",
-        "reason": "WHOMARK™ disclosure marks, final-v4.1 art (vendored from hub/src/whomark, re-branded only when brand.json changes)",
+        "reason": "WHOMARK\u2122 disclosure marks, final-v4.1 art (vendored from hub/src/whomark, re-branded only when brand.json changes)",
         "noShellOk": true
       },
       {
@@ -291,7 +291,7 @@
       "partners/dogacademy/articles/short-daily-lessons.html"
     ],
     "file": "shell/v1.2.6/factory.js",
-    "sha256": "798184e45cdd243a04c81b065689f7fe1744263314a1a49b487ad1ac199ba48e",
+    "sha256": "cbf67c2adb2e00d1d300e53baf799450f6d0c78f5b23df2db0ce7587ba59a63f",
     "reason": "Self-hosted hub fork of shell/v1.2.6/factory.js: header source line only, new SRI; static pages are self only, the shell page adds only the Firebase Auth origins",
     "exception": "E21"
   }

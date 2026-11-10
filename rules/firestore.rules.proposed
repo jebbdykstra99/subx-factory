@@ -241,6 +241,13 @@ service cloud.firestore {
         && (!d.keys().hasAny(['name']) || nameOk(d.name))
         && (!d.keys().hasAny(['handle']) || handleOk(d.handle))
         && (!d.keys().hasAny(['bio']) || (d.bio is string && d.bio.size() <= 160))
+        && (!d.keys().hasAny(['location']) || (d.location is string && d.location.size() <= 30))
+        && (!d.keys().hasAny(['website']) || (d.website is string && d.website.size() <= 100
+            && (d.website.size() == 0 || d.website.matches('^https?://.*'))))
+        && (!d.keys().hasAny(['avatarUrl']) || (d.avatarUrl is string && d.avatarUrl.size() <= 600
+            && d.avatarUrl.matches('^https://firebasestorage[.]googleapis[.]com/.*')))
+        && (!d.keys().hasAny(['bannerUrl']) || (d.bannerUrl is string && d.bannerUrl.size() <= 600
+            && d.bannerUrl.matches('^https://firebasestorage[.]googleapis[.]com/.*')))
         && !d.keys().hasAny(['role', 'admin', 'isAdmin', 'verified', 'steward'])
       );
     }
