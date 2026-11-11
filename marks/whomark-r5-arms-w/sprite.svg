@@ -1,37 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
-  <!-- PEEKAI Round 5 (final-v2, arms-d): Option A closed ring, capital Ai AI tier, solid-body hybrid with angled-down arms at >=24px. Concept, not cleared, not filed. -->
+  <!-- WHOMARK™ Round 5 (final-v2, arms-w): Option A closed ring, capital Ai AI tier, solid-body hybrid with waving arms at >=24px. Concept, not cleared, not filed. -->
   <symbol id="wm-human" viewBox="0 0 24 24">
-    <title>WHOMARK: Human-made (PEEKAI R5 final-v2, concept, not cleared, not filed)</title>
+    <title>WHOMARK™: Human-made (R5 final-v2, concept, not cleared, not filed)</title>
     <circle cx="11" cy="13.2" r="8.6" fill="none" stroke="currentColor" stroke-width="2"/>
     <circle cx="11" cy="9.8" r="2.8" fill="currentColor"/>
     <path fill="currentColor" d="M6 17.8A5 4.2 0 0 1 16 17.8Z"/>
     <path style="fill:var(--wm-accent,#FF6A4D)" fill-rule="evenodd" d="M22.95 4.13L22.53 3.66L22.22 3.37L21.88 3.12L21.52 2.91L21.14 2.73L20.75 2.58L20.13 2.45L19.71 2.41L19.29 2.41L18.87 2.45L18.25 2.58L17.86 2.73L17.48 2.91L16.94 3.24L16.62 3.51L16.19 3.96L16.87 4.37L17.29 4.67L18.10 5.33L18.87 6.10L19.59 7.00L20.34 6.92L20.94 6.75L21.52 6.49L21.88 6.28L22.22 6.03L22.53 5.74L22.82 5.43L23.07 5.09L23.30 4.70ZM20.64 4.97L20.58 5.19L20.49 5.39L20.35 5.57L20.19 5.72L19.99 5.84L19.78 5.92L19.56 5.95L19.33 5.94L19.11 5.88L18.91 5.79L18.73 5.65L18.58 5.49L18.46 5.29L18.38 5.08L18.35 4.86L18.36 4.63L18.42 4.41L18.51 4.21L18.65 4.03L18.81 3.88L19.01 3.76L19.22 3.68L19.44 3.65L19.67 3.66L19.89 3.72L20.09 3.81L20.27 3.95L20.42 4.11L20.54 4.31L20.62 4.52L20.65 4.74Z"/>
   </symbol>
   <symbol id="wm-ai" viewBox="0 0 24 24">
-    <title>WHOMARK: AI-made (PEEKAI R5 final-v2 capital Ai, concept, not cleared, not filed)</title>
+    <title>WHOMARK™: AI-made (R5 final-v2 capital Ai, concept, not cleared, not filed)</title>
     <circle cx="11" cy="13.2" r="8.6" fill="none" stroke="currentColor" stroke-width="2"/>
     <circle cx="14" cy="9" r="1.15" fill="currentColor"/>
     <path fill="currentColor" fill-rule="evenodd" d="M7.54 15.26L9.26 15.26L9.86 17.06L9.95 17.21L10.06 17.28L10.19 17.30L11.50 17.30L11.68 17.22L11.78 17.07L11.79 16.84L9.30 9.29L9.19 9.07L9.01 8.87L8.82 8.75L8.57 8.67L8.23 8.67L7.95 8.77L7.69 8.97L7.52 9.23L5.01 16.84L4.99 16.98L5.06 17.16L5.16 17.25L5.34 17.30L6.61 17.30L6.81 17.23L6.94 17.06ZM8.70 13.54L8.10 13.53L8.40 12.63ZM14.95 12.01L14.89 11.66L14.71 11.38L14.42 11.15L14.12 11.06L13.79 11.08L13.50 11.19L13.25 11.42L13.08 11.75L13.05 12.01L13.05 16.76L13.10 16.93L13.19 17.08L13.32 17.20L13.48 17.27L13.65 17.30L14.35 17.30L14.52 17.27L14.77 17.12L14.92 16.87L14.95 16.70Z"/>
     <path style="fill:var(--wm-accent,#FF6A4D)" fill-rule="evenodd" d="M22.95 4.13L22.53 3.66L22.22 3.37L21.88 3.12L21.52 2.91L21.14 2.73L20.75 2.58L20.13 2.45L19.71 2.41L19.29 2.41L18.87 2.45L18.25 2.58L17.86 2.73L17.48 2.91L16.94 3.24L16.62 3.51L16.19 3.96L16.87 4.37L17.29 4.67L18.10 5.33L18.87 6.10L19.59 7.00L20.34 6.92L20.94 6.75L21.52 6.49L21.88 6.28L22.22 6.03L22.53 5.74L22.82 5.43L23.07 5.09L23.30 4.70ZM20.64 4.97L20.58 5.19L20.49 5.39L20.35 5.57L20.19 5.72L19.99 5.84L19.78 5.92L19.56 5.95L19.33 5.94L19.11 5.88L18.91 5.79L18.73 5.65L18.58 5.49L18.46 5.29L18.38 5.08L18.35 4.86L18.36 4.63L18.42 4.41L18.51 4.21L18.65 4.03L18.81 3.88L19.01 3.76L19.22 3.68L19.44 3.65L19.67 3.66L19.89 3.72L20.09 3.81L20.27 3.95L20.42 4.11L20.54 4.31L20.62 4.52L20.65 4.74Z"/>
   </symbol>
   <symbol id="wm-hybrid" viewBox="0 0 24 24">
-    <title>WHOMARK: Human + AI (PEEKAI R5 final-v2 arms-d, concept, not cleared, not filed)</title>
+    <title>WHOMARK™: Human + AI (R5 final-v2 arms-w, concept, not cleared, not filed)</title>
     <circle cx="11" cy="13.2" r="8.6" fill="none" stroke="currentColor" stroke-width="2"/>
     <circle cx="8.8" cy="9" r="2.35" fill="currentColor"/>
     <circle cx="15.4" cy="9" r="1.2" fill="currentColor"/>
-    <path fill="currentColor" d="M4.78 14.27L4.67 14.42L4.61 14.58L4.63 14.87L4.70 15.03L4.82 15.16L5.08 15.29L5.26 15.30L5.43 15.25L6.66 14.60L5.57 17.03L5.50 17.29L5.52 17.64L5.69 17.96L5.96 18.19L6.30 18.30L11.01 18.30L11.27 18.26L11.44 18.19L11.65 18.03L11.81 17.81L11.90 17.56L11.89 17.20L10.74 14.60L11.92 15.23L12.14 15.30L12.38 15.27L12.58 15.16L12.73 14.98L12.80 14.76L12.79 14.58L12.73 14.42L12.53 14.20L10.23 12.97L9.98 12.90L9.52 11.89L9.38 11.66L9.09 11.45L8.74 11.36L8.57 11.37L8.31 11.45L8.02 11.66L7.88 11.89L7.42 12.90L7.17 12.97L4.92 14.17ZM16.40 12.02L16.34 11.66L16.14 11.33L15.83 11.10L15.54 11.01L15.16 11.03L14.81 11.19L14.59 11.41L14.43 11.76L14.40 12.02L14.40 17.49L14.47 17.74L14.60 17.97L14.88 18.19L15.12 18.28L15.59 18.30L15.92 18.19L16.20 17.97L16.33 17.74L16.38 17.58Z"/>
+    <path fill="currentColor" d="M5.89 11.07L5.72 11.01L5.55 11.00L5.38 11.04L5.22 11.13L5.11 11.26L5.03 11.42L5.00 11.65L5.04 11.82L5.17 12.02L6.99 13.88L5.54 17.11L5.49 17.38L5.50 17.56L5.55 17.73L5.69 17.96L5.81 18.09L6.04 18.23L6.39 18.30L11.01 18.30L11.27 18.26L11.59 18.09L11.76 17.89L11.88 17.64L11.91 17.47L11.89 17.20L10.41 13.88L12.30 11.93L12.39 11.71L12.40 11.53L12.35 11.36L12.26 11.21L12.08 11.07L11.85 11.00L11.62 11.03L11.46 11.11L9.89 12.70L9.48 11.81L9.31 11.60L9.09 11.45L8.83 11.37L8.57 11.37L8.39 11.41L8.16 11.54L7.97 11.73L7.51 12.70L6.03 11.18ZM16.40 12.02L16.34 11.66L16.14 11.33L15.83 11.10L15.54 11.01L15.16 11.03L14.81 11.19L14.59 11.41L14.43 11.76L14.40 12.02L14.40 17.49L14.47 17.74L14.60 17.97L14.88 18.19L15.12 18.28L15.59 18.30L15.92 18.19L16.20 17.97L16.33 17.74L16.38 17.58Z"/>
     <path style="fill:var(--wm-accent,#FF6A4D)" fill-rule="evenodd" d="M22.95 4.13L22.53 3.66L22.22 3.37L21.88 3.12L21.52 2.91L21.14 2.73L20.75 2.58L20.13 2.45L19.71 2.41L19.29 2.41L18.87 2.45L18.25 2.58L17.86 2.73L17.48 2.91L16.94 3.24L16.62 3.51L16.19 3.96L16.87 4.37L17.29 4.67L18.10 5.33L18.87 6.10L19.59 7.00L20.34 6.92L20.94 6.75L21.52 6.49L21.88 6.28L22.22 6.03L22.53 5.74L22.82 5.43L23.07 5.09L23.30 4.70ZM20.64 4.97L20.58 5.19L20.49 5.39L20.35 5.57L20.19 5.72L19.99 5.84L19.78 5.92L19.56 5.95L19.33 5.94L19.11 5.88L18.91 5.79L18.73 5.65L18.58 5.49L18.46 5.29L18.38 5.08L18.35 4.86L18.36 4.63L18.42 4.41L18.51 4.21L18.65 4.03L18.81 3.88L19.01 3.76L19.22 3.68L19.44 3.65L19.67 3.66L19.89 3.72L20.09 3.81L20.27 3.95L20.42 4.11L20.54 4.31L20.62 4.52L20.65 4.74Z"/>
   </symbol>
   <symbol id="wm-human-sm" viewBox="0 0 24 24">
-    <title>WHOMARK: Human-made (16px snapped)</title>
+    <title>WHOMARK™: Human-made (16px snapped)</title>
     <g transform="scale(1.5)" shape-rendering="crispEdges"><path fill="currentColor" d="M4 3h5v1h-5zM2 4h2v1h-2zM9 4h2v1h-2zM1 5h1v1h-1zM5 5h3v1h-3zM11 5h1v1h-1zM1 6h1v1h-1zM4 6h5v1h-5zM11 6h1v1h-1zM0 7h1v1h-1zM4 7h5v1h-5zM12 7h1v1h-1zM0 8h1v1h-1zM5 8h3v1h-3zM12 8h1v1h-1zM0 9h1v1h-1zM12 9h1v1h-1zM0 10h1v1h-1zM4 10h5v1h-5zM12 10h1v1h-1zM0 11h1v1h-1zM3 11h7v1h-7zM12 11h1v1h-1zM1 12h11v1h-11zM1 13h11v1h-11zM2 14h9v1h-9zM4 15h5v1h-5z"/><path style="fill:var(--wm-accent,#FF6A4D)" d="M11 1h4v1h-4zM10 2h2v1h-2zM14 2h2v1h-2zM12 3h3v1h-3z"/></g>
   </symbol>
   <symbol id="wm-ai-sm" viewBox="0 0 24 24">
-    <title>WHOMARK: AI-made (16px snapped)</title>
+    <title>WHOMARK™: AI-made (16px snapped)</title>
     <g transform="scale(1.5)" shape-rendering="crispEdges"><path fill="currentColor" d="M4 3h5v1h-5zM2 4h2v1h-2zM9 4h2v1h-2zM1 5h1v1h-1zM11 5h1v1h-1zM1 6h1v1h-1zM8 6h2v1h-2zM11 6h1v1h-1zM0 7h1v1h-1zM3 7h3v1h-3zM12 7h1v1h-1zM0 8h1v1h-1zM2 8h2v1h-2zM5 8h2v1h-2zM8 8h2v1h-2zM12 8h1v1h-1zM0 9h1v1h-1zM2 9h5v1h-5zM8 9h2v1h-2zM12 9h1v1h-1zM0 10h1v1h-1zM2 10h2v1h-2zM5 10h2v1h-2zM8 10h2v1h-2zM12 10h1v1h-1zM0 11h1v1h-1zM2 11h2v1h-2zM5 11h2v1h-2zM8 11h2v1h-2zM12 11h1v1h-1zM1 12h1v1h-1zM11 12h1v1h-1zM1 13h1v1h-1zM11 13h1v1h-1zM2 14h2v1h-2zM9 14h2v1h-2zM4 15h5v1h-5z"/><path style="fill:var(--wm-accent,#FF6A4D)" d="M11 1h4v1h-4zM10 2h2v1h-2zM14 2h2v1h-2zM12 3h3v1h-3z"/></g>
   </symbol>
   <symbol id="wm-hybrid-sm" viewBox="0 0 24 24">
-    <title>WHOMARK: Human + AI (16px snapped)</title>
+    <title>WHOMARK™: Human + AI (16px snapped)</title>
     <g transform="scale(1.5)" shape-rendering="crispEdges"><path fill="currentColor" d="M4 2h6v1h-6zM2 3h2v1h-2zM11 3h2v1h-2zM1 4h1v1h-1zM5 4h2v1h-2zM13 4h1v1h-1zM1 5h1v1h-1zM4 5h4v1h-4zM10 5h2v1h-2zM13 5h1v1h-1zM0 6h2v1h-2zM4 6h4v1h-4zM10 6h2v1h-2zM13 6h2v1h-2zM0 7h1v1h-1zM14 7h1v1h-1zM0 8h1v1h-1zM5 8h2v1h-2zM10 8h2v1h-2zM14 8h1v1h-1zM0 9h1v1h-1zM4 9h4v1h-4zM10 9h2v1h-2zM14 9h1v1h-1zM0 10h1v1h-1zM3 10h6v1h-6zM10 10h2v1h-2zM14 10h1v1h-1zM0 11h2v1h-2zM3 11h6v1h-6zM10 11h2v1h-2zM13 11h2v1h-2zM1 12h1v1h-1zM13 12h1v1h-1zM2 13h1v1h-1zM12 13h1v1h-1zM3 14h2v1h-2zM10 14h2v1h-2zM5 15h5v1h-5z"/><path style="fill:var(--wm-accent,#FF6A4D)" d="M11 0h4v1h-4zM10 1h2v1h-2zM14 1h2v1h-2zM11 2h4v1h-4z"/></g>
   </symbol>
 </svg>
