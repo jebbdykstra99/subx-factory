@@ -195,7 +195,8 @@ for p in pages:
     ok(True, '%s: internal links resolve' % p)
 
 idx = read(os.path.join(SITE, 'index.html'))
-ok('Small rooms for big interests. Read by topic; join a room to talk.' in idx, 'home: compact identity line')
+ok('Small rooms for big interests.' in idx and 'class="hub-tagline"' in idx and 'Read by topic; join a room to talk.' not in idx and 'hub-page-cat' in idx and 'class="hub-wordmark"' in idx,
+   'home: tagline on its own line, cat and wordmark on the page')
 ok('id="hub-feed"' in idx and 'id="hub-rooms"' in idx, 'home: highlights feed + rooms tab containers')
 ok('href="%s"' % brand['topicPathPrefix'] in read(os.path.join(SITE, 'about.html')), 'about: links the topic index stub')
 ok('id="hub-rooms"' in read(os.path.join(SITE, 'rooms.html')) and '/hub.js?v=' in read(os.path.join(SITE, 'rooms.html')), 'rooms.html: directory container + hub.js')
@@ -259,8 +260,8 @@ ok('Members sign in here. Guest is browse-only.' in idx and 'Sign-in opens soon'
    'index.html: sign-in wording reuses the rooms ("Members sign in here. Guest is browse-only."), no "opens soon" or Read-only claim')
 # HUB SIGN-IN: a visible Sign in / Join entry on the home page (outside the drawer, so it shows at 390px), plus the shell's own
 # #sidebar-auth in the left nav / mobile drawer. The header button only clicks the shell's #auth-signin (one auth flow).
-ok(idx.count('id="hub-join-btn"') == 1 and re.search(r'<button type="button" class="hub-cta hub-join" id="hub-join-btn" aria-haspopup="dialog">Sign in / Join</button>', idx) is not None,
-   'index.html: one header Sign in / Join button (#hub-join-btn)')
+ok(idx.count('id="hub-join-btn"') == 1 and re.search(r'<button type="button" class="hub-signin-link" id="hub-join-btn" aria-haspopup="dialog">Sign in</button>', idx) is not None,
+   'index.html: one header Sign in button (#hub-join-btn), a quiet text link visible without the drawer')
 ok(idx.index('id="hub-join-btn"') > idx.index('<main class="main">') and idx.count('id="sidebar-auth"') == 1 and idx.index('id="sidebar-auth"') < idx.index('</aside>'),
    'index.html: Sign in / Join sits in the page header (visible without the drawer); #sidebar-auth stays in the left nav / mobile drawer')
 ok(not re.search(r'#sidebar-auth|#cv-auth-overlay', re.sub(r'/\*.*?\*/', '', _hcss, flags=re.S)), 'hub.css: #sidebar-auth and the sign-in modal (#cv-auth-overlay) are no longer hidden')
@@ -588,7 +589,8 @@ with tempfile.TemporaryDirectory() as t:
     about = read(os.path.join(out, 'about.html'))
     ok('+1-555-010-0199' in about and '1 Example Way' in about and 'MAKERMARK' in about and 'Tables' in about, 'rename: About shows the new phone, address, mark and room noun')
     idx_ = read(os.path.join(out, 'index.html'))
-    ok('Tiny tables for loud ideas.' in idx_ and 'Read by theme; join a table to talk.' in idx_ and '>Post in a table</button>' in idx_, 'rename: home tagline and Post in a room noun follow brand.json')
+    ok('Tiny tables for loud ideas.' in idx_ and 'class="hub-tagline"' in idx_ and '>Post in a table</button>' in idx_ and 'Read by theme; join a table to talk.' not in idx_,
+       'rename: home tagline and Post in a room noun follow brand.json')
     ok('href="/z/"' in read(os.path.join(out, 'about.html')), 'rename: about links the topic index under the renamed prefix')
     s_ = json.load(open(os.path.join(out, 'site.json')))
     ok(s_['name'] == 'Quillnest' and s_['domain'] == 'quillnest.example' and 'z/index.html' in s_['shell']['noShell'][2], 'rename: site.json name, domain and noShell path follow brand.json')
