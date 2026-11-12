@@ -1,7 +1,7 @@
 {
   "version": "v1.2.10",
   "immutable": true,
-  "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.10 (2026-11-12 phone cat: --subx-cat-space 7.05rem inset and a #fff/#111 light backing on .subx-cat-link so the cat reads on a dark bar; blocked Google popup shows an in-sheet message with Try Google again and Use email instead, and never auto-redirects; factory-signin.js is preloaded on pointerdown/touchstart of Sign in so a Google tap can call signInWithPopup in the same gesture). This folder was restamped in place for the phone cat fix (approved 2026-11-12); a later shell change is a new shell/vX.Y.Z/ folder.",
+  "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.10 (2026-11-12 phone cat: --cat 7.05rem inset and a #fff/#111 light backing on .subx-cat-link so the cat reads on a dark bar; blocked Google popup shows an in-sheet message with Try Google again and Use email instead, and never auto-redirects; factory-signin.js is preloaded on pointerdown/touchstart of Sign in so a Google tap can call signInWithPopup in the same gesture). This folder was restamped in place for the phone cat fix (approved 2026-11-12); a later shell change is a new shell/vX.Y.Z/ folder.",
   "sourceCommit": "c83e6ea1c50cde60c58a20c0ec07824d8d95c98f",
   "sourcePath": "factory/",
   "url": {
@@ -11,9 +11,9 @@
   },
   "files": {
     "factory.js": {
-      "bytes": 254994,
-      "sha256": "25103bcb15e489d8e743df17248cd405e2889668d9eb15942f82036590844f94",
-      "integrity": "sha384-e8GDxXIyzUcy9N8Hc/LFX288FC/qJin7gHPsx9QZvFo2MgB1XedMz0kF71aBYQJV"
+      "bytes": 254995,
+      "sha256": "92f1f39d16a17beb25e189e277fd66c118cbb9959db6de430db98d974e0e9915",
+      "integrity": "sha384-V0fpStyt70/1duX+6BmAwczqB3Oiwy7V2rIkw+a9LCn3MyX93zjaQx+sv145f2a/"
     },
     "factory-signin.js": {
       "bytes": 22148,
