@@ -52,7 +52,10 @@ ok('isiOS' not in fxsi, 'no iOS or Safari redirect branch')
 ok("function isPopupBlockedCode(code)" in si and "code === 'auth/popup-blocked'" in si and "code === 'auth/cancelled-popup-request'" in si, 'factory-signin.js: isPopupBlockedCode treats popup-blocked and cancelled-popup-request as blocked')
 ok("GOOGLE_BLOCKED_MSG = 'Your browser blocked the Google popup.'" in si, 'factory-signin.js: blocked popup message is Your browser blocked the Google popup.')
 ok("if (isPopupBlockedCode(code) || (code === 'auth/popup-closed-by-user' && soon && !lostFocus)) {" in si and 'treatAsBlocked();' in si, 'factory-signin.js: isPopupBlockedCode path calls treatAsBlocked')
-ok('Never auto-redirect or auto-retry' in si and 'signInWithRedirect' not in fxsi, 'factory-signin.js: auth/cancelled-popup-request is detected as blocked and does not redirect')
+ok('fbAuth.signInWithRedirect(provider)' in si and 'function redirectGoogle()' in si and 'function treatAsBlocked()' in si,
+   'factory-signin.js: a blocked popup falls back to signInWithRedirect')
+ok('Empty result after a pending redirect: do not retry or redirect again.' in si,
+   'factory-signin.js: empty redirect result does not start another redirect')
 ok("msg = 'Google sign-in cancelled.';" in si and "msg = authErrorMessage(e, 'Google sign-in failed.');" in si, 'factory-signin.js: failGoogle uses cancelled or Google sign-in failed')
 ok('popup was blocked' not in fxsi, 'no popup-was-blocked copy')
 ok('var modes = [P.LOCAL, P.SESSION, P.NONE];' in fx, 'factory.js: persistence falls back LOCAL, SESSION, then NONE')

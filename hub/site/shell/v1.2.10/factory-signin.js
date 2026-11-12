@@ -52,9 +52,43 @@
     }
     popupWatch = null;
   }
+  // Hide the normal join actions (Google, email, guest) so a blocked
+  // notice replaces that block instead of sitting next to it. The 18+
+  // checkbox and the error line stay visible.
+  function setJoinActionsHidden(hide) {
+    var panel = document.getElementById('cv-panel-login');
+    if (panel && panel.classList) {
+      if (hide) panel.classList.add('is-google-blocked');
+      else panel.classList.remove('is-google-blocked');
+    }
+    var ids = ['cv-google-login', 'cv-use-email-btn', 'cv-guest-login'];
+    var i;
+    for (i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      if (el) el.hidden = !!hide;
+    }
+    if (panel && typeof panel.querySelector === 'function') {
+      var divider = panel.querySelector('.conv-modal-divider');
+      if (divider) divider.hidden = !!hide;
+    }
+    var emailBox = document.getElementById('cv-email-signin');
+    if (emailBox) {
+      if (hide) {
+        emailBox.setAttribute('data-blocked-prev-hidden', emailBox.hidden ? '1' : '0');
+        emailBox.hidden = true;
+      } else {
+        var prev = emailBox.getAttribute('data-blocked-prev-hidden');
+        if (prev === '0' || prev === '1') {
+          emailBox.setAttribute('data-blocked-prev-hidden', '');
+          emailBox.hidden = prev !== '0';
+        }
+      }
+    }
+  }
   function hideGoogleBlockedSheet() {
     var box = document.getElementById('cv-google-blocked');
     if (box) box.hidden = true;
+    setJoinActionsHidden(false);
   }
   function showGoogleBlockedSheet() {
     var err = document.getElementById('cv-login-err');
@@ -62,6 +96,7 @@
       err.textContent = GOOGLE_BLOCKED_MSG;
       err.classList.add('show');
     }
+    setJoinActionsHidden(true);
     var box = document.getElementById('cv-google-blocked');
     if (!box) {
       box = document.createElement('div');
@@ -100,7 +135,7 @@
     var st = document.createElement('style');
     st.id = 'join-auth-css';
     st.textContent =
-      '.conv-modal-tabs.is-join-hidden{display:none;}.conv-email-toggle{width:100%;padding:0.55rem;margin:0.15rem 0 0.35rem;background:transparent;border:1px solid var(--border,rgba(0,0,0,0.14));border-radius:50px;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text-muted,#666);}.conv-email-toggle:hover{color:var(--text,#111);}.cv-email-signin{margin-top:0.2rem;}.conv-google-btn{margin-bottom:0.2rem;}';
+      '.conv-modal-tabs.is-join-hidden{display:none;}#cv-panel-login.is-google-blocked #cv-google-login,#cv-panel-login.is-google-blocked .conv-modal-divider,#cv-panel-login.is-google-blocked #cv-use-email-btn,#cv-panel-login.is-google-blocked #cv-email-signin,#cv-panel-login.is-google-blocked #cv-guest-login{display:none;}.conv-email-toggle{width:100%;padding:0.55rem;margin:0.15rem 0 0.35rem;background:transparent;border:1px solid var(--border,rgba(0,0,0,0.14));border-radius:50px;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text-muted,#666);}.conv-email-toggle:hover{color:var(--text,#111);}.cv-email-signin{margin-top:0.2rem;}.conv-google-btn{margin-bottom:0.2rem;}';
     document.head.appendChild(st);
   }
   function ageCheckLabel() {
@@ -240,10 +275,29 @@
       err.textContent = msg;
       err.classList.add('show');
     }
+    function redirectGoogle() {
+      clearPopupWatch();
+      rememberGoogleRedirect();
+      var box = document.getElementById('cv-google-blocked');
+      if (box) box.hidden = true;
+      // Replace the normal button block with a single status line while
+      // the redirect starts. Do not add a second set of buttons.
+      setJoinActionsHidden(true);
+      if (err) {
+        err.textContent = 'Google popup sign-in could not open. Trying another sign-in method.';
+        err.classList.add('show');
+      }
+      return fbAuth.signInWithRedirect(provider).catch(function (e2) {
+        clearGoogleRedirect();
+        showGoogleBlockedSheet();
+      });
+    }
     function treatAsBlocked() {
       clearPopupWatch();
-      // Never auto-redirect or auto-retry. Offer a same-gesture popup and email.
-      showGoogleBlockedSheet();
+      // Popup-first, then redirect. This is the v1.2.9 design. An empty
+      // redirect result must not start another redirect (that loop is
+      // handled in handleRedirectResult).
+      redirectGoogle();
     }
     function watchForBlockedPopup() {
       var onBlur = function () { lostFocus = true; };
@@ -271,8 +325,8 @@
       clearPopupWatch();
       failGoogle(e);
     }
-    // Call popup in this tap. Do not wait, and do not fall back to redirect
-    // (a cross-site redirect can drop its result on iOS Chrome).
+    // Call popup in this tap. If the popup is blocked (or never opens),
+    // fall back to signInWithRedirect in the same turn.
     watchForBlockedPopup();
     fbAuth.signInWithPopup(provider).then(function (cred) {
       return finishGoogle(cred);
@@ -306,6 +360,7 @@
       console.warn('redirect result', e);
       clearGoogleRedirect();
       if (fbAuth && fbAuth.currentUser) return;
+      showGoogleBlockedSheet();
       var el = document.getElementById('cv-login-err');
       var msg = authErrorMessage(e, 'Google sign-in failed.');
       if (el) { el.textContent = msg; el.classList.add('show'); }

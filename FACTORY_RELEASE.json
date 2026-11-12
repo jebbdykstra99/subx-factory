@@ -10,7 +10,7 @@
     "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)",
     "split": "build/split.mjs (opt-in files out of the folded single-file build: gp, rail, reports)"
   },
-  "built": "2026-11-12 (MT) cursor/phone-cat-space-2026-11-12: phone top bar reserves space for the 44px cat (tune --cat, default 7.05rem = 3.8rem hamburger + 52px cat lane) and a light #fff backing with #111 ink so the cat reads on a dark banner (gpchat / 27chat); img filter brightness(0) for a white dark-mode PNG; desktop cat color is var(--nav-text,#fff) as before this PR; v1.2.10 blocked Google popup and preload unchanged",
+  "built": "2026-11-12 (MT) cursor/signin-popup-redirect-2026-11-12: blocked Google popup falls back to signInWithRedirect (v1.2.9 design); a blocked notice replaces the normal button block instead of sitting next to it; 18+ gate unchanged. Phone cat (prior): top bar reserves space for the 44px cat (tune --cat, default 7.05rem) and a light #fff backing with #111 ink; desktop cat color is var(--nav-text,#fff)",
   "optIn": {
     "factory-gp.js": {
       "sha256": "33c158f1490800b3efe641ac526516b9a89f7fbd2ef0d29e5a8643c07f4bc6fc",
@@ -28,9 +28,9 @@
       "loadWhen": "site.json features.reportLoop true (A9 report loop; airlineschat/amachat first once unkilled)"
     },
     "factory-signin.js": {
-      "sha256": "0427ac92a3f672801964fdcf32002d301e2f85d6965f9de733b57bc4080bdb72",
-      "bytes": 22148,
-      "loadWhen": "lazy, prefetched at factory boot so a Google tap can call signInWithPopup in the same gesture; also handles redirect result, email, register, email-already-in-use, forgot password, and the join-sheet layout, and the in-app-browser Open in your browser note"
+      "sha256": "51ce100803d5cc7270fbfa488841cb75594b8c0bf092ee41c28460c1d4105958",
+      "bytes": 24583,
+      "loadWhen": "lazy, prefetched at factory boot so a Google tap can call signInWithPopup in the same gesture; a blocked popup (or a silent iOS / in-app failure) falls back to signInWithRedirect; also handles redirect result, email, register, email-already-in-use, forgot password, the join-sheet layout, and the in-app-browser Open in your browser note"
     }
   },
   "coreBudgetBytes": 255000
