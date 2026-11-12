@@ -169,7 +169,7 @@
   "topics": [],
   "nests": [],
   "shell": {
-    "base": "v1.2.6",
+    "base": "v1.2.9",
     "fork": true,
     "cspRequired": true,
     "recaptcha": true,
@@ -290,9 +290,9 @@
       "partners/dogacademy/articles/quiet-door-and-greeting.html",
       "partners/dogacademy/articles/short-daily-lessons.html"
     ],
-    "file": "shell/v1.2.6/factory.js",
-    "sha256": "798184e45cdd243a04c81b065689f7fe1744263314a1a49b487ad1ac199ba48e",
-    "reason": "Self-hosted hub fork of shell/v1.2.6/factory.js: header source line only, new SRI; static pages are self only, the shell page adds only the Firebase Auth origins",
+    "file": "shell/v1.2.9/factory.js",
+    "sha256": "b6d63086e70814d9cd81696ee72311d86f65254e0f865a73a4b78efe72d47098",
+    "reason": "Self-hosted hub fork of shell/v1.2.9/factory.js: header source line only, new SRI; static pages are self only, the shell page adds only the Firebase Auth origins",
     "exception": "E21"
   }
 }

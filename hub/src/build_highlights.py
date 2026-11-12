@@ -113,8 +113,10 @@ def live_site(domain):
         return None
 
 def stories_flag(site):
-    """Room Stories on/off as shell v1.2.7 reads it: on unless stories.enabled is false. Rooms on v1.2.6 and older
-    only run Stories when stories.enabled is true, so an unset flag counts as off until the room is on v1.2.7."""
+    """Room Stories on/off. The hub itself is on shell v1.2.9. Rooms on v1.2.7 and later treat Stories as on unless
+    stories.enabled is false. Rooms on v1.2.6 and older only run Stories when stories.enabled is true, so an unset
+    flag counts as off until the room is on v1.2.7. This helper still uses the conservative is-True test so a room
+    that has not been restamped is not shown as having Stories."""
     st = (site or {}).get('stories') or {}
     return st.get('enabled') is True
 

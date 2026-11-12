@@ -84,6 +84,15 @@ for (const code of ['auth/wrong-password', 'auth/invalid-credential', 'auth/user
   assert.ok(signinSrc.includes(code), 'maps ' + code + ' to plain copy');
 }
 assert.ok(!signinSrc.includes('Firebase:'), 'never shows the Firebase: prefix');
+const CRED_MSG = 'That email or password is not right. Try again, reset your password, or use Continue with Google.';
+assert.ok(signinSrc.includes(CRED_MSG), 'user-not-found, wrong-password, and invalid-credential share one neutral message');
+assert.ok(!signinSrc.includes('That password is not right. Try again or reset it.'), 'old distinct wrong-password copy is gone');
+assert.ok(!signinSrc.includes('No account matches that email'), 'old distinct user-not-found copy is gone');
+assert.ok(signinSrc.includes('Google sign-in is not available right now. Use email.'), 'Google disabled copy has no project id');
+assert.ok(!signinSrc.includes('subx-skins') && !signinSrc.includes('Google is not enabled'), 'factory-signin.js never names the Firebase project');
+assert.ok(signinSrc.includes("typeof host.isLiveUser === 'function' && host.isLiveUser()"), 'onRegister has its own isLiveUser guard');
+assert.ok(signinSrc.includes("typeof host.closeAuth === 'function') host.closeAuth()"), 'onRegister closes the sheet when the user is live');
+assert.ok(src.includes('isLiveUser: isLiveUser') && src.includes('closeAuth: closeAuth'), 'sign-in host exposes isLiveUser and closeAuth');
 assert.ok(signinSrc.includes("fbAuth.signInWithPopup(provider)"), 'Google popup-first flow is unchanged');
 assert.ok(signinSrc.includes("code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment'"), 'Google still redirects only when blocked or unsupported');
 
@@ -225,27 +234,77 @@ assert.ok(signinSrc.includes("code === 'auth/popup-blocked' || code === 'auth/op
     assert.strictEqual(calls.signIn, 1, 'when the lookup is unavailable, signs in with the entered password');
   }
 
-  // wrong-password maps to plain copy, never Firebase:
+  // password-already-in-use also offers Continue with Google (fix 2)
   {
     loginErr.textContent = '';
+    delete els['cv-continue-google'];
+    const { api, calls } = runWith({});
+    await api.onRegister();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    assert.strictEqual(calls.signIn, 1, 'password account still retries sign-in');
+    assert.ok(els['cv-continue-google'] && els['cv-continue-google'].textContent === 'Continue with Google' && els['cv-continue-google'].hidden === false, 'Continue with Google is shown for email-already-in-use even when methods is password');
+  }
+
+  // enumeration protection: methods is [], Google-only account would have taken the password path
+  {
+    loginErr.textContent = '';
+    delete els['cv-continue-google'];
+    const { api, calls } = runWith({
+      fbAuth: {
+        fetchSignInMethodsForEmail() { calls.methods++; return Promise.resolve([]); },
+        signInWithEmailAndPassword() { calls.signIn++; return Promise.reject({ code: 'auth/invalid-credential', message: 'Firebase: Error (auth/invalid-credential).' }); },
+        createUserWithEmailAndPassword() { calls.create++; return Promise.reject({ code: 'auth/email-already-in-use' }); },
+        sendPasswordResetEmail() { calls.reset++; return Promise.resolve(); },
+        signInWithPopup() { calls.popup++; return Promise.resolve({ user: { uid: 'u1' } }); },
+        signInWithRedirect() { calls.redirect++; return Promise.resolve(); }
+      }
+    });
+    await api.onRegister();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    assert.strictEqual(calls.methods, 1, 'lookup ran');
+    assert.strictEqual(calls.signIn, 1, 'empty methods still tries the password (enumeration protection returns [])');
+    assert.strictEqual(loginErr.textContent, CRED_MSG, 'empty methods + invalid-credential uses the unified message: ' + loginErr.textContent);
+    assert.ok(!loginErr.textContent.includes('Firebase:'), 'no Firebase: prefix on enumeration-protection path');
+    assert.ok(els['cv-continue-google'] && els['cv-continue-google'].textContent === 'Continue with Google' && els['cv-continue-google'].hidden === false, 'Continue with Google is shown when methods is empty');
+  }
+
+  // user-not-found, wrong-password, invalid-credential, and invalid-login-credentials share one message and offer Google
+  for (const code of ['auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-login-credentials', 'auth/user-not-found']) {
+    loginErr.textContent = '';
+    delete els['cv-continue-google'];
     const { api } = runWith({
       fbAuth: {
-        signInWithEmailAndPassword() { return Promise.reject({ code: 'auth/wrong-password', message: 'Firebase: Error (auth/wrong-password).' }); },
+        signInWithEmailAndPassword() { return Promise.reject({ code, message: 'Firebase: Error (' + code + ').' }); },
         createUserWithEmailAndPassword() { return Promise.resolve({ user: {} }); },
         sendPasswordResetEmail() { return Promise.resolve(); },
         signInWithPopup() { return Promise.resolve({ user: {} }); },
         signInWithRedirect() { return Promise.resolve(); }
       }
     });
-    put('cv-login-email', Object.assign(els['cv-login-email'] || makeEl('cv-login-email'), { value: 'a@b.com' }));
-    // ensure ids
     els['cv-login-email'].value = 'a@b.com';
     els['cv-login-pw'].value = 'bad';
     api.onEmailLogin();
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
-    assert.ok(!loginErr.textContent.includes('Firebase:'), 'wrong-password copy has no Firebase: prefix');
-    assert.ok(/password is not right/i.test(loginErr.textContent), 'wrong-password uses plain copy: ' + loginErr.textContent);
+    assert.strictEqual(loginErr.textContent, CRED_MSG, code + ' uses the unified message: ' + loginErr.textContent);
+    assert.ok(!loginErr.textContent.includes('Firebase:'), code + ' has no Firebase: prefix');
+    assert.ok(els['cv-continue-google'] && els['cv-continue-google'].textContent === 'Continue with Google' && els['cv-continue-google'].hidden === false, code + ' shows Continue with Google');
+  }
+
+  // onRegister: signed-in user closes the sheet and does not call createUser
+  {
+    let closed = 0;
+    const { api, calls } = runWith({
+      isLiveUser() { return true; },
+      closeAuth() { closed++; }
+    });
+    await api.onRegister();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.strictEqual(calls.create, 0, 'onRegister does not call createUser when the user is live');
+    assert.strictEqual(closed, 1, 'onRegister closes the sheet when the user is live');
   }
 
   // Forgot password: sendPasswordResetEmail + neutral confirmation
@@ -265,4 +324,4 @@ assert.ok(signinSrc.includes("code === 'auth/popup-blocked' || code === 'auth/op
   }
 }
 
-console.log('accounts-gate: ok (' + guards.length + ' guards, ' + cases.length + ' cases, ' + rooms.length + ' rooms explicit, stamp refuses missing, share menu, email-in-use)');
+console.log('accounts-gate: ok (' + guards.length + ' guards, ' + cases.length + ' cases, ' + rooms.length + ' rooms explicit, stamp refuses missing, share menu, email-in-use, unified credential copy, live-user register guard)');

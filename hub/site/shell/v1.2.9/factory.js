@@ -1093,6 +1093,8 @@
         get authPersistPromise() { return authPersistPromise; },
         nameOk: nameOk,
         composeErr: composeErr,
+        isLiveUser: isLiveUser,
+        closeAuth: closeAuth,
         setAuthOpenWhenReady: function (v) { authOpenWhenReady = !!v; }
       };
       var s = document.createElement('script');

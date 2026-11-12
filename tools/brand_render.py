@@ -424,28 +424,34 @@ class Renderer:
             fh.write(data)
         return p
 
-    def shell_bytes(self):
-        """The self-hosted hub fork of shell/<base>/factory.js (never re-branded). The pinned file is verified first: its
-        sha384 must equal config.json shell.integrity and SHELL.json, and its sha256 and size must equal SHELL.json, or the
-        render stops. Then exactly one line changes: the header comment line naming the source repo becomes
-        FORK_HEADER. Every other byte is identical. Returns (fork bytes, fork sha256, fork SRI sha384)."""
+    def fork_shell_file(self, name, require_config_integrity=False):
+        """Hub-only header fork of one file from shell/<base>/. The pinned file is verified first
+        against SHELL.json (and, for factory.js, against config.json shell.integrity). Then exactly
+        one line changes: the header comment line naming the source repo becomes FORK_HEADER.
+        Every other byte is identical. Returns (fork bytes, fork sha256, fork SRI sha384)."""
         sh = self.cfg['shell']
-        man = json.load(open(os.path.join(ROOT, 'shell', sh['base'], 'SHELL.json'), encoding='utf-8'))['files']['factory.js']
-        data = open(os.path.join(ROOT, 'shell', sh['base'], 'factory.js'), 'rb').read()
+        man = json.load(open(os.path.join(ROOT, 'shell', sh['base'], 'SHELL.json'), encoding='utf-8'))['files'][name]
+        data = open(os.path.join(ROOT, 'shell', sh['base'], name), 'rb').read()
         sri = 'sha384-' + base64.b64encode(hashlib.sha384(data).digest()).decode()
-        if not (sri == sh['integrity'] == man['integrity']):
-            raise RenderError('shell/%s/factory.js sha384 %s != config.json shell.integrity / SHELL.json' % (sh['base'], sri))
+        if require_config_integrity and not (sri == sh['integrity'] == man['integrity']):
+            raise RenderError('shell/%s/%s sha384 %s != config.json shell.integrity / SHELL.json' % (sh['base'], name, sri))
+        if (not require_config_integrity) and sri != man['integrity']:
+            raise RenderError('shell/%s/%s sha384 %s != SHELL.json' % (sh['base'], name, sri))
         if hashlib.sha256(data).hexdigest() != man['sha256'] or len(data) != man['bytes']:
-            raise RenderError('shell/%s/factory.js sha256/bytes != SHELL.json' % sh['base'])
+            raise RenderError('shell/%s/%s sha256/bytes != SHELL.json' % (sh['base'], name))
         lines = data.split(b'\n')
         hits = [i for i, ln in enumerate(lines) if FORK_HEADER_FROM in ln]
         if len(hits) != 1 or not lines[hits[0]].lstrip().startswith(b'*'):
-            raise RenderError('shell/%s/factory.js: expected exactly one header comment line with %r (found %d)'
-                              % (sh['base'], FORK_HEADER_FROM.decode(), len(hits)))
+            raise RenderError('shell/%s/%s: expected exactly one header comment line with %r (found %d)'
+                              % (sh['base'], name, FORK_HEADER_FROM.decode(), len(hits)))
         lines[hits[0]] = (FORK_HEADER % sh['base']).encode()
         fork = b'\n'.join(lines)
         fsri = 'sha384-' + base64.b64encode(hashlib.sha384(fork).digest()).decode()
         return fork, hashlib.sha256(fork).hexdigest(), fsri
+
+    def shell_bytes(self):
+        """The self-hosted hub fork of shell/<base>/factory.js (never re-branded). See fork_shell_file."""
+        return self.fork_shell_file('factory.js', require_config_integrity=True)
 
     def rebrand_vendor(self, data):
         brand = self.ctx['brand']
@@ -555,6 +561,13 @@ class Renderer:
             self.assets['/' + v['to']] = hashlib.sha256(data).hexdigest()[:10]
         # 1b. the self-hosted shell (byte copy, no ?v= query: a pin URL may not carry one)
         self.write(self.shell_rel, self.shell_data)
+        # v1.2.9 lazy companion: same header-only fork, so a Google tap can load factory-signin.js
+        # from the same directory as factory.js.
+        signin_name = 'factory-signin.js'
+        signin_src = os.path.join(ROOT, 'shell', self.cfg['shell']['base'], signin_name)
+        if os.path.isfile(signin_src):
+            sdata, _, _ = self.fork_shell_file(signin_name)
+            self.write('shell/%s/%s' % (self.cfg['shell']['base'], signin_name), sdata)
         # 2. data files copied as is (room content, not brand copy)
         for d in cfg.get('data', []):
             data = open(os.path.join(self.src, 'data', d), 'rb').read()

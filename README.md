@@ -2,7 +2,7 @@
 
 The single source for every SubX room's `factory.js`. Rooms stay self-contained GitHub Pages repos. This repo **stamps** them by pull request and **checks nightly** that they haven't drifted.
 
-- Release: `v1.2.3`. Core `factory/factory.js` 254,661 B (budget 255,000 B, `tools/check_budget.sh`, CI fails above it), plus three opt-in files (see `FACTORY_RELEASE.json` for sha256):
+- Release: `v1.2.9`. Core `factory/factory.js` 254,707 B (budget 255,000 B, `tools/check_budget.sh`, CI fails above it), plus three opt-in files (see `FACTORY_RELEASE.json` for sha256):
   - `factory/factory-gp.js` (31,358 B): Watchlist, topic follow, session seeds, F1/OpenF1 rail. Loaded only when site.json turns on `features.watchlist|topicFollow|sessionSeeds` or `rail.kind: f1-calendar` (gpchat only today).
   - `factory/factory-rail.js` (10,231 B): NWS forecast/alerts, NWS CWF, BART BSA live rails. Loaded only for `rail.kind nws-forecast|nws-cwf|bart-bsa` or a rail with `forecastUrl`/`lat`+`lon` (415, 808, samo, bart).
   - `factory/factory-reports.js` (6,535 B): report loop (A9): report status, admin triage, "My reports", `report_update` notifications. Loaded only when site.json turns on `features.reportLoop` (no room yet).

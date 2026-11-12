@@ -156,6 +156,26 @@ main() {
     exit 1
   fi
   rm -f factory.js.orig
+  # Review fixes on top of the frozen signin-loop.patch: the lazy sign-in host
+  # exposes isLiveUser and closeAuth so onRegister can close the sheet when
+  # the user is already signed in. The patch file is not in this change set.
+  python3 -c '
+import pathlib, sys
+p = pathlib.Path("factory.js")
+t = p.read_text()
+old = """        composeErr: composeErr,
+        setAuthOpenWhenReady: function (v) { authOpenWhenReady = !!v; }"""
+new = """        composeErr: composeErr,
+        isLiveUser: isLiveUser,
+        closeAuth: closeAuth,
+        setAuthOpenWhenReady: function (v) { authOpenWhenReady = !!v; }"""
+if new in t:
+    pass
+elif old in t:
+    p.write_text(t.replace(old, new, 1))
+else:
+    sys.exit("rebuild: sign-in host object did not match; cannot add isLiveUser/closeAuth")
+'
   local f
   for f in "${OUT[@]}"; do node --check "$f"; done
   if [ "$mode" = check ]; then

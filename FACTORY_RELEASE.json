@@ -1,8 +1,8 @@
 {
   "version": "v1.2.9",
   "factory.js": {
-    "sha256": "b83e951b8e1e87f2b360cdca47eaaac6bad86d88c9ca065821f11053485e3fab",
-    "bytes": 254645
+    "sha256": "7773ead896e3951ea5cd4ee0647b7e2eb839665486992f88a10328fa4444220f",
+    "bytes": 254707
   },
   "sources": {
     "template": "build/sources/template_factory_660144d1886e.js (T0 pin, nest-feed query edited in place)",
@@ -10,7 +10,7 @@
     "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)",
     "split": "build/split.mjs (opt-in files out of the folded single-file build: gp, rail, reports)"
   },
-  "built": "2026-11-11 (MT) cursor/signin-loop-shell-v129-f9e1: trim, lazy factory-signin.js, 255000 cap, email-in-use, profile-edit, in-app email form stays open",
+  "built": "2026-11-11 (MT) cursor/signin-loop-shell-v129-f9e1: review fixes, unified credential copy, Google offered on credential errors, 255000 cap",
   "optIn": {
     "factory-gp.js": {
       "sha256": "9ab816ec31425cdf9ef989be23e5c189fc6b0753ae22cf4febeca6adf12346fb",
@@ -28,8 +28,8 @@
       "loadWhen": "site.json features.reportLoop true (A9 report loop; airlineschat/amachat first once unkilled)"
     },
     "factory-signin.js": {
-      "sha256": "1514be501b3c9d94c4e8a5c88413d7cdf2dfd1d4381bfc52b02b5be095e57291",
-      "bytes": 18231,
+      "sha256": "78c1595488a0d68f4bd2b8a9614aecf8425e576d549f4fd8737dc5cf03d21286",
+      "bytes": 18823,
       "loadWhen": "lazy, prefetched at factory boot so a Google tap can call signInWithPopup in the same gesture; also handles redirect result, email, register, email-already-in-use, forgot password, and the join-sheet layout, and the in-app-browser Open in your browser note"
     }
   },

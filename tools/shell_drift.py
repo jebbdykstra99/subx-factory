@@ -1720,6 +1720,14 @@ def check(room, mans, legacy=None):
         rel = os.path.relpath(p, room).replace(os.sep, '/')
         if fork and rel == fork_file:
             continue
+        # v1.2.9 lazy companion: same directory, same one-line header fork of shell/<base>/factory-signin.js
+        if (fork and fork_file
+                and os.path.dirname(rel) == os.path.dirname(fork_file)
+                and os.path.basename(rel) == 'factory-signin.js'
+                and man
+                and os.path.isfile(os.path.join(man['_dir'], 'factory-signin.js'))
+                and diff_lines(os.path.join(man['_dir'], 'factory-signin.js'), p) == 2):
+            continue
         data = open(p, 'rb').read()
         if sha256b(data) in hashes or SHELL_HEADER_RE.search(data[:600].decode('utf-8', 'replace')):
             f.append('%s is a shell copy (release hash or SubX factory header) and is not the declared fork%s'

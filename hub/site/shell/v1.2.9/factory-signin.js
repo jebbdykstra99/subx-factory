@@ -168,7 +168,7 @@
     function failGoogle(e) {
       var msg;
       if (e && e.code === 'auth/operation-not-allowed') {
-        msg = 'Google is not enabled on subx-skins yet.';
+        msg = 'Google sign-in is not available right now. Use email.';
       } else if (e && e.code === 'auth/popup-closed-by-user') {
         msg = 'Google sign-in cancelled.';
       } else {
@@ -230,12 +230,15 @@
 
   function authErrorMessage(e, fallback) {
     var code = (e && e.code) || '';
-    if (code === 'auth/wrong-password') return 'That password is not right. Try again or reset it.';
-    if (code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') return 'That email or password is not right. Try again.';
-    if (code === 'auth/user-not-found') return 'No account matches that email. Create an account or sign in with Google.';
+    if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials' || code === 'auth/user-not-found') {
+      return 'That email or password is not right. Try again, reset your password, or use Continue with Google.';
+    }
     if (code === 'auth/too-many-requests') return 'Too many tries. Wait a few minutes and try again.';
     if (code === 'auth/network-request-failed' || /network/i.test(code)) return 'Could not reach the sign-in service. Check your connection and try again.';
     return fallback || 'Sign-in failed. Try again.';
+  }
+  function offersGoogleOn(code) {
+    return code === 'auth/email-already-in-use' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials' || code === 'auth/wrong-password' || code === 'auth/user-not-found';
   }
   function inAppBrowserName() {
     var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
@@ -313,9 +316,9 @@
     var emailBox = document.getElementById('cv-email-signin');
     ensureForgotPasswordLink(emailBox);
   }
-  function showGoogleInUse(errEl) {
-    if (errEl) {
-      errEl.textContent = 'This email signs in with Google.';
+  function showContinueGoogle(errEl, msg) {
+    if (errEl && msg) {
+      errEl.textContent = msg;
       errEl.classList.add('show');
     }
     var hostEl = errEl && errEl.parentNode;
@@ -335,24 +338,27 @@
     }
     btn.hidden = false;
     if (hostEl && btn.parentNode !== hostEl) {
-      if (errEl.nextSibling) hostEl.insertBefore(btn, errEl.nextSibling);
-      else hostEl.appendChild(btn);
+      if (errEl && errEl.nextSibling) hostEl.insertBefore(btn, errEl.nextSibling);
+      else if (hostEl) hostEl.appendChild(btn);
     }
   }
   function switchToSignInAndTry(email, pw, errEl) {
     switchToSignInForm(email, pw);
     var fbAuth = host.fbAuth;
     var loginErr = document.getElementById('cv-login-err') || errEl;
+    showContinueGoogle(loginErr);
     if (!fbAuth) {
       if (loginErr) { loginErr.textContent = 'Auth is not ready.'; loginErr.classList.add('show'); }
       return Promise.resolve();
     }
     host.markAuthLand();
     return fbAuth.signInWithEmailAndPassword(email, pw).catch(function (e) {
+      var code = (e && e.code) || '';
       if (loginErr) {
         loginErr.textContent = authErrorMessage(e, 'Sign-in failed. Try again.');
         loginErr.classList.add('show');
       }
+      if (offersGoogleOn(code)) showContinueGoogle(loginErr);
     });
   }
   function handleEmailAlreadyInUse(email, pw, errEl) {
@@ -365,7 +371,7 @@
       var hasGoogle = list.indexOf('google.com') !== -1;
       if (hasGoogle) {
         switchToSignInForm(email, pw);
-        showGoogleInUse(document.getElementById('cv-login-err') || errEl);
+        showContinueGoogle(document.getElementById('cv-login-err') || errEl, 'This email signs in with Google.');
         return;
       }
       return switchToSignInAndTry(email, pw, errEl);
@@ -384,13 +390,19 @@
       err.textContent = '';
       host.markAuthLand();
       fbAuth.signInWithEmailAndPassword(email, pw).catch(function (e) {
+        var code = (e && e.code) || '';
         err.textContent = authErrorMessage(e, 'Sign-in failed. Try again.');
         err.classList.add('show');
+        if (offersGoogleOn(code)) showContinueGoogle(err);
       });
       });
     });
   }
   function onRegister() {
+    if (typeof host.isLiveUser === 'function' && host.isLiveUser()) {
+      if (typeof host.closeAuth === 'function') host.closeAuth();
+      return;
+    }
     var err = document.getElementById('cv-reg-err');
     var fbAuth = host.fbAuth;
     host.runWithAuth(err, function () {

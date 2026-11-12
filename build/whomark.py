@@ -21,7 +21,7 @@ TIER_FIELDS = ('symbolId', 'symbolIdSmall', 'textLabel', 'ariaLabel', 'title', '
 LABELS = {'human': 'Human-made', 'ai': 'AI steward · SubX', 'hybrid': 'Human + AI'}
 # Byte budgets (stated in README "Swapping the disclosure mark family").
 BUDGET = {'sprite.svg': 8192, 'config.json': 4096, 'whomark.js': 8192, 'png': 16384, 'total': 65536}
-CORE_BUDGET = 265000
+CORE_BUDGET = 255000
 BEGIN, END = '/* @whomark-config */', '/* @whomark-config-end */'
 
 def q(tag): return '{%s}%s' % (SVGNS, tag)

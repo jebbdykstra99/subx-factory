@@ -126,6 +126,23 @@ ok(len(_pl) == len(_fl) and len(_dl) == 1 and b'github.com/jebbdykstra99/subx-fa
    'hub fork = pinned shell with exactly one line changed (header source line -> %r) (diff lines %s)' % (_hdr.decode(), [i + 1 for i in _dl][:5]))
 ok(_sb.replace(_hdr, _pl[_dl[0]] if _dl else b'', 1) == _pb, 'hub fork: undoing the one header substitution gives the pinned bytes exactly')
 ok(_fsri != cfg['shell']['integrity'] and len(_sb) == len(_pb) - len(_pl[_dl[0]] if _dl else b'') + len(_hdr), 'hub fork has its own SRI (not the pin SRI) and the expected size')
+
+# v1.2.9 lazy factory-signin.js: same header-only hub fork, sitting next to factory.js so the lazy loader resolves.
+_si_rel = 'shell/%s/factory-signin.js' % cfg['shell']['base']
+ok(cfg['shell']['base'] == 'v1.2.9', 'hub is pinned to shell v1.2.9')
+ok(os.path.isfile(os.path.join(ROOT, 'shell', cfg['shell']['base'], 'factory-signin.js')), 'pinned shell ships factory-signin.js')
+ok(os.path.isfile(os.path.join(SITE, _si_rel)), 'hub hosts factory-signin.js next to the self-hosted factory.js')
+_siman = json.load(open(os.path.join(ROOT, 'shell', cfg['shell']['base'], 'SHELL.json')))['files']['factory-signin.js']
+_sisb = open(os.path.join(SITE, _si_rel), 'rb').read()
+_sipb = open(os.path.join(ROOT, _si_rel), 'rb').read()
+ok(hashlib.sha256(_sipb).hexdigest() == _siman['sha256'] and len(_sipb) == _siman['bytes']
+   and ('sha384-' + base64.b64encode(hashlib.sha384(_sipb).digest()).decode()) == _siman['integrity'],
+   'pinned factory-signin.js sha256, size and sha384 = SHELL.json')
+_sipl, _sifl = _sipb.split(b'\n'), _sisb.split(b'\n')
+_sidl = [i for i in range(max(len(_sipl), len(_sifl))) if i >= len(_sipl) or i >= len(_sifl) or _sipl[i] != _sifl[i]]
+ok(len(_sipl) == len(_sifl) and len(_sidl) == 1 and _sifl[_sidl[0]] == _hdr,
+   'hub factory-signin.js = pinned file with exactly the same one header-line fork (diff lines %s)' % ([i + 1 for i in _sidl][:5],))
+ok(_sisb.replace(_hdr, _sipl[_sidl[0]] if _sidl else b'', 1) == _sipb, 'hub factory-signin.js: undoing the header substitution gives the pinned bytes exactly')
 ok(BR.Renderer(SRC, os.path.join(ROOT, 'brand', 'brand.json'), SITE).shell_bytes() == (_sb, _fsha, _fsri), 'renderer shell_bytes() = (fork bytes, fork sha256, fork SRI)')
 _jb = [f for f in files(SITE) if 'jebbdykstra99' in open(os.path.join(SITE, f), encoding='utf-8', errors='replace').read()]
 ok(not _jb and 'jebbdykstra99' not in open(os.path.join(ROOT, 'hub', 'firebase.json')).read(), 'no jebbdykstra99 anywhere in rendered hub output or hub/firebase.json (%s)' % _jb[:3])
@@ -553,7 +570,8 @@ with tempfile.TemporaryDirectory() as t:
     ok('z/index.html' in names and 't/index.html' not in names, 'rename: topic index follows topicPathPrefix (/z/)')
     left = []
     for f in names:
-        if not f.endswith(TEXT) or f == SHELL_REL:  # the self-hosted shell is an upstream byte copy, not brand copy
+        if not f.endswith(TEXT) or f == SHELL_REL or f == _si_rel:
+            # the self-hosted shell and its lazy factory-signin.js are upstream forks, not brand copy
             continue
         t_ = read(os.path.join(out, f))
         for a in ALLOW:
