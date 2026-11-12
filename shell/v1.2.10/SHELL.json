@@ -1,19 +1,19 @@
 {
   "version": "v1.2.10",
   "immutable": true,
-  "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.10 (blocked Google popup shows an in-sheet message with Try Google again and Use email instead, and never auto-redirects; factory-signin.js is preloaded on pointerdown/touchstart of Sign in so a Google tap can call signInWithPopup in the same gesture). Never edit files in this folder; a change is a new shell/vX.Y.Z/ folder.",
-  "sourceCommit": "173f48432ad71153aa780a2c9ac874256c4623fc",
+  "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.10 (2026-11-12 phone cat: --cat 7.05rem inset and a #fff/#111 light backing on .subx-cat-link so the cat reads on a dark bar; blocked Google popup shows an in-sheet message with Try Google again and Use email instead, and never auto-redirects; factory-signin.js is preloaded on pointerdown/touchstart of Sign in so a Google tap can call signInWithPopup in the same gesture). This folder was restamped in place for the phone cat fix (approved 2026-11-12); a later shell change is a new shell/vX.Y.Z/ folder.",
+  "sourceCommit": "f25a3faca5c13b1239b3be132fcc4ad27a32a260",
   "sourcePath": "factory/",
   "url": {
     "pinned": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@<MERGE_SHA>/shell/v1.2.10/<file>",
-    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@173f48432ad71153aa780a2c9ac874256c4623fc/factory/<file>",
+    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@f25a3faca5c13b1239b3be132fcc4ad27a32a260/factory/<file>",
     "rule": "Pin by full 40-char commit SHA only. Never @main, @latest, a branch, or a semver range."
   },
   "files": {
     "factory.js": {
-      "bytes": 254971,
-      "sha256": "8b9936c3de072a47c0a9a9635246005bbbf5dc5456370c9115c81442b095420b",
-      "integrity": "sha384-sfknGbRrkpqjB2axWvi++kWQUVzYUldIR3xaIF9dHaUpaA+Bkspo5F+Q2AUqYzdh"
+      "bytes": 254995,
+      "sha256": "92f1f39d16a17beb25e189e277fd66c118cbb9959db6de430db98d974e0e9915",
+      "integrity": "sha384-V0fpStyt70/1duX+6BmAwczqB3Oiwy7V2rIkw+a9LCn3MyX93zjaQx+sv145f2a/"
     },
     "factory-signin.js": {
       "bytes": 22148,

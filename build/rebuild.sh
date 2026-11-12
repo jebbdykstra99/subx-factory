@@ -296,7 +296,7 @@ while True:
     t = t[:block_start] + replacement + t[end:]
     pos = block_start + len(replacement)
 
-CAT = "  function ensureSubxCat(){var a=document.querySelector('.subx-cat-link'),m,h,r,u='url(https://subx.it/assets/brand/cat-mask.png) center/contain no-repeat';if(!a){m=document.querySelector('.sidebar-brand .brand-mark');if(!m)return;a=document.createElement('a');a.href='https://subx.it/';a.className='subx-cat-link';a.setAttribute('aria-label','SubX home');a.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;z-index:600;text-decoration:none;color:var(--nav-text,#fff)';a.innerHTML='<span style=\"width:28px;height:28px;background:currentColor;-webkit-mask:'+u+';mask:'+u+'\"></span>';m.parentNode.insertBefore(a,m)}if(!ensureSubxCat.h)ensureSubxCat.h=a.parentNode;h=document.getElementById('hamburger');if(h&&innerWidth<=MOBILE_NAV_MQ){r=h.getBoundingClientRect();document.body.appendChild(a);a.style.position='fixed';a.style.top=r.top+'px';a.style.left=r.right+4+'px';a.style.background='var(--nav-bg,#111)';a.style.zIndex=600}else if(a){ensureSubxCat.h.appendChild(a);a.style.position=a.style.top=a.style.left=a.style.background=''}if(!ensureSubxCat.w){ensureSubxCat.w=1;addEventListener('resize',ensureSubxCat);addEventListener('load',ensureSubxCat)}}\n"
+CAT = "  function ensureSubxCat(){var a=document.querySelector('.subx-cat-link'),m,h,r,u='url(https://subx.it/assets/brand/cat-mask.png) center/contain no-repeat';if(!a){m=document.querySelector('.sidebar-brand .brand-mark');if(!m)return;a=document.createElement('a');a.href='https://subx.it/';a.className='subx-cat-link';a.setAttribute('aria-label','SubX home');a.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;z-index:600;text-decoration:none;color:var(--nav-text,#fff)';a.innerHTML='<span style=\"width:28px;height:28px;background:currentColor;-webkit-mask:'+u+';mask:'+u+'\"></span>';m.parentNode.insertBefore(a,m)}if(!ensureSubxCat.h)ensureSubxCat.h=a.parentNode;h=document.getElementById('hamburger');if(h&&innerWidth<=MOBILE_NAV_MQ){r=h.getBoundingClientRect();document.body.appendChild(a);a.style.position='fixed';a.style.top=r.top+'px';a.style.left=r.right+4+'px';a.style.zIndex=600}else if(a){ensureSubxCat.h.appendChild(a);a.style.position=a.style.top=a.style.left=a.style.background=''}if(!ensureSubxCat.w){ensureSubxCat.w=1;addEventListener('resize',ensureSubxCat);addEventListener('load',ensureSubxCat);addCss('cat-sp','@media (max-width:900px){:root{--cat:7.05rem}.thoughts-tabs,.view-back,.notif-header,.story-streamer,.race-strip,.home-h1,.city-gate{padding-left:var(--cat)!important}.subx-cat-link{background:#fff;color:#111!important;img{filter:brightness(0)}}}')}}\n"
 hook2 = '  function applySiteChrome() {\n    if (!site) return;\n'
 if hook2 not in t:
     raise SystemExit('rebuild: applySiteChrome hook not found; cannot add SubX cat')
@@ -307,6 +307,38 @@ if hook3 in t and "function wireEvents() {\n    ensureSubxCat();\n    ['pointerd
     t = t.replace(hook3, "  function wireEvents() {\n    ensureSubxCat();\n    ['pointerdown','touchstart']", 1)
 t = re.sub(r'\n\n(  function )', r'\n\1', t)
 t = t.replace('function (', 'function(')
+# Trims that keep the 3-line header and the light-backing cat under the 255000 B cap.
+# Tune --cat (full phone inset, default 7.05rem = 3.8rem hamburger + 52px cat)
+# and the #fff / #111 backing and ink on .subx-cat-link.
+popup = '     // Popup must run in this tap. Prefetched at boot so this is usually sync.\n'
+t = t.replace(popup, '')
+at = (
+    '  function applyTheme(tokens) {\n'
+    '    if (!tokens) return;\n'
+    '    var root = document.documentElement;\n'
+    '    Object.keys(tokens).forEach(function(k) {\n'
+    "      if (k === 'avatarColors') return;\n"
+    "      if (typeof tokens[k] === 'string') root.style.setProperty('--' + k, tokens[k]);\n"
+    '    });\n'
+    '    if (Array.isArray(tokens.avatarColors) && tokens.avatarColors.length) COLORS = tokens.avatarColors.slice();\n'
+    '  }'
+)
+at_new = (
+    "  function applyTheme(tokens){if(!tokens)return;var root=document.documentElement;"
+    "Object.keys(tokens).forEach(function(k){if(k==='avatarColors')return;"
+    "if(typeof tokens[k]==='string')root.style.setProperty('--'+k,tokens[k])});"
+    "if(Array.isArray(tokens.avatarColors)&&tokens.avatarColors.length)COLORS=tokens.avatarColors.slice();}"
+)
+if at in t:
+    t = t.replace(at, at_new, 1)
+elif at_new not in t:
+    raise SystemExit('rebuild: applyTheme body did not match; cannot compact')
+nf_s = t.find('/* @nest-feed')
+nf_e = t.find('/* @nest-feed-end */')
+if nf_s < 0 or nf_e < nf_s:
+    raise SystemExit('rebuild: nest-feed markers missing')
+head, mid, tail = t[:nf_s], t[nf_s:nf_e], t[nf_e:]
+t = re.sub(r'\n\n', '\n', head) + mid + re.sub(r'\n\n', '\n', tail)
 p.write_text(t)
 APPLY_CAT
   local f
