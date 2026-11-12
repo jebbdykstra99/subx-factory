@@ -2,11 +2,11 @@
   "version": "v1.2.10",
   "immutable": true,
   "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.10 (2026-11-12 phone cat: --cat 7.05rem inset and a #fff/#111 light backing on .subx-cat-link so the cat reads on a dark bar; blocked Google popup shows an in-sheet message with Try Google again and Use email instead, and never auto-redirects; factory-signin.js is preloaded on pointerdown/touchstart of Sign in so a Google tap can call signInWithPopup in the same gesture). This folder was restamped in place for the phone cat fix (approved 2026-11-12); a later shell change is a new shell/vX.Y.Z/ folder.",
-  "sourceCommit": "c83e6ea1c50cde60c58a20c0ec07824d8d95c98f",
+  "sourceCommit": "f25a3faca5c13b1239b3be132fcc4ad27a32a260",
   "sourcePath": "factory/",
   "url": {
     "pinned": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@<MERGE_SHA>/shell/v1.2.10/<file>",
-    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@c83e6ea1c50cde60c58a20c0ec07824d8d95c98f/factory/<file>",
+    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@f25a3faca5c13b1239b3be132fcc4ad27a32a260/factory/<file>",
     "rule": "Pin by full 40-char commit SHA only. Never @main, @latest, a branch, or a semver range."
   },
   "files": {
