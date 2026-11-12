@@ -113,11 +113,17 @@
     font: 700 11px/1 var(--ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
     margin: 0 0 8px;
   }
+  /* The right-rail toggle hangs into the feed; hide it on the home page in both designs. */
+  body.hub-home .right-panel-tab { display: none !important; }
+  body.hub-home .hub-card .post-text { overflow-wrap: break-word; word-break: normal; }
+  body.hub-home .hub-text-link { color: var(--accent); text-decoration: none; }
+  body.hub-home .hub-text-link:hover { text-decoration: underline; }
+  body.hub-home .post-avatar.is-ai { border-radius: 8px; }
   /* Phone: the brand bar leaves a lane for the fixed hamburger. The tagline is on the next line and never clips. */
   @media (max-width: 900px) {
     body.hub-home .hub-brand-bar { padding-left: 3.8rem; }
     body.hub-home .hub-tagline {
-      padding: 0 16px 12px;
+      padding: 10px 16px 12px;
       max-width: 100%;
       overflow: visible;
       white-space: normal;
@@ -132,10 +138,19 @@
     body.hub-home .hub-schip { min-width: 160px; }
     body.hub-home[data-home-design="hero-room"] .right-panel { display: none; }
     body.hub-home[data-home-design="hero-room"] .main { margin-right: 0; }
-    body.hub-home .hub-brand-bar { padding-left: 16px; }
   }
   @media (min-width: 901px) {
-    body.hub-home .hub-brand-bar { padding-left: 16px; }
+    body.hub-home .hamburger { display: none !important; }
+    body.hub-home .hub-brand,
+    body.hub-home .hub-tagline { display: none; }
+    body.hub-home .hub-brand-bar {
+      justify-content: flex-end;
+      padding: 12px 16px;
+    }
+    body.hub-home #page-thoughts {
+      max-width: 640px;
+      width: 100%;
+    }
   }
   </style>
   <link rel="preload" href="{{asset:/site.json}}" as="fetch" crossorigin="anonymous">

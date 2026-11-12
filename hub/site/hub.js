@@ -6,6 +6,31 @@
   var ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ESC[c]; }); }
   function safeUrl(u) { return /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}\/(\?p=[A-Za-z0-9_-]+)?$/i.test(String(u || '')) ? u : ''; }
+  function shortLinks(text) {
+    var raw = String(text == null ? '' : text);
+    var re = /https:\/\/[^\s<]+/gi;
+    var out = '', last = 0, m;
+    while ((m = re.exec(raw))) {
+      out += esc(raw.slice(last, m.index));
+      var full = m[0];
+      var url = full.replace(/[.,;:!?)\]]+$/, '');
+      var tail = full.slice(url.length);
+      var host = '';
+      try {
+        var parsed = new URL(url);
+        if (parsed.protocol === 'https:' && /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(parsed.hostname)) {
+          host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+        }
+      } catch (e) { host = ''; }
+      if (host) {
+        out += '<a class="hub-text-link" href="' + esc(url) + '" rel="noopener noreferrer" target="_blank">' + esc(host) + ' \u2197</a>' + esc(tail);
+      } else {
+        out += esc(full);
+      }
+      last = m.index + full.length;
+    }
+    return out + esc(raw.slice(last));
+  }
   var COLORS = ['#16181c', '#2f3336', '#3d4450', '#202327', '#25282c', '#3a4148'];
   function color(key) { var h = 0; key = String(key || ''); for (var i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0; return COLORS[h % COLORS.length]; }
   function initials(name) { var w = String(name || '?').trim().split(/\s+/); return ((w[0] || '?').charAt(0) + (w[1] ? w[1].charAt(0) : '')).toUpperCase(); }
@@ -33,13 +58,13 @@
       ? '<a class="hub-room-pill" href="' + esc(roomUrl) + '" rel="noopener">in ' + esc(it.roomName) + '</a>'
       : '<span class="hub-room-pill">in ' + esc(it.roomName) + '</span>';
     return '<article class="hub-card" data-room="' + esc(it.room) + '">' +
-      '<div class="post-avatar" style="background:' + color(it.room) + '" aria-hidden="true">' + esc(initials(who)) + '</div>' +
+      '<div class="post-avatar' + (it.tier === 'ai' ? ' is-ai' : '') + '" style="background:' + color(it.room) + '" aria-hidden="true">' + esc(initials(who)) + '</div>' +
       '<div class="post-body"><div class="post-meta">' +
       '<a class="hub-card-link" href="' + esc(url) + '" rel="noopener"><span class="post-name">' + esc(who) + '</span></a>' + tierHtml(it.tier, it.names) +
       (it.authorHandle ? '<span class="post-handle">@' + esc(it.authorHandle) + '</span>' : '') +
       '<span class="post-time">· ' + esc(ago(it.createdAt)) + '</span></div>' +
       pill +
-      '<a class="hub-card-link" href="' + esc(url) + '" rel="noopener"><div class="post-text">' + esc(it.text) + '</div></a>' +
+      '<div class="post-text">' + shortLinks(it.text) + '</div>' +
       '<a class="hub-open" href="' + esc(url) + '" rel="noopener">Open in ' + esc(it.domain) + ' →</a></div></article>';
   }
   function labelText(tier) {
@@ -290,7 +315,7 @@
         cards.innerHTML = live.map(function (it) {
           return '<div class="hub-story-card"><div class="post-meta"><span class="post-name">' + esc(it.authorName || it.roomName) + '</span>' + tierHtml(it.tier) +
             '<span class="post-time">· ' + esc(ago(typeof it.createdAt === 'number' ? new Date(it.createdAt).toISOString() : it.createdAt)) + '</span></div>' +
-            '<div class="post-text">' + esc(it.text) + '</div></div>';
+            '<div class="post-text">' + shortLinks(it.text) + '</div></div>';
         }).join('') + '<a class="hub-open" href="' + esc(roomHref(dom)) + '" rel="noopener">Open ' + esc(dom) + ' →</a>';
         openDlg(view);
       });
