@@ -176,6 +176,139 @@ elif old in t:
 else:
     sys.exit("rebuild: sign-in host object did not match; cannot add isLiveUser/closeAuth")
 '
+  # v1.2.10: preload factory-signin.js on pointerdown/touchstart of Sign in
+  # so a Google tap can call signInWithPopup in the same gesture.
+  python3 -c '
+import pathlib, sys
+p = pathlib.Path("factory.js")
+t = p.read_text()
+q = chr(39)
+old = "  function wireEvents() {\n   document.addEventListener(" + q + "click" + q + ", function (e) {"
+new = "  function wireEvents() {\n    [" + q + "pointerdown" + q + "," + q + "touchstart" + q + "].forEach(function(v){document.addEventListener(v,function(e){try{if(e.target.closest(" + q + "#auth-signin,#profile-signin-prompt-btn,#cv-google-login" + q + "))loadSigninModule()}catch(x){}},{passive:true});});\n   document.addEventListener(" + q + "click" + q + ", function (e) {"
+if new in t:
+    pass
+elif old in t:
+    p.write_text(t.replace(old, new, 1))
+else:
+    sys.exit("rebuild: wireEvents() did not match; cannot add sign-in preload")
+'
+  # v1.2.10: fold simple style tags into addCss, inject the SubX cat link,
+  # and squeeze blank lines before top-level functions so the core still
+  # fits the 255000 B cap.
+  python3 - << 'APPLY_CAT'
+# Apply v1.2.10 addCss refactor, SubX cat inject, and function-blank squeeze.
+# Reads and writes factory.js in the current directory (build/).
+from pathlib import Path
+import re
+
+p = Path('factory.js')
+t = p.read_text()
+if 'function ensureSubxCat()' in t:
+    raise SystemExit(0)
+
+def skip_string(s, i):
+    q = s[i]; i += 1
+    while i < len(s):
+        if s[i] == '\\':
+            i += 2
+            continue
+        if s[i] == q:
+            return i + 1
+        i += 1
+    return i
+
+def assignment_semicolon(s, start):
+    i = start
+    while i < len(s):
+        if s[i] in "'\"":
+            i = skip_string(s, i)
+            continue
+        if s[i] == ';':
+            return i
+        i += 1
+    return -1
+
+ADD_CSS = "  function addCss(id,c){if(document.getElementById(id))return;var s=document.createElement('style');s.id=id;s.textContent=c;document.head.appendChild(s);}\n"
+hook = "  'use strict';\n\n"
+if ADD_CSS not in t:
+    if t.count(hook) != 1:
+        raise SystemExit('rebuild: use strict hook not unique; cannot add addCss')
+    t = t.replace(hook, hook + ADD_CSS, 1)
+
+pos = 0
+while True:
+    j = t.find("var st = document.createElement('style');", pos)
+    if j < 0:
+        break
+    id_m = re.search(r"st\.id = '([^']+)';", t[j:j+120])
+    if not id_m:
+        raise SystemExit('rebuild: style tag without id')
+    css_id = id_m.group(1)
+    if css_id == 'acc-gate-css':
+        pos = j + 1
+        continue
+    tc = t.find('st.textContent =', j)
+    if tc < 0:
+        raise SystemExit('rebuild: style tag without textContent')
+    expr_start = tc + len('st.textContent =')
+    semi = assignment_semicolon(t, expr_start)
+    if semi < 0:
+        raise SystemExit('rebuild: style assignment has no semicolon')
+    expr = t[expr_start:semi].strip()
+    after = t[semi+1:]
+    next_m = re.search(r'\S', after)
+    next_stmt = after[next_m.start():] if next_m else ''
+    if not next_stmt.startswith('document.head.appendChild(st);'):
+        pos = semi + 1
+        continue
+    app = semi + 1 + after.find('document.head.appendChild(st);')
+    line_start = t.rfind('\n', 0, app) + 1
+    indent = t[line_start:app]
+    var_line_start = t.rfind('\n', 0, j) + 1
+    block_start = var_line_start
+    prefix = ''
+    prev_nl = t.rfind('\n', 0, var_line_start-1)
+    prev_line = t[prev_nl+1:var_line_start]
+    if re.search(r"if \(document\.getElementById\('%s'\)\) return;" % re.escape(css_id), prev_line):
+        block_start = prev_nl + 1
+    elif re.search(r"if \(!document\.getElementById\('%s'\)\) \{" % re.escape(css_id), prev_line):
+        block_start = prev_nl + 1
+    elif css_id == 'acc-gate-css':
+        k = t.rfind("if (o || document.getElementById('acc-gate-css')) return;", 0, j)
+        if k < 0:
+            raise SystemExit('rebuild: acc-gate guard not found')
+        block_start = k
+        prefix = t[block_start:var_line_start].replace(
+            "if (o || document.getElementById('acc-gate-css')) return;",
+            "if (o) return;"
+        )
+    end = app + len('document.head.appendChild(st);')
+    opened = t[block_start:j]
+    if re.search(r"if \(!document\.getElementById\('%s'\)\) \{" % re.escape(css_id), opened):
+        m_end = re.match(r'\s*\}', t[end:])
+        if not m_end:
+            raise SystemExit('rebuild: share-sheet style block missing close')
+        end = end + m_end.end()
+    if css_id == 'acc-gate-css' and prefix:
+        replacement = prefix + f"{indent}addCss('{css_id}', {expr});"
+    else:
+        replacement = f"{indent}addCss('{css_id}', {expr});"
+    t = t[:block_start] + replacement + t[end:]
+    pos = block_start + len(replacement)
+
+CAT = "  function ensureSubxCat(){var a=document.querySelector('.subx-cat-link'),m,h,r,u='url(https://subx.it/assets/brand/cat-mask.png) center/contain no-repeat';if(!a){m=document.querySelector('.sidebar-brand .brand-mark');if(!m)return;a=document.createElement('a');a.href='https://subx.it/';a.className='subx-cat-link';a.setAttribute('aria-label','SubX home');a.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;z-index:600;text-decoration:none;color:var(--nav-text,#fff)';a.innerHTML='<span style=\"width:28px;height:28px;background:currentColor;-webkit-mask:'+u+';mask:'+u+'\"></span>';m.parentNode.insertBefore(a,m)}if(!ensureSubxCat.h)ensureSubxCat.h=a.parentNode;h=document.getElementById('hamburger');if(h&&innerWidth<=MOBILE_NAV_MQ){r=h.getBoundingClientRect();document.body.appendChild(a);a.style.position='fixed';a.style.top=r.top+'px';a.style.left=r.right+4+'px';a.style.background='var(--nav-bg,#111)';a.style.zIndex=600}else if(a){ensureSubxCat.h.appendChild(a);a.style.position=a.style.top=a.style.left=a.style.background=''}if(!ensureSubxCat.w){ensureSubxCat.w=1;addEventListener('resize',ensureSubxCat);addEventListener('load',ensureSubxCat)}}\n"
+hook2 = '  function applySiteChrome() {\n    if (!site) return;\n'
+if hook2 not in t:
+    raise SystemExit('rebuild: applySiteChrome hook not found; cannot add SubX cat')
+if 'function ensureSubxCat()' not in t:
+    t = t.replace(hook2, CAT + '  function applySiteChrome() {\n    ensureSubxCat();\n    if (!site) return;\n', 1)
+hook3 = "  function wireEvents() {\n    ['pointerdown','touchstart']"
+if hook3 in t and "function wireEvents() {\n    ensureSubxCat();\n    ['pointerdown','touchstart']" not in t:
+    t = t.replace(hook3, "  function wireEvents() {\n    ensureSubxCat();\n    ['pointerdown','touchstart']", 1)
+t = re.sub(r'\n\n(  function )', r'\n\1', t)
+t = t.replace('function (', 'function(')
+p.write_text(t)
+APPLY_CAT
   local f
   for f in "${OUT[@]}"; do node --check "$f"; done
   if [ "$mode" = check ]; then

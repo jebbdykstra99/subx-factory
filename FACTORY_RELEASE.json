@@ -1,8 +1,8 @@
 {
-  "version": "v1.2.9",
+  "version": "v1.2.10",
   "factory.js": {
-    "sha256": "7773ead896e3951ea5cd4ee0647b7e2eb839665486992f88a10328fa4444220f",
-    "bytes": 254707
+    "sha256": "8b9936c3de072a47c0a9a9635246005bbbf5dc5456370c9115c81442b095420b",
+    "bytes": 254971
   },
   "sources": {
     "template": "build/sources/template_factory_660144d1886e.js (T0 pin, nest-feed query edited in place)",
@@ -10,26 +10,26 @@
     "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)",
     "split": "build/split.mjs (opt-in files out of the folded single-file build: gp, rail, reports)"
   },
-  "built": "2026-11-11 (MT) cursor/signin-loop-shell-v129-f9e1: review fixes, unified credential copy, Google offered on credential errors, 255000 cap",
+  "built": "2026-11-12 (MT) cursor/signin-popup-loop-2026-11-12: v1.2.10 blocked Google popup shows a sheet (Try Google again / Use email instead), no auto-redirect; preload factory-signin.js on pointerdown/touchstart of Sign in",
   "optIn": {
     "factory-gp.js": {
-      "sha256": "9ab816ec31425cdf9ef989be23e5c189fc6b0753ae22cf4febeca6adf12346fb",
-      "bytes": 34934,
+      "sha256": "33c158f1490800b3efe641ac526516b9a89f7fbd2ef0d29e5a8643c07f4bc6fc",
+      "bytes": 34935,
       "loadWhen": "site.json features.watchlist|topicFollow|sessionSeeds true, or rail.kind f1-calendar (gpchat only today)"
     },
     "factory-rail.js": {
-      "sha256": "2316ec5db056652901090168e1e7919de96d2b31560140cb515f9bbd35281f17",
-      "bytes": 10235,
+      "sha256": "d09eb22983863f58528ed9caf1065704bfa240a65423e487e151c4a1d9c44558",
+      "bytes": 10236,
       "loadWhen": "site.json rail.kind nws-forecast|nws-cwf|bart-bsa, or rail.forecastUrl / rail.lat+lon (415, 808, samo, bart)"
     },
     "factory-reports.js": {
-      "sha256": "6f330c72877200219657c4efad5f58da2f22f231090ef0af373dac09b04790fc",
-      "bytes": 9369,
+      "sha256": "d692374f0cc12dfd357c0ae096222e75ae5394bcb911802bf4cbe99bf3cfdf8c",
+      "bytes": 9370,
       "loadWhen": "site.json features.reportLoop true (A9 report loop; airlineschat/amachat first once unkilled)"
     },
     "factory-signin.js": {
-      "sha256": "78c1595488a0d68f4bd2b8a9614aecf8425e576d549f4fd8737dc5cf03d21286",
-      "bytes": 18823,
+      "sha256": "0427ac92a3f672801964fdcf32002d301e2f85d6965f9de733b57bc4080bdb72",
+      "bytes": 22148,
       "loadWhen": "lazy, prefetched at factory boot so a Google tap can call signInWithPopup in the same gesture; also handles redirect result, email, register, email-already-in-use, forgot password, and the join-sheet layout, and the in-app-browser Open in your browser note"
     }
   },

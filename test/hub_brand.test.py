@@ -129,7 +129,18 @@ ok(_fsri != cfg['shell']['integrity'] and len(_sb) == len(_pb) - len(_pl[_dl[0]]
 
 # v1.2.9 lazy factory-signin.js: same header-only hub fork, sitting next to factory.js so the lazy loader resolves.
 _si_rel = 'shell/%s/factory-signin.js' % cfg['shell']['base']
-ok(cfg['shell']['base'] == 'v1.2.9', 'hub is pinned to shell v1.2.9')
+ok(cfg['shell']['base'] == 'v1.2.10', 'hub is pinned to shell v1.2.10')
+# SubX cat on the hub and in the room shell: href, aria-label, 44px tap target.
+_idx = open(os.path.join(SITE, 'index.html'), encoding='utf-8').read()
+_st = open(os.path.join(SITE, 'styles.css'), encoding='utf-8').read()
+_fx = open(os.path.join(ROOT, 'factory', 'factory.js'), encoding='utf-8').read()
+ok('href="https://subx.it/"' in _idx and 'aria-label="SubX home"' in _idx,
+   'hub index.html: .brand-mark links to https://subx.it/ with aria-label SubX home')
+ok('min-width: 44px' in _st and 'min-height: 44px' in _st,
+   'hub styles.css: .brand-mark is at least 44x44px')
+ok("a.href='https://subx.it/'" in _fx and "setAttribute('aria-label','SubX home')" in _fx,
+   'factory.js: SubX cat link href is https://subx.it/ with aria-label SubX home')
+ok('width:44px;height:44px' in _fx, 'factory.js: SubX cat tap target is 44x44px')
 ok(os.path.isfile(os.path.join(ROOT, 'shell', cfg['shell']['base'], 'factory-signin.js')), 'pinned shell ships factory-signin.js')
 ok(os.path.isfile(os.path.join(SITE, _si_rel)), 'hub hosts factory-signin.js next to the self-hosted factory.js')
 _siman = json.load(open(os.path.join(ROOT, 'shell', cfg['shell']['base'], 'SHELL.json')))['files']['factory-signin.js']

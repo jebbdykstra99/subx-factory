@@ -110,7 +110,15 @@ button, input, select, textarea { font-family: inherit; }
   display: flex; align-items: center; justify-content: center;
 }
 .sidebar-search-btn:hover { opacity: 1; background: var(--hover-surface); }
-.brand-mark { display: inline-block; }
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  text-decoration: none;
+  color: inherit;
+}
 .brand-icon {
   display: block; width: 52px; height: 52px; margin: 0 auto 0.55rem;
   padding: 0; border: 0; background-color: var(--subx-cat-color);

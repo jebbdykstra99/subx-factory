@@ -94,7 +94,11 @@ assert.ok(signinSrc.includes("typeof host.isLiveUser === 'function' && host.isLi
 assert.ok(signinSrc.includes("typeof host.closeAuth === 'function') host.closeAuth()"), 'onRegister closes the sheet when the user is live');
 assert.ok(src.includes('isLiveUser: isLiveUser') && src.includes('closeAuth: closeAuth'), 'sign-in host exposes isLiveUser and closeAuth');
 assert.ok(signinSrc.includes("fbAuth.signInWithPopup(provider)"), 'Google popup-first flow is unchanged');
-assert.ok(signinSrc.includes("code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment'"), 'Google still redirects only when blocked or unsupported');
+assert.ok(signinSrc.includes("Your browser blocked the Google popup."), 'blocked popup shows the in-sheet message');
+assert.ok(signinSrc.includes("Try Google again") && signinSrc.includes("Use email instead"), 'blocked popup offers Try Google again and Use email instead');
+assert.ok(!/signInWithRedirect/.test(signinSrc), 'blocked popup never auto-redirects');
+assert.ok(signinSrc.includes('auth/popup-closed-by-user') && signinSrc.includes('POPUP_BLOCK_MS'), 'detects a quick close and a silent blocked popup');
+assert.ok(!signinSrc.includes('—') && !signinSrc.includes('–'), 'no em or en dashes in factory-signin.js');
 
 // Runtime: email-already-in-use, forgot password, and error mapping (mocked Firebase, no network).
 {
@@ -131,16 +135,23 @@ assert.ok(signinSrc.includes("code === 'auth/popup-blocked' || code === 'auth/op
   const regAge = put('cv-reg-age', { checked: true });
   const loginEmail = put('cv-login-email', { value: '' });
   const loginPw = put('cv-login-pw', { value: '' });
+  const googleAge = put('cv-google-age', { checked: true });
+  put('cv-google-login');
+  const docListeners = {};
   const document = {
     getElementById(id) { return els[id] || null; },
     documentElement: { classList: { contains() { return false; } } },
+    hidden: false,
+    visibilityState: 'visible',
     createElement(tag) {
       const n = makeEl('tmp');
       Object.defineProperty(n, 'id', { get() { return n._id; }, set(v) { n._id = v; els[v] = n; } });
       n.tag = tag;
       return n;
     },
-    head: { appendChild(n) { return n; } }
+    head: { appendChild(n) { return n; } },
+    addEventListener(ev, fn) { (docListeners[ev] || (docListeners[ev] = [])).push(fn); },
+    removeEventListener(ev, fn) { docListeners[ev] = (docListeners[ev] || []).filter((f) => f !== fn); }
   };
   function runWith(hostExtras) {
     let installed = null;
@@ -170,16 +181,35 @@ assert.ok(signinSrc.includes("code === 'auth/popup-blocked' || code === 'auth/op
       setAuthOpenWhenReady() {}
     }, hostExtras || {});
     host.fbAuth = fbAuth;
+    const mem = function () {
+      const d = Object.create(null);
+      return {
+        setItem(k, v) { d[k] = String(v); },
+        getItem(k) { return Object.prototype.hasOwnProperty.call(d, k) ? d[k] : null; },
+        removeItem(k) { delete d[k]; }
+      };
+    };
+    const sessionStorage = mem();
+    const localStorage = mem();
+    const winListeners = {};
+    const windowObj = {
+      __subxSigninHost: host,
+      addEventListener(ev, fn) { (winListeners[ev] || (winListeners[ev] = [])).push(fn); },
+      removeEventListener(ev, fn) { winListeners[ev] = (winListeners[ev] || []).filter((f) => f !== fn); }
+    };
+    let authOpen = 0;
+    const origReady = host.setAuthOpenWhenReady;
+    host.setAuthOpenWhenReady = function (v) { authOpen++; if (typeof origReady === 'function') origReady(v); };
     const ctx = {
-      window: { __subxSigninHost: host },
+      window: windowObj,
       document,
-      sessionStorage: { setItem() {}, getItem() { return null; }, removeItem() {} },
-      localStorage: { setItem() {}, getItem() { return null; }, removeItem() {} },
+      sessionStorage,
+      localStorage,
       firebase: { auth: { GoogleAuthProvider: function () {} }, firestore: { FieldValue: { serverTimestamp() { return 'ts'; } } } },
-      console, Promise, Error, Array, Set
+      console, Promise, Error, Array, Set, Date, setTimeout, clearTimeout
     };
     vm.runInNewContext(signinSrc, ctx, { filename: 'factory-signin.js' });
-    return { api: installed, calls, fbAuth, host };
+    return { api: installed, calls, fbAuth, host, sessionStorage, localStorage, authOpen: () => authOpen, windowObj };
   }
 
   // password account already exists: switch to sign-in and retry with the same password
@@ -322,6 +352,131 @@ assert.ok(signinSrc.includes("code === 'auth/popup-blocked' || code === 'auth/op
     assert.strictEqual(calls.reset, 1, 'Forgot password? calls sendPasswordResetEmail');
     assert.strictEqual(loginErr.textContent, 'If an account exists for that email, a reset message is on its way.', 'neutral reset confirmation');
   }
+
+  function blockedUi() {
+    const box = els['cv-google-blocked'];
+    const retry = els['cv-google-retry'];
+    const useEmail = els['cv-google-use-email'];
+    assert.ok(loginErr.textContent === 'Your browser blocked the Google popup.' || (els['cv-login-err'] && els['cv-login-err'].textContent === 'Your browser blocked the Google popup.'), 'blocked message: ' + loginErr.textContent);
+    assert.ok(box && box.hidden === false, 'blocked sheet is visible');
+    assert.ok(retry && retry.textContent === 'Try Google again', 'Try Google again button');
+    assert.ok(useEmail && useEmail.textContent === 'Use email instead', 'Use email instead button');
+  }
+
+  // A popup that never resolves and has no focus loss must show the blocked message (iOS Chrome).
+  {
+    loginErr.textContent = '';
+    delete els['cv-google-blocked'];
+    delete els['cv-google-retry'];
+    delete els['cv-google-use-email'];
+    const { api, calls } = runWith({
+      fbAuth: {
+        signInWithPopup() { calls.popup++; return new Promise(function () {}); },
+        signInWithRedirect() { calls.redirect++; return Promise.resolve(); },
+        getRedirectResult() { return Promise.resolve(null); }
+      }
+    });
+    api.onGoogleClick();
+    assert.strictEqual(calls.popup, 1, 'never-resolving popup is opened once');
+    assert.strictEqual(calls.redirect, 0, 'never auto-redirects while waiting');
+    await new Promise((r) => setTimeout(r, 500));
+    assert.ok(!els['cv-google-blocked'] || els['cv-google-blocked'].hidden, 'does not treat a 0.5s wait as blocked');
+    await new Promise((r) => setTimeout(r, 1700));
+    blockedUi();
+    assert.strictEqual(calls.redirect, 0, 'never auto-redirects after the blocked timeout');
+  }
+
+  // popup-closed-by-user arriving quickly is treated as blocked, not as a cancel.
+  {
+    loginErr.textContent = '';
+    delete els['cv-google-blocked'];
+    delete els['cv-google-retry'];
+    delete els['cv-google-use-email'];
+    const { api, calls } = runWith({
+      fbAuth: {
+        signInWithPopup() { calls.popup++; return Promise.reject({ code: 'auth/popup-closed-by-user' }); },
+        signInWithRedirect() { calls.redirect++; return Promise.resolve(); }
+      }
+    });
+    api.onGoogleClick();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    blockedUi();
+    assert.ok(loginErr.textContent !== 'Google sign-in cancelled.', 'quick close is not a cancel message');
+    assert.strictEqual(calls.redirect, 0, 'quick close never auto-redirects');
+  }
+
+  // An empty redirect result where a redirect was pending shows the blocked sheet and settles.
+  {
+    loginErr.textContent = '';
+    delete els['cv-google-blocked'];
+    delete els['cv-google-retry'];
+    delete els['cv-google-use-email'];
+    let settled = false;
+    const { api, calls, sessionStorage, authOpen } = runWith({
+      fbAuth: {
+        getRedirectResult() { return Promise.resolve({ user: null }); },
+        signInWithPopup() { calls.popup++; return Promise.resolve({ user: {} }); },
+        signInWithRedirect() { calls.redirect++; return Promise.resolve(); }
+      }
+    });
+    sessionStorage.setItem('subx.googleRedirect', '1');
+    const p = api.handleRedirectResult();
+    assert.ok(p && typeof p.then === 'function', 'handleRedirectResult returns a promise');
+    await p.then(function () { settled = true; });
+    assert.ok(settled, 'empty redirect result settles (Join is not deadlocked)');
+    blockedUi();
+    assert.ok(authOpen() >= 1, 'empty redirect asks the sheet to open');
+    assert.strictEqual(calls.redirect, 0, 'empty redirect never auto-redirects again');
+    assert.strictEqual(sessionStorage.getItem('subx.googleRedirect'), null, 'pending redirect flag is cleared');
+  }
+
+  // "Try Google again" calls signInWithPopup synchronously in the click handler.
+  {
+    loginErr.textContent = '';
+    delete els['cv-google-blocked'];
+    delete els['cv-google-retry'];
+    delete els['cv-google-use-email'];
+    let sync = false;
+    const { api, calls } = runWith({
+      fbAuth: {
+        signInWithPopup() {
+          calls.popup++;
+          sync = true;
+          return Promise.reject({ code: 'auth/popup-blocked' });
+        },
+        signInWithRedirect() { calls.redirect++; return Promise.resolve(); }
+      }
+    });
+    api.onGoogleClick();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    blockedUi();
+    const first = calls.popup;
+    sync = false;
+    els['cv-google-retry'].click();
+    assert.ok(sync, 'Try Google again calls signInWithPopup synchronously');
+    assert.strictEqual(calls.popup, first + 1, 'Try Google again opens a new popup');
+    assert.strictEqual(calls.redirect, 0, 'Try Google again never redirects');
+  }
+
+  // "Use email instead" opens the existing email sign-in.
+  {
+    const { api, calls } = runWith({
+      fbAuth: {
+        signInWithPopup() { calls.popup++; return Promise.reject({ code: 'auth/popup-blocked' }); },
+        signInWithRedirect() { calls.redirect++; return Promise.resolve(); }
+      }
+    });
+    api.ensureJoinAuthLayout();
+    api.onGoogleClick();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    blockedUi();
+    els['cv-google-use-email'].click();
+    const emailBox = els['cv-email-signin'];
+    assert.ok(emailBox && emailBox.hidden === false, 'Use email instead opens the email form');
+  }
 }
 
-console.log('accounts-gate: ok (' + guards.length + ' guards, ' + cases.length + ' cases, ' + rooms.length + ' rooms explicit, stamp refuses missing, share menu, email-in-use, unified credential copy, live-user register guard)');
+console.log('accounts-gate: ok (' + guards.length + ' guards, ' + cases.length + ' cases, ' + rooms.length + ' rooms explicit, stamp refuses missing, share menu, email-in-use, unified credential copy, live-user register guard, popup-blocked recovery)');

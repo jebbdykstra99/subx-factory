@@ -31,11 +31,68 @@
     storageDel(sessionStorage, GOOGLE_REDIRECT_KEY);
     storageDel(localStorage, GOOGLE_REDIRECT_KEY);
   }
-  function showGooglePopupBlocked(msg) {
+  var POPUP_BLOCK_MS = 1800;
+  var POPUP_SOON_MS = 2000;
+  var GOOGLE_BLOCKED_MSG = 'Your browser blocked the Google popup.';
+  var popupWatch = null;
+
+  function isPopupBlockedCode(code) {
+    return code === 'auth/popup-blocked'
+      || code === 'auth/cancelled-popup-request'
+      || code === 'auth/operation-not-supported-in-this-environment'
+      || code === 'auth/operation-not-supported';
+  }
+  function clearPopupWatch() {
+    if (!popupWatch) return;
+    if (popupWatch.timer) clearTimeout(popupWatch.timer);
+    if (popupWatch.onBlur && typeof window !== 'undefined') window.removeEventListener('blur', popupWatch.onBlur);
+    if (popupWatch.onFocus && typeof window !== 'undefined') window.removeEventListener('focus', popupWatch.onFocus);
+    if (popupWatch.onVis && typeof document.removeEventListener === 'function') {
+      document.removeEventListener('visibilitychange', popupWatch.onVis);
+    }
+    popupWatch = null;
+  }
+  function hideGoogleBlockedSheet() {
+    var box = document.getElementById('cv-google-blocked');
+    if (box) box.hidden = true;
+  }
+  function showGoogleBlockedSheet() {
     var err = document.getElementById('cv-login-err');
-    if (!err) return;
-    err.textContent = msg || 'Google sign-in did not complete. Try again or use email.';
-    err.classList.add('show');
+    if (err) {
+      err.textContent = GOOGLE_BLOCKED_MSG;
+      err.classList.add('show');
+    }
+    var box = document.getElementById('cv-google-blocked');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'cv-google-blocked';
+      var retry = document.createElement('button');
+      retry.id = 'cv-google-retry';
+      retry.type = 'button';
+      retry.className = 'conv-google-btn';
+      retry.textContent = 'Try Google again';
+      retry.addEventListener('click', function () {
+        onGoogleClick();
+      });
+      var useEmail = document.createElement('button');
+      useEmail.id = 'cv-google-use-email';
+      useEmail.type = 'button';
+      useEmail.className = 'conv-email-toggle';
+      useEmail.textContent = 'Use email instead';
+      useEmail.addEventListener('click', function () {
+        hideGoogleBlockedSheet();
+        if (err) { err.textContent = ''; err.classList.remove('show'); }
+        toggleEmailAuth(true);
+      });
+      box.appendChild(retry);
+      box.appendChild(useEmail);
+      var hostEl = (err && err.parentNode) || document.getElementById('cv-panel-login');
+      if (hostEl) {
+        if (err && err.nextSibling) hostEl.insertBefore(box, err.nextSibling);
+        else hostEl.appendChild(box);
+      }
+    }
+    box.hidden = false;
   }
 
   function ensureJoinAuthCss() {
@@ -151,10 +208,16 @@
     }
     err.textContent = '';
     err.classList.remove('show');
+    hideGoogleBlockedSheet();
+    clearPopupWatch();
     host.markAuthLand();
     clearGoogleRedirect();
     var provider = new firebase.auth.GoogleAuthProvider();
+    var startedAt = Date.now();
+    var lostFocus = false;
     function finishGoogle(cred) {
+      clearPopupWatch();
+      hideGoogleBlockedSheet();
       clearGoogleRedirect();
       var u = cred && cred.user;
       if (u && !host.accountsOpen() && u.uid !== host.ADMIN_UID) return fbAuth.signOut().then(function () { throw new Error(host.ACC_CLOSED); });
@@ -177,22 +240,43 @@
       err.textContent = msg;
       err.classList.add('show');
     }
-    function redirectGoogle() {
-      rememberGoogleRedirect();
-      showGooglePopupBlocked('Google popup sign-in could not open. Trying another sign-in method.');
-      return fbAuth.signInWithRedirect(provider).catch(function (e2) {
-        clearGoogleRedirect();
-        failGoogle(e2);
-      });
+    function treatAsBlocked() {
+      clearPopupWatch();
+      // Never auto-redirect or auto-retry. Offer a same-gesture popup and email.
+      showGoogleBlockedSheet();
     }
-    // Call popup in this tap. iOS Safari blocks it if this handler waits first.
-    fbAuth.signInWithPopup(provider).then(finishGoogle).catch(function (e) {
-      var code = e && e.code;
-      if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
-        return redirectGoogle();
+    function watchForBlockedPopup() {
+      var onBlur = function () { lostFocus = true; };
+      var onVis = function () {
+        if (document.hidden || document.visibilityState === 'hidden') lostFocus = true;
+      };
+      popupWatch = { timer: null, onBlur: onBlur, onVis: onVis };
+      if (typeof window !== 'undefined' && window.addEventListener) {
+        window.addEventListener('blur', onBlur);
       }
+      if (typeof document.addEventListener === 'function') {
+        document.addEventListener('visibilitychange', onVis);
+      }
+      popupWatch.timer = setTimeout(function () {
+        if (popupWatch && !lostFocus) treatAsBlocked();
+      }, POPUP_BLOCK_MS);
+    }
+    function onPopupError(e) {
+      var code = e && e.code;
+      var soon = (Date.now() - startedAt) <= POPUP_SOON_MS;
+      if (isPopupBlockedCode(code) || (code === 'auth/popup-closed-by-user' && soon && !lostFocus)) {
+        treatAsBlocked();
+        return;
+      }
+      clearPopupWatch();
       failGoogle(e);
-    });
+    }
+    // Call popup in this tap. Do not wait, and do not fall back to redirect
+    // (a cross-site redirect can drop its result on iOS Chrome).
+    watchForBlockedPopup();
+    fbAuth.signInWithPopup(provider).then(function (cred) {
+      return finishGoogle(cred);
+    }).catch(onPopupError);
   }
 
   function handleRedirectResult() {
@@ -202,6 +286,7 @@
       var u = cred && cred.user;
       if (u) {
         clearGoogleRedirect();
+        hideGoogleBlockedSheet();
         if (!host.accountsOpen() && u.uid !== host.ADMIN_UID) return fbAuth.signOut();
         if (host.fbDb) {
           return host.ensurePublicProfile(u, '', {
@@ -211,9 +296,10 @@
         }
         return;
       }
+      // Empty result after a pending redirect: do not retry or redirect again.
       if (peekGoogleRedirect() && !(fbAuth && fbAuth.currentUser)) {
         clearGoogleRedirect();
-        showGooglePopupBlocked();
+        showGoogleBlockedSheet();
         host.setAuthOpenWhenReady(true);
       }
     }).catch(function (e) {
