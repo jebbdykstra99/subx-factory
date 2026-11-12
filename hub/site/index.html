@@ -38,6 +38,8 @@
   <link rel="stylesheet" href="/nests.css?v=a67c57a6bb">
   <link rel="stylesheet" href="/hub.css?v=1a4bca6d90">
   <style>
+    /* hub only: the sidebar brand mark already shows the cat, so hide the shared room cat link */
+    [class$="-cat-link"] { display: none !important; }
   /* Home redo 2026-11-12: Hero Room (default) and Feed First. Phone first.
      Scoped to the home page so other hub pages keep their existing CSS. */
   body.hub-home {
