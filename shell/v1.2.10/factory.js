@@ -18,7 +18,6 @@
   } catch (eLs) {}
   const SITE_JSON_URL = (document.currentScript && document.currentScript.getAttribute('data-site')) || 'site.json';
   var FACTORY_SRC = (document.currentScript && document.currentScript.src) || '';
-
   let SITE_ID = '';
   let site = null;
   let dmSendInFlight = false;
@@ -36,7 +35,6 @@
   var paintedNestSlug = null;
   var memberNestsUnsub = null;
   var nestAddSlugDirty = false;
-
   var NEST_RESERVED = {
     '': 1, home: 1, feed: 1, thoughts: 1, following: 1, explore: 1,
     notifications: 1, chat: 1, profile: 1, news: 1, about: 1, terms: 1,
@@ -46,7 +44,6 @@
     'favicon.ico': 1, 'apple-touch-icon.png': 1, 'og.png': 1, '404.html': 1,
     'app.js': 1, 'taxonomy.json': 1, cname: 1
   };
-
   let fbAuth = null;
   let fbDb = null;
   let fbStorage = null;
@@ -92,7 +89,6 @@
   let notifTab = 'all';
   const ADMIN_UID = 'o774wL9hUVSi19EkDCgLqQomP8i2';
   const DM_TEXT_MAX = 1000;
-
   var PLUGIN = {};
   var CORE = {
     closeSocialOverlays: closeSocialOverlays,
@@ -137,9 +133,7 @@
     var api = install(CORE) || {};
     Object.keys(api).forEach(function(k) { PLUGIN[k] = api[k]; });
   });
-
   const FB_WEB_CONFIG_URL = 'https://subx-skins.web.app/firebase-web-config.json';
-
   var authPersistPromise = Promise.resolve();
   function setAuthPersistence(auth) {
     var P = firebase.auth.Auth.Persistence;
@@ -188,7 +182,6 @@
       })
       .catch(function(e) { console.warn('subx-skins init', e); });
   }
-
   var fbReadyPromise = initFirebaseFromHostedConfig();
   function runWithAuth(errEl, fn) {
     var go = function() {
@@ -204,7 +197,6 @@
     if (fbAuth) go();
     else fbReadyPromise.then(go);
   }
-
   var HANDLE_EXACT = { mod: 1, mods: 1, staff: 1, support: 1, steward: 1, system: 1, root: 1, team: 1 };
   var guardState = { rate: null, unsub: null, lastPostMs: 0, lastMsgMs: 0, sending: false };
   var guardTick = null;
@@ -969,7 +961,6 @@
     var v = s && typeof s[key] === 'string' ? s[key] : '';
     return v || fallback;
   }
-
   const hamburger = document.getElementById('hamburger');
   const sidebar = document.getElementById('sidebar');
   function loadJSON(key, fallback) {
@@ -991,7 +982,6 @@
   function toggleTopicFollow() { // factory-gp.js
     if (PLUGIN.toggleTopicFollow) return PLUGIN.toggleTopicFollow.apply(null, arguments);
   }
-
   let currentUser = loadJSON(LS_USER, null);
   let currentTab = 'foryou';
   function initials(name) {
@@ -1030,7 +1020,6 @@
   function isLiveUser() {
     return !!(fbAuth && fbAuth.currentUser);
   }
-
   var authStateKnown = false;
   var authBootFailed = false;
   var redirectSettled = false;
@@ -1194,7 +1183,6 @@
     for (var j = 0; j < seeds.length; j++) if (seeds[j].id === id) return seeds[j];
     return null;
   }
-
   var deepPostId = '';
   var authQ = '';
   var deepPostDone = false;
@@ -1435,17 +1423,8 @@
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
   };
-
-  function applyTheme(tokens) {
-    if (!tokens) return;
-    var root = document.documentElement;
-    Object.keys(tokens).forEach(function(k) {
-      if (k === 'avatarColors') return;
-      if (typeof tokens[k] === 'string') root.style.setProperty('--' + k, tokens[k]);
-    });
-    if (Array.isArray(tokens.avatarColors) && tokens.avatarColors.length) COLORS = tokens.avatarColors.slice();
-  }
-  function ensureSubxCat(){var a=document.querySelector('.subx-cat-link'),m,h,r,u='url(https://subx.it/assets/brand/cat-mask.png) center/contain no-repeat';if(!a){m=document.querySelector('.sidebar-brand .brand-mark');if(!m)return;a=document.createElement('a');a.href='https://subx.it/';a.className='subx-cat-link';a.setAttribute('aria-label','SubX home');a.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;z-index:600;text-decoration:none;color:var(--nav-text,#fff)';a.innerHTML='<span style="width:28px;height:28px;background:currentColor;-webkit-mask:'+u+';mask:'+u+'"></span>';m.parentNode.insertBefore(a,m)}if(!ensureSubxCat.h)ensureSubxCat.h=a.parentNode;h=document.getElementById('hamburger');if(h&&innerWidth<=MOBILE_NAV_MQ){r=h.getBoundingClientRect();document.body.appendChild(a);a.style.position='fixed';a.style.top=r.top+'px';a.style.left=r.right+4+'px';a.style.background='var(--nav-bg,#111)';a.style.zIndex=600}else if(a){ensureSubxCat.h.appendChild(a);a.style.position=a.style.top=a.style.left=a.style.background=''}if(!ensureSubxCat.w){ensureSubxCat.w=1;addEventListener('resize',ensureSubxCat);addEventListener('load',ensureSubxCat)}}
+  function applyTheme(tokens){if(!tokens)return;var root=document.documentElement;Object.keys(tokens).forEach(function(k){if(k==='avatarColors')return;if(typeof tokens[k]==='string')root.style.setProperty('--'+k,tokens[k])});if(Array.isArray(tokens.avatarColors)&&tokens.avatarColors.length)COLORS=tokens.avatarColors.slice();}
+  function ensureSubxCat(){var a=document.querySelector('.subx-cat-link'),m,h,r,u='url(https://subx.it/assets/brand/cat-mask.png) center/contain no-repeat';if(!a){m=document.querySelector('.sidebar-brand .brand-mark');if(!m)return;a=document.createElement('a');a.href='https://subx.it/';a.className='subx-cat-link';a.setAttribute('aria-label','SubX home');a.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;z-index:600;text-decoration:none';a.innerHTML='<span style="width:28px;height:28px;background:currentColor;-webkit-mask:'+u+';mask:'+u+'"></span>';m.parentNode.insertBefore(a,m)}if(!ensureSubxCat.h)ensureSubxCat.h=a.parentNode;h=document.getElementById('hamburger');if(h&&innerWidth<=MOBILE_NAV_MQ){r=h.getBoundingClientRect();document.body.appendChild(a);a.style.position='fixed';a.style.top=r.top+'px';a.style.left=r.right+4+'px';a.style.zIndex=600}else if(a){ensureSubxCat.h.appendChild(a);a.style.position=a.style.top=a.style.left=a.style.background=''}if(!ensureSubxCat.w){ensureSubxCat.w=1;addEventListener('resize',ensureSubxCat);addEventListener('load',ensureSubxCat);addCss('cat-sp','@media (max-width:900px){:root{--subx-cat-space:7.05rem}.thoughts-tabs,.view-back,.notif-header,.story-streamer,.race-strip,.home-h1,.city-gate{padding-left:var(--subx-cat-space)!important}.subx-cat-link{background:#fff;color:#111}.subx-cat-link img{filter:brightness(0)}}')}}
   function applySiteChrome() {
     ensureSubxCat();
     if (!site) return;
@@ -1710,7 +1689,6 @@
       isAdminAuthor: uid === ADMIN_UID
     };
   }
-
   function firestoreQuery(spec, cursor) {
     var q = fbDb.collection(spec.collection);
     var i;
@@ -1928,7 +1906,6 @@
     }
     return '<button type="button" class="nest-feed-more" id="nest-feed-more">Older posts in this nest</button>';
   }
-
   /* @nest-feed
      Pure query helpers. test/nest-feed.test.js extracts this block.
      Home stays siteId + createdAt desc, limit FEED_PAGE.
@@ -2624,7 +2601,6 @@
      focusedTopicId = '';
      renderWatchlist();
    }
-
    if (raw === 'following') {
      closeSocialOverlays();
      showContentPage('thoughts');
@@ -2838,12 +2814,10 @@
   function renderFeed() {
    const el = document.getElementById('thoughts-feed');
    if (!el) return;
-
    if (focusedTopicId) {
      renderTopicFeed();
      return;
    }
-
    if (currentTab === 'following') {
      if (!followingLive()) {
        el.innerHTML = '<div class="post-empty soon-panel"><strong>Following: Soon.</strong> There is no follows graph yet. The live room is on For You.</div>';
@@ -2853,7 +2827,6 @@
      renderFollowingFeed();
      return;
    }
-
    var nestView = !!currentNest;
    var seeds = nestView ? [] : sessionSeedPosts();
    var scopeError = nestView ? nestError : liveError;
@@ -2870,14 +2843,12 @@
      refreshPorchUi();
      return;
    }
-
    let posts = (scopeReady && !scopeError) ? topLevelPosts().slice() : [];
    if (scopeReady && !scopeError && currentTab === 'hot') posts.sort(function(a, b) { return (b.likes || 0) - (a.likes || 0); });
    if (scopeReady && !scopeError && currentTab === 'new') posts.sort(function(a, b) { return (b.ms || 0) - (a.ms || 0); });
    var seedIds = {};
    for (var si = 0; si < seeds.length; si++) seedIds[seeds[si].id] = true;
    posts = seeds.concat(posts.filter(function(p) { return !seedIds[p.id]; }));
-
    if (!posts.length) {
      var empty = nestView
        ? (nestScanCapped
@@ -2889,7 +2860,6 @@
      refreshNestSurfaces();
      return;
    }
-
    el.innerHTML = posts.map(function(p) {
      var kids = repliesFor(p.id);
      return renderPost(p, false) + kids.map(function(r) { return renderPost(r, true); }).join('');
@@ -2898,7 +2868,6 @@
    refreshPorchUi();
    refreshNestSurfaces();
   }
-
   var RAIL_MAX = 3;
   function renderTrendCard(t) {
     const href = t.url || '#';
@@ -2969,7 +2938,6 @@
     if (page) page.innerHTML = html;
     maybeShowRailOverlay();
   }
-
   var railOverlayUiReady = false;
   var railOverlayTimer = null;
   var railOverlayDeadline = 0;
@@ -3213,7 +3181,6 @@
     if (PLUGIN.fetchCwfCards) return PLUGIN.fetchCwfCards.apply(null, arguments);
     return Promise.reject(new Error('factory-rail.js not loaded'));
   }
-
   function outboundCards() {
     var list = railCfg().outbound || [];
     var out = [];
@@ -3236,7 +3203,6 @@
     if (PLUGIN.fetchBartCards) return PLUGIN.fetchBartCards.apply(null, arguments);
     return Promise.reject(new Error('factory-rail.js not loaded'));
   }
-
   function fetchF1Cards() { // factory-gp.js
     if (PLUGIN.fetchF1Cards) return PLUGIN.fetchF1Cards.apply(null, arguments);
     return Promise.reject(new Error('factory-gp.js not loaded'));
@@ -3260,7 +3226,6 @@
     if (PLUGIN.mergeF1Rail) return PLUGIN.mergeF1Rail.apply(null, arguments);
     return (cards || []).concat(extra || []);
   }
-
   var f1RefreshTimer = null;
   var PORCH_DWELL_DEFAULT_MS = 9000;
   var porchDwellActive = false;
@@ -4040,7 +4005,6 @@
    var threadOpen = !!activeConvId;
    var peer = pendingPeer && pendingPeer.uid ? pendingPeer.uid : (findConv(activeConvId) ? convPeerUid(findConv(activeConvId)) : '');
    var blocked = !!(peer && blockedUids[peer]);
-
    if (newBtn) {
      if (!dmsOn()) {
        newBtn.hidden = false;
@@ -4416,7 +4380,6 @@
     var editBtn = document.getElementById('profile-edit-btn');
     var msgBtn = document.getElementById('profile-message-btn');
     var other = viewingProfile && viewingProfile.uid && viewingProfile.uid !== liveUid();
-
     if (other) {
       if (prompt) prompt.hidden = true;
       if (content) content.hidden = false;
@@ -4429,10 +4392,8 @@
       syncFollowButton();
       return;
     }
-
     if (msgBtn) msgBtn.hidden = true;
     if (editBtn) editBtn.hidden = false;
-
     if (!isLiveUser() || !currentUser || !currentUser.live) {
       if (prompt) prompt.hidden = false;
       if (content) content.hidden = true;
@@ -4618,7 +4579,6 @@
     const btn = document.getElementById('thoughts-post-btn');
     paintPostBtn(btn, text, pollReady);
   }
-
   var MAX_IMAGE_BYTES = 5 * 1024 * 1024;
   function isVideoFile(file) {
     var t = (file.type || '').toLowerCase();
@@ -4944,7 +4904,6 @@
        }
      });
    }
-
    function takeClipboardImage(e) {
      var cd = e.clipboardData || (e.originalEvent && e.originalEvent.clipboardData);
      if (!cd) return false;
@@ -4976,7 +4935,6 @@
      }
    }
    if (wrap) wrap.addEventListener('paste', onComposePaste, true);
-
    var pollPanel = document.getElementById('compose-poll');
    var pollBtn = document.getElementById('compose-btn-poll');
    if (pollBtn && pollPanel) {
@@ -5173,7 +5131,6 @@
        return;
      }
      if (e.target.closest('#auth-signout')) { signOut(); return; }
-
      if (e.target.closest('#profile-follow-btn')) {
        togglePersonFollow();
        return;
@@ -5211,7 +5168,6 @@
        hideDmPicker();
        return;
      }
-
      const followBtn = e.target.closest('[data-topic-follow]');
      if (followBtn) {
        e.preventDefault();
@@ -5219,20 +5175,17 @@
        toggleTopicFollow(followBtn);
        return;
      }
-
      const porchBtn = e.target.closest('[data-porch]');
      if (porchBtn) {
        e.preventDefault();
        porchPick(porchBtn.getAttribute('data-porch'));
        return;
      }
-
      const pollOpt = e.target.closest('[data-poll-idx]');
      if (pollOpt) {
        votePoll(pollOpt.dataset.postId, parseInt(pollOpt.dataset.pollIdx, 10));
        return;
      }
-
      const tab = e.target.closest('[data-thoughts-tab]');
      if (tab) {
        const t = tab.dataset.thoughtsTab;
@@ -5242,7 +5195,6 @@
        else goRoom();
        return;
      }
-
      const likeBtn = e.target.closest('[data-act="like"]');
      if (likeBtn) {
        const post = likeBtn.closest('[data-post-id]');
@@ -5281,7 +5233,6 @@
        if (p && p.authorUid) blockUser(p.authorUid);
        return;
      }
-
      const ntab = e.target.closest('[data-notif-tab]');
      if (ntab) {
        notifTab = ntab.getAttribute('data-notif-tab') || 'all';
@@ -5308,7 +5259,6 @@
        }
        return;
      }
-
      const etab = e.target.closest('[data-explore-tab]');
      if (etab) {
        document.querySelectorAll('[data-explore-tab]').forEach(function(t) {
@@ -5320,13 +5270,11 @@
        });
        return;
      }
-
      if (isMobileNav() && document.body.classList.contains('nav-open')
          && sidebar && !sidebar.contains(e.target) && hamburger && !hamburger.contains(e.target)) {
        closeMobileNav();
      }
    });
-
    document.addEventListener('keydown', function(e) {
      if (e.key !== 'Escape') return;
      var nestForm = document.getElementById('nav-nest-form');
@@ -5341,7 +5289,6 @@
      if (ov && ov.classList.contains('open')) { e.preventDefault(); closeAuth(); return; }
      if (isMobileNav() && document.body.classList.contains('nav-open')) closeMobileNav();
    });
-
    hamburger.addEventListener('click', function() {
      if (isMobileNav()) document.body.classList.toggle('nav-open');
      else document.body.classList.toggle('nav-collapsed');
@@ -5360,13 +5307,11 @@
        if (input) { input.focus(); input.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
      }, 120);
    });
-
    ['profile-back', 'notif-back', 'explore-back'].forEach(function(id) {
      document.getElementById(id).addEventListener('click', function() { goRoom(); });
    });
    var markRead = document.getElementById('notif-mark-read');
    if (markRead) markRead.addEventListener('click', function() { markNotifsRead(); });
-
    var chatNew = document.getElementById('chat-new-btn');
    if (chatNew) chatNew.addEventListener('click', onChatNew);
    var chatPlaceholderNew = document.getElementById('chat-placeholder-new');
@@ -5388,12 +5333,10 @@
    }
    var chatSearch = document.getElementById('chat-search-input');
    if (chatSearch) chatSearch.addEventListener('input', renderThreads);
-
    document.getElementById('profile-edit-btn').addEventListener('click', function() {
      if (isLiveUser()) openDisplayNamePrompt();
      else openAuth('join');
    });
-
    const compose = document.getElementById('thoughts-compose-input');
    const postBtn = document.getElementById('thoughts-post-btn');
    compose.addEventListener('input', function() {
@@ -5403,7 +5346,6 @@
    });
    postBtn.addEventListener('click', maybePost);
    wireComposeToolbar();
-
    document.getElementById('cv-modal-close').addEventListener('click', function(e) {
      e.preventDefault();
      closeAuth();
@@ -5423,12 +5365,10 @@
      withSignin('onRegister');
    });
    document.getElementById('cv-google-login').addEventListener('click', function() {
-     // Popup must run in this tap. Prefetched at boot so this is usually sync.
      if (signinApi) { signinApi.onGoogleClick(); return; }
      withSignin('onGoogleClick');
    });
    document.getElementById('cv-guest-login').addEventListener('click', function() { stubSignIn('Guest', skin('guestHandle', 'guest')); });
-
    const search = document.getElementById('explore-search-input');
    search.addEventListener('input', function() {
      const q = search.value.trim().toLowerCase();
@@ -5454,7 +5394,6 @@
      if (nestPane) fillExploreNests(nestPane, filt(nestExploreCards()));
    });
   }
-
   var STORIES_TTL_MS = 24 * 60 * 60 * 1000;
   var STORIES_PER_DAY = 6;
   var STORIES_TEXT_MAX = 280;
@@ -6284,7 +6223,6 @@
     ensureDmCss();
     hideDummyChrome();
     syncChatChrome();
-
     wireEvents();
     applyAccountsGate();
     document.addEventListener('subx-auth-land', function() { landInFeedCompose(); });
@@ -6297,7 +6235,6 @@
     railOverlayUiReady = true;
     wireRailOverlay();
     maybeShowRailOverlay();
-
     restoreBouncedPath();
     window.addEventListener('hashchange', applyRoute);
     window.addEventListener('popstate', applyRoute);
@@ -6320,7 +6257,6 @@
     if (hand[1] === 'compose') { try { restoreCompose(decodeURIComponent(hand[2] || '').slice(0, 280)); } catch (e) {} }
     syncHamburgerAria();
     try { if (!sessionStorage.getItem('subx.hit.'+SITE_ID)) { sessionStorage.setItem('subx.hit.'+SITE_ID,'1'); sendPixel(); } } catch (e) {}
-
     fbReadyPromise.then(function() {
       var wantedAuth = false;
       if (!fbAuth) {
@@ -6364,7 +6300,6 @@
       if (wantedAuth) showAuthUnavailable();
     });
   }
-
   loadSigninModule().catch(function(e) { console.warn('factory-signin', e); });
   fetch(SITE_JSON_URL)
     .then(function(res) {

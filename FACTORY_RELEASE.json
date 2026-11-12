@@ -1,8 +1,8 @@
 {
   "version": "v1.2.10",
   "factory.js": {
-    "sha256": "8e4b7712fbc7f3d1900b07939e9e75ced6afa81f0c57fe0b97ee8b2b41130ad7",
-    "bytes": 254989
+    "sha256": "25103bcb15e489d8e743df17248cd405e2889668d9eb15942f82036590844f94",
+    "bytes": 254994
   },
   "sources": {
     "template": "build/sources/template_factory_660144d1886e.js (T0 pin, nest-feed query edited in place)",
@@ -10,7 +10,7 @@
     "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)",
     "split": "build/split.mjs (opt-in files out of the folded single-file build: gp, rail, reports)"
   },
-  "built": "2026-11-12 (MT) cursor/phone-cat-space-2026-11-12: phone top bar reserves space for the 44px cat (tune --subx-cat-space, default 52px) and the cat has a light drop-shadow outline so it reads on a dark banner; v1.2.10 blocked Google popup and preload unchanged",
+  "built": "2026-11-12 (MT) cursor/phone-cat-space-2026-11-12: phone top bar reserves space for the 44px cat (tune --subx-cat-space, default 7.05rem = 3.8rem hamburger + 52px cat lane) and a light #fff backing with #111 ink so the cat reads on a dark banner (gpchat / 27chat); img filter brightness(0) for a white dark-mode PNG; v1.2.10 blocked Google popup and preload unchanged",
   "optIn": {
     "factory-gp.js": {
       "sha256": "33c158f1490800b3efe641ac526516b9a89f7fbd2ef0d29e5a8643c07f4bc6fc",
