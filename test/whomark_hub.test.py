@@ -168,9 +168,10 @@ hits = []
 # one header line differs; its upstream code keeps the functional reserved-handle regex "jebb". hub_brand.test.py pins it.
 SELF_SHELL = os.path.abspath(os.path.join(ROOT, 'hub', 'site', 'shell'))
 _hub_cfg = json.load(open(os.path.join(ROOT, 'hub', 'src', 'config.json')))
-ok(_hub_cfg['shell']['base'] == 'v1.2.9', 'hub is pinned to shell v1.2.9')
-ok(os.path.isfile(os.path.join(SELF_SHELL, 'v1.2.9', 'factory.js')), 'hub/site/shell/v1.2.9/factory.js exists')
-ok(os.path.isfile(os.path.join(SELF_SHELL, 'v1.2.9', 'factory-signin.js')), 'hub/site/shell/v1.2.9/factory-signin.js exists (lazy sign-in companion)')
+ok(_hub_cfg['shell']['base'] == 'v1.2.10', 'hub is pinned to shell v1.2.10')
+ok(os.path.isfile(os.path.join(SELF_SHELL, 'v1.2.10', 'factory.js')), 'hub/site/shell/v1.2.10/factory.js exists')
+ok(os.path.isfile(os.path.join(SELF_SHELL, 'v1.2.10', 'factory-signin.js')), 'hub/site/shell/v1.2.10/factory-signin.js exists (lazy sign-in companion)')
+ok(not os.path.isdir(os.path.join(SELF_SHELL, 'v1.2.9')), 'previous hub shell v1.2.9 is no longer hosted')
 ok(not os.path.isdir(os.path.join(SELF_SHELL, 'v1.2.6')), 'previous hub shell v1.2.6 is no longer hosted')
 for p in list(walk(os.path.join(ROOT, 'hub'))) + [os.path.join(SRC, 'topic-template.html')]:
     if os.path.abspath(p).startswith(SELF_SHELL + os.sep):

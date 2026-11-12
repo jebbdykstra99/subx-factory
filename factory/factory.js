@@ -5324,6 +5324,7 @@
   }
 
   function wireEvents() {
+    ['pointerdown','touchstart'].forEach(function(v){document.addEventListener(v,function(e){try{if(e.target.closest('#auth-signin,#profile-signin-prompt-btn,#cv-google-login'))loadSigninModule()}catch(x){}},{passive:true});});
    document.addEventListener('click', function (e) {
      if (e.target.closest('#nav-nest-add')) {
        e.preventDefault();

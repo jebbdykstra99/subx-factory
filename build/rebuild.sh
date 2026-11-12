@@ -176,6 +176,22 @@ elif old in t:
 else:
     sys.exit("rebuild: sign-in host object did not match; cannot add isLiveUser/closeAuth")
 '
+  # v1.2.10: preload factory-signin.js on pointerdown/touchstart of Sign in
+  # so a Google tap can call signInWithPopup in the same gesture.
+  python3 -c '
+import pathlib, sys
+p = pathlib.Path("factory.js")
+t = p.read_text()
+q = chr(39)
+old = "  function wireEvents() {\n   document.addEventListener(" + q + "click" + q + ", function (e) {"
+new = "  function wireEvents() {\n    [" + q + "pointerdown" + q + "," + q + "touchstart" + q + "].forEach(function(v){document.addEventListener(v,function(e){try{if(e.target.closest(" + q + "#auth-signin,#profile-signin-prompt-btn,#cv-google-login" + q + "))loadSigninModule()}catch(x){}},{passive:true});});\n   document.addEventListener(" + q + "click" + q + ", function (e) {"
+if new in t:
+    pass
+elif old in t:
+    p.write_text(t.replace(old, new, 1))
+else:
+    sys.exit("rebuild: wireEvents() did not match; cannot add sign-in preload")
+'
   local f
   for f in "${OUT[@]}"; do node --check "$f"; done
   if [ "$mode" = check ]; then

@@ -3,8 +3,8 @@
   "shell": {
     "repo": "jebbdykstra99/subx-factory",
     "sha": "c1e8fda95fbb53cec36cd615b90514bc970aa02f",
-    "base": "v1.2.9",
-    "integrity": "sha384-oQASW5URKe52dbE4Dn9ZuMm33RMvtr2ps1etlAT+49yakw3BwWO3e+tB+aFbAlmY"
+    "base": "v1.2.10",
+    "integrity": "sha384-VP16YCxBCmjOBnQRr/ntLLico1ZnVPGkwI3lCrqiuGPb7hxrHUhXVTDlo55Zp+BV"
   },
   "vendor": [
     {

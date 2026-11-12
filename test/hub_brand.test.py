@@ -129,7 +129,7 @@ ok(_fsri != cfg['shell']['integrity'] and len(_sb) == len(_pb) - len(_pl[_dl[0]]
 
 # v1.2.9 lazy factory-signin.js: same header-only hub fork, sitting next to factory.js so the lazy loader resolves.
 _si_rel = 'shell/%s/factory-signin.js' % cfg['shell']['base']
-ok(cfg['shell']['base'] == 'v1.2.9', 'hub is pinned to shell v1.2.9')
+ok(cfg['shell']['base'] == 'v1.2.10', 'hub is pinned to shell v1.2.10')
 ok(os.path.isfile(os.path.join(ROOT, 'shell', cfg['shell']['base'], 'factory-signin.js')), 'pinned shell ships factory-signin.js')
 ok(os.path.isfile(os.path.join(SITE, _si_rel)), 'hub hosts factory-signin.js next to the self-hosted factory.js')
 _siman = json.load(open(os.path.join(ROOT, 'shell', cfg['shell']['base'], 'SHELL.json')))['files']['factory-signin.js']

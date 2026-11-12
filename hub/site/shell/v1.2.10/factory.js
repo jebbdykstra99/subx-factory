@@ -1,5 +1,5 @@
 /* SubX factory.js (subx-factory master). DO NOT EDIT IN A ROOM REPO.
- * Source: SubX shared shell v1.2.9 (hub fork, header only)
+ * Source: SubX shared shell v1.2.10 (hub fork, header only)
  * Room differences belong in site.json (features, skin, rail, nests, minAge) or in EXCEPTIONS.md. */
 (function () {
   'use strict';
@@ -5324,6 +5324,7 @@
   }
 
   function wireEvents() {
+    ['pointerdown','touchstart'].forEach(function(v){document.addEventListener(v,function(e){try{if(e.target.closest('#auth-signin,#profile-signin-prompt-btn,#cv-google-login'))loadSigninModule()}catch(x){}},{passive:true});});
    document.addEventListener('click', function (e) {
      if (e.target.closest('#nav-nest-add')) {
        e.preventDefault();
