@@ -360,6 +360,7 @@
       console.warn('redirect result', e);
       clearGoogleRedirect();
       if (fbAuth && fbAuth.currentUser) return;
+      showGoogleBlockedSheet();
       var el = document.getElementById('cv-login-err');
       var msg = authErrorMessage(e, 'Google sign-in failed.');
       if (el) { el.textContent = msg; el.classList.add('show'); }

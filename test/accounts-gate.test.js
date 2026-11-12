@@ -486,6 +486,42 @@ assert.ok(!signinSrc.includes('—') && !signinSrc.includes('–'), 'no em or en
     assert.strictEqual(sessionStorage.getItem('subx.googleRedirect'), null, 'pending redirect flag is cleared');
   }
 
+  // A rejected redirect result shows the failure message and replaces the normal button block (no doubled controls). It does not redirect again.
+  {
+    loginErr.textContent = '';
+    delete els['cv-google-blocked'];
+    delete els['cv-google-retry'];
+    delete els['cv-google-use-email'];
+    els['cv-google-login'].hidden = false;
+    let settled = false;
+    const { api, calls, sessionStorage, authOpen } = runWith({
+      fbAuth: {
+        getRedirectResult() { return Promise.reject({ code: 'auth/network-request-failed', message: 'Firebase: Error (auth/network-request-failed).' }); },
+        signInWithPopup() { calls.popup++; return Promise.resolve({ user: {} }); },
+        signInWithRedirect() { calls.redirect++; return Promise.resolve(); }
+      }
+    });
+    sessionStorage.setItem('subx.googleRedirect', '1');
+    const p = api.handleRedirectResult();
+    assert.ok(p && typeof p.then === 'function', 'handleRedirectResult returns a promise');
+    await p.then(function () { settled = true; });
+    assert.ok(settled, 'rejected redirect result settles (Join is not deadlocked)');
+    const msg = loginErr.textContent || (els['cv-login-err'] && els['cv-login-err'].textContent) || '';
+    assert.strictEqual(msg, 'Could not reach the sign-in service. Check your connection and try again.', 'catch keeps the failure message: ' + msg);
+    assert.ok(!msg.includes('Firebase:'), 'no Firebase: prefix on redirect-result catch');
+    const box = els['cv-google-blocked'];
+    const retry = els['cv-google-retry'];
+    const useEmail = els['cv-google-use-email'];
+    assert.ok(box && box.hidden === false, 'catch shows the blocked sheet (replaces the normal buttons)');
+    assert.ok(retry && retry.textContent === 'Try Google again', 'Try Google again button');
+    assert.ok(useEmail && useEmail.textContent === 'Use email instead', 'Use email instead button');
+    assert.ok(els['cv-google-login'] && els['cv-google-login'].hidden === true, 'normal Google button is hidden on redirect-result catch (no doubled controls)');
+    assert.ok(els['cv-google-age'] && els['cv-google-age'].hidden !== true, '18+ checkbox stays visible');
+    assert.ok(authOpen() >= 1, 'redirect-result catch asks the sheet to open');
+    assert.strictEqual(calls.redirect, 0, 'redirect-result catch never auto-redirects again');
+    assert.strictEqual(sessionStorage.getItem('subx.googleRedirect'), null, 'pending redirect flag is cleared');
+  }
+
   // When redirect itself fails, the blocked sheet replaces the normal buttons. "Try Google again" calls signInWithPopup synchronously, then falls back to redirect.
   {
     loginErr.textContent = '';
@@ -548,4 +584,4 @@ assert.ok(!signinSrc.includes('—') && !signinSrc.includes('–'), 'no em or en
   }
 }
 
-console.log('accounts-gate: ok (' + guards.length + ' guards, ' + cases.length + ' cases, ' + rooms.length + ' rooms explicit, stamp refuses missing, share menu, email-in-use, unified credential copy, live-user register guard, popup-blocked redirect fallback)');
+console.log('accounts-gate: ok (' + guards.length + ' guards, ' + cases.length + ' cases, ' + rooms.length + ' rooms explicit, stamp refuses missing, share menu, email-in-use, unified credential copy, live-user register guard, popup-blocked redirect fallback, redirect-result catch replaces the button block)');

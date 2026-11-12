@@ -16,9 +16,9 @@
       "integrity": "sha384-V0fpStyt70/1duX+6BmAwczqB3Oiwy7V2rIkw+a9LCn3MyX93zjaQx+sv145f2a/"
     },
     "factory-signin.js": {
-      "bytes": 24551,
-      "sha256": "0ab646556073153ef6687202c523b643251793196b44ed21807fc14cab0bc2e9",
-      "integrity": "sha384-wYqHZw6s6/X0V5itiMwBZLPWx9UkH2ssJZNsDvjoPfpo5hVhAsdJkE9zUxUoPya4"
+      "bytes": 24583,
+      "sha256": "51ce100803d5cc7270fbfa488841cb75594b8c0bf092ee41c28460c1d4105958",
+      "integrity": "sha384-U4s0I3cIKL7r0yrCLGMN+KYERSvUqUJNkksYj81mVGwpXvhnp4HRN/sGOtymhZpO"
     },
     "factory-gp.js": {
       "bytes": 34935,
