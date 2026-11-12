@@ -1,4 +1,6 @@
-/* SubX factory-signin.js. Lazy-loaded Google popup and redirect sign-in. DO NOT EDIT IN A ROOM REPO. See FACTORY.lock / EXCEPTIONS.md. */
+/* SubX factory-signin.js (subx-factory master). DO NOT EDIT IN A ROOM REPO.
+ * Source: github.com/jebbdykstra99/subx-factory  (version + sha256 in the room's FACTORY.lock)
+ * Room differences belong in site.json (features, skin, rail, nests, minAge) or in EXCEPTIONS.md. */
 (function () {
   'use strict';
   var host = window.__subxSigninHost;
@@ -65,7 +67,7 @@
     var panel = document.getElementById('cv-panel-login');
     if (!panel) return;
     ensureJoinAuthCss();
-    if (panel.getAttribute('data-join-layout') === '1') return;
+    if (panel.getAttribute('data-join-layout') === '1') { ensureInAppNote(); return; }
     panel.setAttribute('data-join-layout', '1');
 
     var err = document.getElementById('cv-login-err');
@@ -100,6 +102,7 @@
       gotoReg.textContent = 'Create an account';
     }
     if (gotoReg.parentNode !== emailBox) emailBox.appendChild(gotoReg);
+    ensureForgotPasswordLink(emailBox);
 
     var useEmail = document.getElementById('cv-use-email-btn');
     if (!useEmail) {
@@ -115,6 +118,7 @@
     [err, ageLab, google, divider, useEmail, emailBox, guest].forEach(function (n) {
       if (n) panel.appendChild(n);
     });
+    ensureInAppNote();
 
     var reg = document.getElementById('cv-panel-register');
     if (reg && !document.getElementById('cv-goto-join')) {
@@ -168,7 +172,7 @@
       } else if (e && e.code === 'auth/popup-closed-by-user') {
         msg = 'Google sign-in cancelled.';
       } else {
-        msg = (e && e.message) ? e.message : 'Google sign-in failed.';
+        msg = authErrorMessage(e, 'Google sign-in failed.');
       }
       err.textContent = msg;
       err.classList.add('show');
@@ -217,12 +221,158 @@
       clearGoogleRedirect();
       if (fbAuth && fbAuth.currentUser) return;
       var el = document.getElementById('cv-login-err');
-      var msg = (e && e.message) ? e.message : 'Google sign-in failed.';
+      var msg = authErrorMessage(e, 'Google sign-in failed.');
       if (el) { el.textContent = msg; el.classList.add('show'); }
       host.setAuthOpenWhenReady(true);
     });
   }
 
+
+  function authErrorMessage(e, fallback) {
+    var code = (e && e.code) || '';
+    if (code === 'auth/wrong-password') return 'That password is not right. Try again or reset it.';
+    if (code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') return 'That email or password is not right. Try again.';
+    if (code === 'auth/user-not-found') return 'No account matches that email. Create an account or sign in with Google.';
+    if (code === 'auth/too-many-requests') return 'Too many tries. Wait a few minutes and try again.';
+    if (code === 'auth/network-request-failed' || /network/i.test(code)) return 'Could not reach the sign-in service. Check your connection and try again.';
+    return fallback || 'Sign-in failed. Try again.';
+  }
+  function inAppBrowserName() {
+    var ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+    if (/Instagram/i.test(ua)) return 'Instagram';
+    if (/\bTwitter\b|\bTweetie\b|X\/\d/i.test(ua)) return 'X';
+    if (/FBAN|FBAV|FB_IAB|FBIOS/i.test(ua)) return 'Facebook';
+    return '';
+  }
+  function ensureInAppNote() {
+    var panel = document.getElementById('cv-panel-login');
+    var name = inAppBrowserName();
+    var note = document.getElementById('cv-inapp-note');
+    if (!name) {
+      if (note) note.hidden = true;
+      return;
+    }
+    if (!note) {
+      note = document.createElement('p');
+      note.id = 'cv-inapp-note';
+      note.className = 'conv-modal-note';
+      note.setAttribute('role', 'status');
+    }
+    note.textContent = 'Google sign-in may not work inside ' + name + '. Open in your browser, or use email.';
+    note.hidden = false;
+    if (panel && note.parentNode !== panel) panel.insertBefore(note, panel.firstChild);
+    toggleEmailAuth(true);
+  }
+  function ensureForgotPasswordLink(emailBox) {
+    if (!emailBox) return;
+    var forgot = document.getElementById('cv-forgot-pw');
+    if (!forgot) {
+      forgot = document.createElement('button');
+      forgot.id = 'cv-forgot-pw';
+      forgot.type = 'button';
+      forgot.className = 'conv-email-toggle';
+      forgot.textContent = 'Forgot password?';
+      forgot.addEventListener('click', onForgotPassword);
+    }
+    if (forgot.parentNode !== emailBox) emailBox.appendChild(forgot);
+  }
+  function onForgotPassword(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    var email = ((document.getElementById('cv-login-email') && document.getElementById('cv-login-email').value) ||
+      (document.getElementById('cv-reg-email') && document.getElementById('cv-reg-email').value) || '').trim();
+    var err = document.getElementById('cv-login-err') || document.getElementById('cv-reg-err');
+    function show(msg) {
+      if (!err) return;
+      err.textContent = msg;
+      err.classList.add('show');
+    }
+    if (!email) { show('Enter your email first.'); return; }
+    var fbAuth = host.fbAuth;
+    if (!fbAuth || typeof fbAuth.sendPasswordResetEmail !== 'function') { show('Auth is not ready.'); return; }
+    fbAuth.sendPasswordResetEmail(email).then(function () {
+      show('If an account exists for that email, a reset message is on its way.');
+    }).catch(function (e2) {
+      var code = (e2 && e2.code) || '';
+      if (code === 'auth/user-not-found' || code === 'auth/invalid-email') {
+        show('If an account exists for that email, a reset message is on its way.');
+        return;
+      }
+      show(authErrorMessage(e2, 'If an account exists for that email, a reset message is on its way.'));
+    });
+  }
+  function switchToSignInForm(email, pw) {
+    var login = document.getElementById('cv-panel-login');
+    var reg = document.getElementById('cv-panel-register');
+    if (login) login.style.display = '';
+    if (reg) reg.style.display = 'none';
+    toggleEmailAuth(true);
+    var emailIn = document.getElementById('cv-login-email');
+    var pwIn = document.getElementById('cv-login-pw');
+    if (emailIn) emailIn.value = email || '';
+    if (pwIn) pwIn.value = pw || '';
+    var emailBox = document.getElementById('cv-email-signin');
+    ensureForgotPasswordLink(emailBox);
+  }
+  function showGoogleInUse(errEl) {
+    if (errEl) {
+      errEl.textContent = 'This email signs in with Google.';
+      errEl.classList.add('show');
+    }
+    var hostEl = errEl && errEl.parentNode;
+    var btn = document.getElementById('cv-continue-google');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = 'cv-continue-google';
+      btn.type = 'button';
+      btn.className = 'conv-google-btn';
+      btn.textContent = 'Continue with Google';
+      btn.addEventListener('click', function () {
+        var regAge = document.getElementById('cv-reg-age');
+        var gAge = document.getElementById('cv-google-age');
+        if (regAge && regAge.checked && gAge && !gAge.checked) gAge.checked = true;
+        onGoogleClick();
+      });
+    }
+    btn.hidden = false;
+    if (hostEl && btn.parentNode !== hostEl) {
+      if (errEl.nextSibling) hostEl.insertBefore(btn, errEl.nextSibling);
+      else hostEl.appendChild(btn);
+    }
+  }
+  function switchToSignInAndTry(email, pw, errEl) {
+    switchToSignInForm(email, pw);
+    var fbAuth = host.fbAuth;
+    var loginErr = document.getElementById('cv-login-err') || errEl;
+    if (!fbAuth) {
+      if (loginErr) { loginErr.textContent = 'Auth is not ready.'; loginErr.classList.add('show'); }
+      return Promise.resolve();
+    }
+    host.markAuthLand();
+    return fbAuth.signInWithEmailAndPassword(email, pw).catch(function (e) {
+      if (loginErr) {
+        loginErr.textContent = authErrorMessage(e, 'Sign-in failed. Try again.');
+        loginErr.classList.add('show');
+      }
+    });
+  }
+  function handleEmailAlreadyInUse(email, pw, errEl) {
+    var fbAuth = host.fbAuth;
+    var lookup = (fbAuth && typeof fbAuth.fetchSignInMethodsForEmail === 'function')
+      ? Promise.resolve().then(function () { return fbAuth.fetchSignInMethodsForEmail(email); })
+      : Promise.reject(new Error('unavailable'));
+    return lookup.then(function (methods) {
+      var list = Array.isArray(methods) ? methods : [];
+      var hasGoogle = list.indexOf('google.com') !== -1;
+      if (hasGoogle) {
+        switchToSignInForm(email, pw);
+        showGoogleInUse(document.getElementById('cv-login-err') || errEl);
+        return;
+      }
+      return switchToSignInAndTry(email, pw, errEl);
+    }).catch(function () {
+      return switchToSignInAndTry(email, pw, errEl);
+    });
+  }
 
   function onEmailLogin() {
     var err = document.getElementById('cv-login-err');
@@ -234,7 +384,7 @@
       err.textContent = '';
       host.markAuthLand();
       fbAuth.signInWithEmailAndPassword(email, pw).catch(function (e) {
-        err.textContent = (e && e.message) ? e.message : 'Sign-in failed.';
+        err.textContent = authErrorMessage(e, 'Sign-in failed. Try again.');
         err.classList.add('show');
       });
       });
@@ -271,7 +421,10 @@
           host.composeErr('Account created. Verify your email before posting.');
         });
       }).catch(function (e) {
-        err.textContent = (e && e.message) ? e.message : 'Could not create account.';
+        if (e && e.code === 'auth/email-already-in-use') {
+          return handleEmailAlreadyInUse(email, pw, err);
+        }
+        err.textContent = authErrorMessage(e, 'Could not create account.');
         err.classList.add('show');
       });
       });
@@ -281,6 +434,7 @@
   host._installed = true;
   host.install({
     ensureJoinAuthLayout: ensureJoinAuthLayout,
+    ensureInAppNote: ensureInAppNote,
     toggleEmailAuth: toggleEmailAuth,
     onEmailLogin: onEmailLogin,
     onRegister: onRegister,

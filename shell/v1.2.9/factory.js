@@ -1,4 +1,6 @@
-/* SubX factory.js. DO NOT EDIT IN A ROOM REPO. See FACTORY.lock / EXCEPTIONS.md. */
+/* SubX factory.js (subx-factory master). DO NOT EDIT IN A ROOM REPO.
+ * Source: github.com/jebbdykstra99/subx-factory  (version + sha256 in the room's FACTORY.lock)
+ * Room differences belong in site.json (features, skin, rail, nests, minAge) or in EXCEPTIONS.md. */
 (function () {
   'use strict';
 
@@ -15,6 +17,7 @@
     }
   } catch (eLs) {}
   const SITE_JSON_URL = (document.currentScript && document.currentScript.getAttribute('data-site')) || 'site.json';
+  var FACTORY_SRC = (document.currentScript && document.currentScript.src) || '';
 
   let SITE_ID = '';
   let site = null;
@@ -507,7 +510,7 @@
     if (err) err.textContent = '';
     var input = document.getElementById('name-prompt-input');
     if (input) {
-      input.value = '';
+      input.value = (currentUser && currentUser.name) || '';
       try { input.focus(); } catch (e2) {}
     }
     el.hidden = false;
@@ -1053,7 +1056,6 @@
   var pendingAuthAction = null;
   var flushingAuth = false;
   var AUTH_ACTION_KEY = 'subx.authAction';
-  var GOOGLE_REDIRECT_KEY = 'subx.googleRedirect';
   var AUTH_ACTION_MS = 10 * 60 * 1000;
 
   function authReadyForGate() {
@@ -1068,25 +1070,45 @@
   function storageDel(store, key) {
     try { store.removeItem(key); } catch (e) {}
   }
-  function rememberGoogleRedirect() {
-    storageSet(sessionStorage, GOOGLE_REDIRECT_KEY, '1');
-    storageSet(localStorage, GOOGLE_REDIRECT_KEY, '1');
-  }
-  function peekGoogleRedirect() {
-    return storageGet(sessionStorage, GOOGLE_REDIRECT_KEY) === '1' || storageGet(localStorage, GOOGLE_REDIRECT_KEY) === '1';
-  }
-  function clearGoogleRedirect() {
-    storageDel(sessionStorage, GOOGLE_REDIRECT_KEY);
-    storageDel(localStorage, GOOGLE_REDIRECT_KEY);
-  }
   function showAuthUnavailable() {
     composeErr('Sign-in is unavailable right now. Please reload.');
   }
-  function showGooglePopupBlocked(msg) {
-    var err = document.getElementById('cv-login-err');
-    if (!err) return;
-    err.textContent = msg || 'Google sign-in did not complete. Try again or use email.';
-    err.classList.add('show');
+  var signinApi = null;
+  var signinP = null;
+  function loadSigninModule() {
+    if (signinApi) return Promise.resolve(signinApi);
+    if (signinP) return signinP;
+    signinP = new Promise(function (resolve, reject) {
+      window.__subxSigninHost = {
+        install: function (api) { signinApi = api; resolve(api); },
+        get fbAuth() { return fbAuth; },
+        get fbDb() { return fbDb; },
+        get ADMIN_UID() { return ADMIN_UID; },
+        ACC_CLOSED: ACC_CLOSED,
+        accountsOpen: accountsOpen,
+        ageGateMessage: ageGateMessage,
+        markAuthLand: markAuthLand,
+        ensurePublicProfile: ensurePublicProfile,
+        runWithAuth: runWithAuth,
+        get authPersistPromise() { return authPersistPromise; },
+        nameOk: nameOk,
+        composeErr: composeErr,
+        setAuthOpenWhenReady: function (v) { authOpenWhenReady = !!v; }
+      };
+      var s = document.createElement('script');
+      s.src = FACTORY_SRC ? FACTORY_SRC.replace(/factory\.js(\?[^#]*)?(#.*)?$/i, 'factory-signin.js$1$2') : 'factory-signin.js';
+      s.async = true;
+      s.onerror = function () { signinP = null; reject(new Error('Could not load factory-signin.js')); };
+      s.onload = function () { if (!signinApi) { signinP = null; reject(new Error('factory-signin.js did not install')); } };
+      (document.head || document.documentElement).appendChild(s);
+    });
+    return signinP;
+  }
+  function withSignin(name, args) {
+    if (signinApi && signinApi[name]) return signinApi[name].apply(signinApi, args || []);
+    var p = loadSigninModule().then(function (api) { return api[name].apply(api, args || []); });
+    p.catch(function (e) { console.warn('factory-signin', e); });
+    return p;
   }
   function clearAuthAction() {
     pendingAuthAction = null;
@@ -4733,98 +4755,13 @@
       try { input.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e2) {}
     }, 60);
   }
-  function ensureJoinAuthCss() {
-    if (document.getElementById('join-auth-css')) return;
-    var st = document.createElement('style');
-    st.id = 'join-auth-css';
-    st.textContent =
-      '.conv-modal-tabs.is-join-hidden{display:none;}.conv-email-toggle{width:100%;padding:0.55rem;margin:0.15rem 0 0.35rem;background:transparent;border:1px solid var(--border,rgba(0,0,0,0.14));border-radius:50px;cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text-muted,#666);}.conv-email-toggle:hover{color:var(--text,#111);}.cv-email-signin{margin-top:0.2rem;}.conv-google-btn{margin-bottom:0.2rem;}';
-    document.head.appendChild(st);
-  }
-  function ageCheckLabel() {
-    var box = document.getElementById('cv-google-age');
-    if (!box) return null;
-    return box.closest('label') || box;
-  }
-  function fieldWrap(input) {
-    if (!input) return null;
-    return input.closest('.conv-modal-field') || input;
-  }
   function toggleEmailAuth(forceOpen) {
-    var box = document.getElementById('cv-email-signin');
-    var btn = document.getElementById('cv-use-email-btn');
-    if (!box) return;
-    var open = forceOpen === true ? true : forceOpen === false ? false : box.hidden;
-    box.hidden = !open;
-    if (btn) btn.textContent = open ? 'Hide email' : 'Use email';
+    if (signinApi) return signinApi.toggleEmailAuth(forceOpen);
+    return withSignin('toggleEmailAuth', [forceOpen]);
   }
   function ensureJoinAuthLayout() {
-    var panel = document.getElementById('cv-panel-login');
-    if (!panel) return;
-    ensureJoinAuthCss();
-    if (panel.getAttribute('data-join-layout') === '1') return;
-    panel.setAttribute('data-join-layout', '1');
-
-    var err = document.getElementById('cv-login-err');
-    var ageLab = ageCheckLabel();
-    var google = document.getElementById('cv-google-login');
-    var divider = panel.querySelector('.conv-modal-divider');
-    var guest = document.getElementById('cv-guest-login');
-    var emailIn = document.getElementById('cv-login-email');
-    var pwIn = document.getElementById('cv-login-pw');
-    var loginBtn = document.getElementById('cv-login-btn');
-
-    var emailBox = document.getElementById('cv-email-signin');
-    if (!emailBox) {
-      emailBox = document.createElement('div');
-      emailBox.id = 'cv-email-signin';
-      emailBox.className = 'cv-email-signin';
-    }
-    emailBox.hidden = true;
-
-    var emailField = fieldWrap(emailIn);
-    var pwField = fieldWrap(pwIn);
-    if (emailField && emailField.parentNode !== emailBox) emailBox.appendChild(emailField);
-    if (pwField && pwField.parentNode !== emailBox) emailBox.appendChild(pwField);
-    if (loginBtn && loginBtn.parentNode !== emailBox) emailBox.appendChild(loginBtn);
-
-    var gotoReg = document.getElementById('cv-goto-register');
-    if (!gotoReg) {
-      gotoReg = document.createElement('button');
-      gotoReg.id = 'cv-goto-register';
-      gotoReg.type = 'button';
-      gotoReg.className = 'conv-guest-btn';
-      gotoReg.textContent = 'Create an account';
-    }
-    if (gotoReg.parentNode !== emailBox) emailBox.appendChild(gotoReg);
-
-    var useEmail = document.getElementById('cv-use-email-btn');
-    if (!useEmail) {
-      useEmail = document.createElement('button');
-      useEmail.id = 'cv-use-email-btn';
-      useEmail.type = 'button';
-      useEmail.className = 'conv-email-toggle';
-      useEmail.textContent = 'Use email';
-    }
-
-    if (divider) divider.textContent = 'or use email';
-
-    [err, ageLab, google, divider, useEmail, emailBox, guest].forEach(function (n) {
-      if (n) panel.appendChild(n);
-    });
-
-    var reg = document.getElementById('cv-panel-register');
-    if (reg && !document.getElementById('cv-goto-join')) {
-      var back = document.createElement('button');
-      back.id = 'cv-goto-join';
-      back.type = 'button';
-      back.className = 'conv-guest-btn';
-      back.textContent = 'Continue with Google instead';
-      var regErr = document.getElementById('cv-reg-err');
-      if (regErr && regErr.nextSibling) reg.insertBefore(back, regErr.nextSibling);
-      else if (reg.firstChild) reg.insertBefore(back, reg.firstChild);
-      else reg.appendChild(back);
-    }
+    if (signinApi) return signinApi.ensureJoinAuthLayout();
+    return withSignin('ensureJoinAuthLayout');
   }
   function openAuth(tab) {
     if (authBootFailed) {
@@ -4834,7 +4771,7 @@
     ensureJoinAuthLayout();
     var modeHint = tab || 'join';
     if (modeHint === 'login') modeHint = 'join';
-    if (modeHint === 'join' && isLiveUser()) {
+    if ((modeHint === 'join' || modeHint === 'register') && isLiveUser()) {
       closeAuth();
       flushPendingAuthAction();
       return;
@@ -4865,6 +4802,7 @@
       if (reg) reg.style.display = 'none';
       toggleEmailAuth(false);
     }
+    withSignin('ensureInAppNote');
     restoreCompose(draft);
     var google = document.getElementById('cv-google-login');
     var closeBtn = document.getElementById('cv-modal-close');
@@ -5699,7 +5637,8 @@
    if (chatSearch) chatSearch.addEventListener('input', renderThreads);
 
    document.getElementById('profile-edit-btn').addEventListener('click', function () {
-     openAuth('register');
+     if (isLiveUser()) openDisplayNamePrompt();
+     else openAuth('join');
    });
 
    const compose = document.getElementById('thoughts-compose-input');
@@ -5723,114 +5662,17 @@
      t.addEventListener('click', function () { openAuth(t.dataset.tab); });
    });
    document.getElementById('cv-login-btn').addEventListener('click', function () {
-     const err = document.getElementById('cv-login-err');
-     runWithAuth(err, function () {
-       authPersistPromise.then(function () {
-       const email = (document.getElementById('cv-login-email').value || '').trim();
-       const pw = document.getElementById('cv-login-pw').value || '';
-       err.textContent = '';
-       markAuthLand();
-       fbAuth.signInWithEmailAndPassword(email, pw).catch(function (e) {
-         err.textContent = (e && e.message) ? e.message : 'Sign-in failed.';
-         err.classList.add('show');
-       });
-       });
-     });
+     if (signinApi) { signinApi.onEmailLogin(); return; }
+     withSignin('onEmailLogin');
    });
    document.getElementById('cv-reg-btn').addEventListener('click', function () {
-     const err = document.getElementById('cv-reg-err');
-     runWithAuth(err, function () {
-       authPersistPromise.then(function () {
-       const name = (document.getElementById('cv-reg-name').value || '').trim();
-       const email = (document.getElementById('cv-reg-email').value || '').trim();
-       const pw = document.getElementById('cv-reg-pw').value || '';
-       const age = document.getElementById('cv-reg-age');
-       if (!accountsOpen()) { err.textContent = ACC_CLOSED; err.classList.add('show'); return; }
-       if (!age || !age.checked) {
-         err.textContent = ageGateMessage();
-         err.classList.add('show');
-         return;
-       }
-       if (name && !nameOk(name)) {
-         err.textContent = 'That display name is reserved.';
-         err.classList.add('show');
-         return;
-       }
-       if (!email || pw.length < 6) { err.textContent = 'Email and a password of at least 6 characters.'; err.classList.add('show'); return; }
-       err.textContent = '';
-       markAuthLand();
-       fbAuth.createUserWithEmailAndPassword(email, pw).then(function (cred) {
-         cred.user.sendEmailVerification().catch(function () {});
-         return ensurePublicProfile(cred.user, name, {
-           createdAt: firebase.firestore.FieldValue.serverTimestamp()
-         }).then(function () {
-           composeErr('Account created. Verify your email before posting.');
-         });
-       }).catch(function (e) {
-         err.textContent = (e && e.message) ? e.message : 'Could not create account.';
-         err.classList.add('show');
-       });
-       });
-     });
+     if (signinApi) { signinApi.onRegister(); return; }
+     withSignin('onRegister');
    });
    document.getElementById('cv-google-login').addEventListener('click', function () {
-     var err = document.getElementById('cv-login-err');
-     if (!fbAuth) {
-       err.textContent = 'Auth is not ready.';
-       err.classList.add('show');
-       return;
-     }
-     if (!accountsOpen() && !document.documentElement.classList.contains('acc-stew')) { err.textContent = ACC_CLOSED; err.classList.add('show'); return; }
-     var age = document.getElementById('cv-google-age');
-     if (!age || !age.checked) {
-       err.textContent = ageGateMessage();
-       err.classList.add('show');
-       return;
-     }
-     err.textContent = '';
-     err.classList.remove('show');
-     markAuthLand();
-     clearGoogleRedirect();
-     var provider = new firebase.auth.GoogleAuthProvider();
-     function finishGoogle(cred) {
-       clearGoogleRedirect();
-       var u = cred && cred.user;
-       if (u && !accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut().then(function () { throw new Error(ACC_CLOSED); });
-       if (fbDb && u) {
-         return ensurePublicProfile(u, '', {
-           provider: 'google',
-           createdAt: firebase.firestore.FieldValue.serverTimestamp()
-         });
-       }
-     }
-     function failGoogle(e) {
-       var msg;
-       if (e && e.code === 'auth/operation-not-allowed') {
-         msg = 'Google is not enabled on subx-skins yet.';
-       } else if (e && e.code === 'auth/popup-closed-by-user') {
-         msg = 'Google sign-in cancelled.';
-       } else {
-         msg = (e && e.message) ? e.message : 'Google sign-in failed.';
-       }
-       err.textContent = msg;
-       err.classList.add('show');
-     }
-     function redirectGoogle() {
-       rememberGoogleRedirect();
-       showGooglePopupBlocked('Google popup sign-in could not open. Trying another sign-in method.');
-       return fbAuth.signInWithRedirect(provider).catch(function (e2) {
-         clearGoogleRedirect();
-         failGoogle(e2);
-       });
-     }
-     // Call popup in this tap. iOS Safari blocks it if this handler waits first.
-     fbAuth.signInWithPopup(provider).then(finishGoogle).catch(function (e) {
-       var code = e && e.code;
-       if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
-         return redirectGoogle();
-       }
-       failGoogle(e);
-     });
+     // Popup must run in this tap. Prefetched at boot so this is usually sync.
+     if (signinApi) { signinApi.onGoogleClick(); return; }
+     withSignin('onGoogleClick');
    });
    document.getElementById('cv-guest-login').addEventListener('click', function () { stubSignIn('Guest', skin('guestHandle', 'guest')); });
 
@@ -6738,32 +6580,10 @@
         deferredAuthQ = '';
         clearAuthAction();
       } else {
-        fbAuth.getRedirectResult().then(function (cred) {
-          var u = cred && cred.user;
-          if (u) {
-            clearGoogleRedirect();
-            if (!accountsOpen() && u.uid !== ADMIN_UID) return fbAuth.signOut();
-            if (fbDb) {
-              return ensurePublicProfile(u, '', {
-                provider: 'google',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-              });
-            }
-            return;
-          }
-          if (peekGoogleRedirect() && !(fbAuth && fbAuth.currentUser)) {
-            clearGoogleRedirect();
-            showGooglePopupBlocked();
-            authOpenWhenReady = true;
-          }
+        loadSigninModule().then(function (api) {
+          return api.handleRedirectResult();
         }).catch(function (e) {
           console.warn('redirect result', e);
-          clearGoogleRedirect();
-          if (fbAuth && fbAuth.currentUser) return;
-          var el = document.getElementById('cv-login-err');
-          var msg = (e && e.message) ? e.message : 'Google sign-in failed.';
-          if (el) { el.textContent = msg; el.classList.add('show'); }
-          authOpenWhenReady = true;
         }).then(function () { markRedirectSettled(); }, function () { markRedirectSettled(); });
         fbAuth.onAuthStateChanged(function (user) {
           authStateKnown = true;
@@ -6794,6 +6614,7 @@
     });
   }
 
+  loadSigninModule().catch(function (e) { console.warn('factory-signin', e); });
   fetch(SITE_JSON_URL)
     .then(function (res) {
       if (!res.ok) throw new Error('Could not load ' + SITE_JSON_URL);

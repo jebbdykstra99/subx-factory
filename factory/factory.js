@@ -1,4 +1,6 @@
-/* SubX factory.js. DO NOT EDIT IN A ROOM REPO. See FACTORY.lock / EXCEPTIONS.md. */
+/* SubX factory.js (subx-factory master). DO NOT EDIT IN A ROOM REPO.
+ * Source: github.com/jebbdykstra99/subx-factory  (version + sha256 in the room's FACTORY.lock)
+ * Room differences belong in site.json (features, skin, rail, nests, minAge) or in EXCEPTIONS.md. */
 (function () {
   'use strict';
 
@@ -508,7 +510,7 @@
     if (err) err.textContent = '';
     var input = document.getElementById('name-prompt-input');
     if (input) {
-      input.value = '';
+      input.value = (currentUser && currentUser.name) || '';
       try { input.focus(); } catch (e2) {}
     }
     el.hidden = false;
@@ -4769,7 +4771,7 @@
     ensureJoinAuthLayout();
     var modeHint = tab || 'join';
     if (modeHint === 'login') modeHint = 'join';
-    if (modeHint === 'join' && isLiveUser()) {
+    if ((modeHint === 'join' || modeHint === 'register') && isLiveUser()) {
       closeAuth();
       flushPendingAuthAction();
       return;
@@ -4800,6 +4802,7 @@
       if (reg) reg.style.display = 'none';
       toggleEmailAuth(false);
     }
+    withSignin('ensureInAppNote');
     restoreCompose(draft);
     var google = document.getElementById('cv-google-login');
     var closeBtn = document.getElementById('cv-modal-close');
@@ -5634,7 +5637,8 @@
    if (chatSearch) chatSearch.addEventListener('input', renderThreads);
 
    document.getElementById('profile-edit-btn').addEventListener('click', function () {
-     openAuth('register');
+     if (isLiveUser()) openDisplayNamePrompt();
+     else openAuth('join');
    });
 
    const compose = document.getElementById('thoughts-compose-input');
