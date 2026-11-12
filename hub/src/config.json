@@ -6,6 +6,11 @@
     "base": "v1.2.9",
     "integrity": "sha384-oQASW5URKe52dbE4Dn9ZuMm33RMvtr2ps1etlAT+49yakw3BwWO3e+tB+aFbAlmY"
   },
+  "home": {
+    "home_design": "hero-room",
+    "hero_room": "gpchat",
+    "_doc": "home_design is hero-room (concept C, the default) or feed-first (concept A). Swapping is a one-line change of home_design, then a re-render, for A/B testing. hero_room is the featured room id on the Hero Room home. It can rotate so SubX does not read as a single-topic site."
+  },
   "vendor": [
     {
       "from": "factory/nests.css",

@@ -125,7 +125,7 @@ with tempfile.TemporaryDirectory() as t:
     usa_name = json.load(open(os.path.join(ROOT, 'hub', 'src', 'partners', 'usserviceanimals', 'config.json'), encoding='utf-8'))['displayName']
     ok(alt in part and ('<title>%s, %s, Why am I seeing this?' % (alt, usa_name)) in part and name not in part
        and 'property="og:title" content="%s, %s, Why am I seeing this?' % (alt, usa_name) in part, 'partners page title, meta, and og follow displayName')
-    ok(idx.index('id="partner-rooms"') < idx.index('id="news-feed"'), 'partner rail sits above Suggested rooms')
+    ok('id="hub-feed"' in idx and 'id="partner-rooms"' in idx and idx.index('id="hub-feed"') < idx.index('id="partner-rooms"'), 'partner rooms sit below the highlights, once')
     artp = read(os.path.join(hub_out, 'partners', 'dogacademy', 'articles', 'calm-steady-presence.html'))
     ok('SubX editorial' in artp and 'Example partner post' in artp and ('Sponsored by %s' % alt) in artp
        and artp.count('>Sponsored<') >= 1 and name not in artp and 'Millan' not in artp and 'cesarmillan' not in artp,
@@ -136,8 +136,8 @@ live_idx = read(os.path.join(live.out, 'index.html'))
 live_part = read(os.path.join(live.out, 'partners.html'))
 usa_live = json.load(open(os.path.join(ROOT, 'hub', 'src', 'partners', 'usserviceanimals', 'config.json'), encoding='utf-8'))['displayName']
 cards = re.findall(r'<a class="partner-room"[\s\S]*?</a>', live_idx)
-ok(len(cards) >= 4 and all('>Sponsored<' in c and 'class="partner-disclosure">' in c and 'Sponsored by ' in c for c in cards),
-   'every partner card in the home HTML contains Sponsored and its disclosure')
+ok(len(cards) == 2 and all('>Sponsored<' in c and 'class="partner-disclosure">' in c and 'Sponsored by ' in c for c in cards),
+   'every partner card in the home HTML contains Sponsored and its disclosure, and each partner appears once')
 ok(('Sponsored by %s' % name) in live_idx and ('Sponsored by %s' % usa_live) in live_idx, 'home shows both sponsor lines')
 ok('href="/partners/dogacademy/"' in live_idx and 'href="/partners/usserviceanimals/"' in live_idx, 'cards link to the hub room pages')
 ok('Why am I seeing this?' in live_idx and 'href="/partners.html"' in live_idx, 'Why am I seeing this links to /partners.html')

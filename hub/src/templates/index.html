@@ -2,9 +2,145 @@
 <html lang="en">
 <head>
 {{> head}}
+  <style>
+  /* Home redo 2026-11-12: Hero Room (default) and Feed First. Phone first.
+     Scoped to the home page so other hub pages keep their existing CSS. */
+  body.hub-home {
+    --foot-h: 0px;
+    padding-bottom: 0;
+  }
+  body.hub-home #hub-post-btn { display: none !important; }
+  body.hub-home .legal-footer {
+    position: static;
+    display: block !important;
+    visibility: visible !important;
+    padding: 24px 16px 40px;
+    text-align: left;
+    font-size: 12px;
+    line-height: 1.6;
+    margin-top: 8px;
+    z-index: auto;
+  }
+  body.hub-home .legal-footer-line { display: block; margin-bottom: 4px; }
+  body.hub-home .legal-footer-nonaff { font-size: 12px; }
+  body.hub-home .legal-footer a:hover { color: var(--text-strong); }
+  body.hub-home .hub-top {
+    position: static;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  body.hub-home .hub-brand-bar {
+    position: sticky; top: 0; z-index: 8;
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px 4px;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+  }
+  body.hub-home .hub-brand {
+    display: flex; align-items: center; gap: 10px;
+    flex: 1; min-width: 0;
+    color: inherit; text-decoration: none;
+  }
+  body.hub-home .hub-page-cat.brand-icon {
+    width: 28px; height: 28px;
+    margin: 0;
+    flex: none;
+    display: block;
+  }
+  body.hub-home .hub-wordmark {
+    font-weight: 800; font-size: 20px; letter-spacing: -0.02em; line-height: 1;
+    color: var(--text-strong);
+  }
+  body.hub-home .hub-brand-actions { display: flex; align-items: center; gap: 10px; flex: none; }
+  body.hub-home .hub-signin-link {
+    background: none; border: 0; padding: 6px 4px;
+    font: inherit; font-size: 14px; font-weight: 600;
+    color: var(--text-muted); cursor: pointer;
+  }
+  body.hub-home .hub-signin-link:hover { color: var(--text-strong); }
+  body.hub-home .hub-signin-link[hidden],
+  .acc-closed .hub-signin-link { display: none !important; }
+  body.hub-home .hub-tagline {
+    font-size: 15px; color: var(--text-muted); line-height: 1.35;
+    max-width: 100%; overflow: visible; white-space: normal;
+    padding: 0 16px 12px; margin: 0;
+  }
+  body.hub-home .hub-hero { padding: 8px 16px 20px; }
+  body.hub-home .hub-hero-eyebrow {
+    font: 700 11px/1 var(--ui); letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 10px;
+  }
+  body.hub-home .hub-hero-name {
+    font-size: 42px; line-height: 1; font-weight: 800; letter-spacing: -0.04em;
+    margin: 0; color: var(--text-strong);
+  }
+  body.hub-home .hub-hero-tag { font-size: 20px; color: var(--text-muted); margin: 8px 0 18px; }
+  body.hub-home .hub-cta-row { padding: 0 16px 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  body.hub-home .hub-hero .hub-cta-row { padding: 0; }
+  body.hub-home .hub-cta-row .hub-cta,
+  body.hub-home #hub-hero-open.hub-cta,
+  body.hub-home #hub-browse-rooms.hub-cta {
+    height: 40px; padding: 0 18px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px; font-weight: 700; font-size: 15px;
+    background: var(--text); color: var(--bg); border: 1px solid transparent;
+    text-decoration: none; cursor: pointer; font-family: inherit;
+  }
+  body.hub-home .hub-sample-note {
+    font-size: 12px; color: var(--text-muted); padding: 12px 16px; line-height: 1.5; margin: 0;
+  }
+  body.hub-home .hub-sample-note[hidden],
+  body.hub-home .hub-hero[hidden],
+  body.hub-home .hub-cta-row[hidden],
+  body.hub-home .hub-others[hidden] { display: none !important; }
+  body.hub-home .hub-others { padding: 16px 0 8px; }
+  body.hub-home .hub-others-title { font-size: 16px; font-weight: 800; padding: 0 16px 10px; margin: 0; color: var(--text-strong); }
+  body.hub-home .hub-strip {
+    display: flex; gap: 10px; overflow-x: auto; padding: 0 16px 12px; scrollbar-width: thin;
+  }
+  body.hub-home .hub-schip {
+    flex: 0 0 auto; border: 1px solid var(--border); border-radius: 14px;
+    padding: 12px 14px; min-width: 170px;
+    color: inherit; text-decoration: none;
+  }
+  body.hub-home .hub-schip:hover { background: var(--surface); }
+  body.hub-home .hub-schip-name { display: block; font-weight: 800; }
+  body.hub-home .hub-schip-tag { display: block; font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  body.hub-home .partner-rooms-feed,
+  body.hub-home .partner-rooms-rail { display: block; padding: 0.55rem 0.85rem 0.35rem; border-bottom: 0; margin: 16px; }
+  body.hub-home .partner-rooms-feed .partner-rooms-title,
+  body.hub-home .partner-rooms-rail .partner-rooms-title {
+    font: 700 11px/1 var(--ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
+    margin: 0 0 8px;
+  }
+  /* Phone: the brand bar leaves a lane for the fixed hamburger. The tagline is on the next line and never clips. */
+  @media (max-width: 900px) {
+    body.hub-home .hub-brand-bar { padding-left: 3.8rem; }
+    body.hub-home .hub-tagline {
+      padding: 0 16px 12px;
+      max-width: 100%;
+      overflow: visible;
+      white-space: normal;
+      text-overflow: unset;
+    }
+    body.hub-home .hub-top .thoughts-tabs { padding-left: 16px; }
+  }
+  @media (min-width: 1080px) {
+    body.hub-home .hub-hero { padding: 28px 32px 24px; }
+    body.hub-home .hub-hero-name { font-size: 64px; }
+    body.hub-home .hub-strip { flex-wrap: wrap; overflow: visible; }
+    body.hub-home .hub-schip { min-width: 160px; }
+    body.hub-home[data-home-design="hero-room"] .right-panel { display: none; }
+    body.hub-home[data-home-design="hero-room"] .main { margin-right: 0; }
+    body.hub-home .hub-brand-bar { padding-left: 16px; }
+  }
+  @media (min-width: 901px) {
+    body.hub-home .hub-brand-bar { padding-left: 16px; }
+  }
+  </style>
   <link rel="preload" href="{{asset:/site.json}}" as="fetch" crossorigin="anonymous">
 </head>
-<body class="hub-home">
+<body class="hub-home" data-home-design="hero-room" data-hero-room="gpchat">
 
 <button class="hamburger" id="hamburger" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">
   <span></span><span></span><span></span>
@@ -110,28 +246,46 @@
 
   <section class="page active" id="page-thoughts">
     <header class="hub-top" id="hub-intro">
-      <div class="hub-top-main">
-        <h1 class="hub-title">{{brand.tagline}} Read by {{brand.topicNoun.one}}; join a {{brand.roomNoun.one}} to talk.</h1>
-        <div class="hub-top-actions">
-          <button type="button" class="hub-cta" id="hub-post-btn" aria-haspopup="dialog" aria-controls="hub-post-pick">Post in a {{brand.roomNoun.one}}</button>
-          <button type="button" class="hub-cta hub-join" id="hub-join-btn" aria-haspopup="dialog">Sign in / Join</button>
+      <div class="hub-brand-bar">
+        <a class="hub-brand" href="#home" data-social="home" aria-label="{{brand.name}} home">
+          <span class="brand-icon hub-page-cat" aria-hidden="true"></span>
+          <span class="hub-wordmark">{{brand.name}}</span>
+        </a>
+        <div class="hub-brand-actions">
+          <button type="button" class="hub-signin-link" id="hub-join-btn" aria-haspopup="dialog">Sign in</button>
+          <button type="button" class="hub-cta" id="hub-post-btn" aria-haspopup="dialog" aria-controls="hub-post-pick" hidden>Post in a {{brand.roomNoun.one}}</button>
         </div>
+      </div>
+      <p class="hub-tagline" id="hub-tagline">{{brand.tagline}}</p>
+      <section class="hub-hero" id="hub-hero" hidden>
+        <div class="hub-hero-eyebrow">A {{brand.name}} room · featured</div>
+        <h1 class="hub-hero-name" id="hub-hero-name"></h1>
+        <p class="hub-hero-tag" id="hub-hero-tag"></p>
+        <div class="hub-cta-row">
+          <a class="hub-cta" id="hub-hero-open" rel="noopener">Open</a>
+        </div>
+      </section>
+      <div class="hub-cta-row" id="hub-feed-cta" hidden>
+        <a class="hub-cta" id="hub-browse-rooms" href="#rooms">Browse rooms</a>
       </div>
       <div class="thoughts-tabs hub-tabs" role="tablist" aria-label="Hub">
         <button class="thoughts-tab active" data-hub-tab="highlights" role="tab" aria-selected="true" type="button">Highlights</button>
         <button class="thoughts-tab" data-hub-tab="rooms" role="tab" aria-selected="false" type="button">{{brand.roomNoun.Many}}</button>
       </div>
     </header>
-    {{partner:feed}}
+    <p class="hub-sample-note" id="hub-sample-note"></p>
     <section class="hub-stories" id="hub-stories" hidden aria-label="Stories from live {{brand.roomNoun.many}}">
       <div class="hub-stories-row" id="hub-stories-row">
         <button type="button" class="hub-story is-add" id="hub-story-add" aria-haspopup="dialog"><span class="hub-story-ring"><span class="hub-story-avatar">+</span></span><span class="hub-story-label">Add story</span></button>
       </div>
     </section>
     <div class="hub-feed" id="hub-feed" aria-live="polite"><div class="empty-note">Loading highlights…</div></div>
-    <div id="hub-rooms-partner" hidden>
-    {{partner:roomsTab}}
+    <div class="hub-others" id="hub-others" hidden>
+      <h2 class="hub-others-title">Other rooms</h2>
+      <div class="hub-strip" id="hub-strip"></div>
     </div>
+    {{partner:widget}}
+    <div id="hub-rooms-partner" hidden></div>
     <div class="hub-rooms" id="hub-rooms" hidden></div>
     <div class="thoughts-tabs" role="tablist">
       <button class="thoughts-tab active" data-thoughts-tab="foryou" role="tab">For You</button>
@@ -227,6 +381,7 @@
     <div class="hub-handoff-list" id="hub-chat-rooms"><div class="empty-note">Loading…</div></div>
   </section>
 
+{{> footer}}
 </main>
 
 <!-- ── Profile overlay ──────────────────────────────── -->
@@ -287,7 +442,6 @@
 
 <!-- ── Right rail ───────────────────────────────────── -->
 <aside class="right-panel" id="right-panel">
-  {{partner:widget}}
   <div class="right-panel-header">
     <div class="right-panel-kicker">Live {{brand.name}} rooms</div>
     <div class="right-panel-title">Suggested rooms</div>
@@ -366,7 +520,6 @@
     <button type="button" class="hub-pick-close" data-hub-close>Close</button>
   </div>
 </div>
-{{> footer}}
 {{> scripts}}
 </body>
 </html>
