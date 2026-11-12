@@ -291,7 +291,7 @@
       "partners/dogacademy/articles/short-daily-lessons.html"
     ],
     "file": "shell/v1.2.10/factory.js",
-    "sha256": "c6d53233dce05c5b658a72665ca1bb4f3d2812a01d3197039d9724c4ea9033c3",
+    "sha256": "a6442f3ee33d6f41fa724921bdcc0370ee91a04f9e2472cea2a292913879a997",
     "reason": "Self-hosted hub fork of shell/v1.2.10/factory.js: header source line only, new SRI; static pages are self only, the shell page adds only the Firebase Auth origins",
     "exception": "E21"
   }
