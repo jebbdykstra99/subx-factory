@@ -1,8 +1,8 @@
 {
   "version": "v1.2.10",
   "factory.js": {
-    "sha256": "8b9936c3de072a47c0a9a9635246005bbbf5dc5456370c9115c81442b095420b",
-    "bytes": 254971
+    "sha256": "8e4b7712fbc7f3d1900b07939e9e75ced6afa81f0c57fe0b97ee8b2b41130ad7",
+    "bytes": 254989
   },
   "sources": {
     "template": "build/sources/template_factory_660144d1886e.js (T0 pin, nest-feed query edited in place)",
@@ -10,7 +10,7 @@
     "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)",
     "split": "build/split.mjs (opt-in files out of the folded single-file build: gp, rail, reports)"
   },
-  "built": "2026-11-12 (MT) cursor/signin-popup-loop-2026-11-12: v1.2.10 blocked Google popup shows a sheet (Try Google again / Use email instead), no auto-redirect; preload factory-signin.js on pointerdown/touchstart of Sign in",
+  "built": "2026-11-12 (MT) cursor/phone-cat-space-2026-11-12: phone top bar reserves space for the 44px cat (tune --subx-cat-space, default 52px) and the cat has a light drop-shadow outline so it reads on a dark banner; v1.2.10 blocked Google popup and preload unchanged",
   "optIn": {
     "factory-gp.js": {
       "sha256": "33c158f1490800b3efe641ac526516b9a89f7fbd2ef0d29e5a8643c07f4bc6fc",

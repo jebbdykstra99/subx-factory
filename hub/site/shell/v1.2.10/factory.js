@@ -1,6 +1,4 @@
-/* SubX factory.js (subx-factory master). DO NOT EDIT IN A ROOM REPO.
- * Source: SubX shared shell v1.2.10 (hub fork, header only)
- * Room differences belong in site.json (features, skin, rail, nests, minAge) or in EXCEPTIONS.md. */
+/* SubX factory.js (subx-factory master). DO NOT EDIT IN A ROOM REPO. Shell v1.2.10 (hub fork, header only). */
 (function() {
   'use strict';
   function addCss(id,c){if(document.getElementById(id))return;var s=document.createElement('style');s.id=id;s.textContent=c;document.head.appendChild(s);}
@@ -18,7 +16,6 @@
   } catch (eLs) {}
   const SITE_JSON_URL = (document.currentScript && document.currentScript.getAttribute('data-site')) || 'site.json';
   var FACTORY_SRC = (document.currentScript && document.currentScript.src) || '';
-
   let SITE_ID = '';
   let site = null;
   let dmSendInFlight = false;
@@ -36,7 +33,6 @@
   var paintedNestSlug = null;
   var memberNestsUnsub = null;
   var nestAddSlugDirty = false;
-
   var NEST_RESERVED = {
     '': 1, home: 1, feed: 1, thoughts: 1, following: 1, explore: 1,
     notifications: 1, chat: 1, profile: 1, news: 1, about: 1, terms: 1,
@@ -46,7 +42,6 @@
     'favicon.ico': 1, 'apple-touch-icon.png': 1, 'og.png': 1, '404.html': 1,
     'app.js': 1, 'taxonomy.json': 1, cname: 1
   };
-
   let fbAuth = null;
   let fbDb = null;
   let fbStorage = null;
@@ -92,7 +87,6 @@
   let notifTab = 'all';
   const ADMIN_UID = 'o774wL9hUVSi19EkDCgLqQomP8i2';
   const DM_TEXT_MAX = 1000;
-
   var PLUGIN = {};
   var CORE = {
     closeSocialOverlays: closeSocialOverlays,
@@ -137,9 +131,7 @@
     var api = install(CORE) || {};
     Object.keys(api).forEach(function(k) { PLUGIN[k] = api[k]; });
   });
-
   const FB_WEB_CONFIG_URL = 'https://subx-skins.web.app/firebase-web-config.json';
-
   var authPersistPromise = Promise.resolve();
   function setAuthPersistence(auth) {
     var P = firebase.auth.Auth.Persistence;
@@ -188,7 +180,6 @@
       })
       .catch(function(e) { console.warn('subx-skins init', e); });
   }
-
   var fbReadyPromise = initFirebaseFromHostedConfig();
   function runWithAuth(errEl, fn) {
     var go = function() {
@@ -204,7 +195,6 @@
     if (fbAuth) go();
     else fbReadyPromise.then(go);
   }
-
   var HANDLE_EXACT = { mod: 1, mods: 1, staff: 1, support: 1, steward: 1, system: 1, root: 1, team: 1 };
   var guardState = { rate: null, unsub: null, lastPostMs: 0, lastMsgMs: 0, sending: false };
   var guardTick = null;
@@ -969,7 +959,6 @@
     var v = s && typeof s[key] === 'string' ? s[key] : '';
     return v || fallback;
   }
-
   const hamburger = document.getElementById('hamburger');
   const sidebar = document.getElementById('sidebar');
   function loadJSON(key, fallback) {
@@ -991,7 +980,6 @@
   function toggleTopicFollow() { // factory-gp.js
     if (PLUGIN.toggleTopicFollow) return PLUGIN.toggleTopicFollow.apply(null, arguments);
   }
-
   let currentUser = loadJSON(LS_USER, null);
   let currentTab = 'foryou';
   function initials(name) {
@@ -1030,7 +1018,6 @@
   function isLiveUser() {
     return !!(fbAuth && fbAuth.currentUser);
   }
-
   var authStateKnown = false;
   var authBootFailed = false;
   var redirectSettled = false;
@@ -1194,7 +1181,6 @@
     for (var j = 0; j < seeds.length; j++) if (seeds[j].id === id) return seeds[j];
     return null;
   }
-
   var deepPostId = '';
   var authQ = '';
   var deepPostDone = false;
@@ -1435,7 +1421,6 @@
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
   };
-
   function applyTheme(tokens) {
     if (!tokens) return;
     var root = document.documentElement;
@@ -1445,7 +1430,7 @@
     });
     if (Array.isArray(tokens.avatarColors) && tokens.avatarColors.length) COLORS = tokens.avatarColors.slice();
   }
-  function ensureSubxCat(){var a=document.querySelector('.subx-cat-link'),m,h,r,u='url(https://subx.it/assets/brand/cat-mask.png) center/contain no-repeat';if(!a){m=document.querySelector('.sidebar-brand .brand-mark');if(!m)return;a=document.createElement('a');a.href='https://subx.it/';a.className='subx-cat-link';a.setAttribute('aria-label','SubX home');a.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;z-index:600;text-decoration:none;color:var(--nav-text,#fff)';a.innerHTML='<span style="width:28px;height:28px;background:currentColor;-webkit-mask:'+u+';mask:'+u+'"></span>';m.parentNode.insertBefore(a,m)}if(!ensureSubxCat.h)ensureSubxCat.h=a.parentNode;h=document.getElementById('hamburger');if(h&&innerWidth<=MOBILE_NAV_MQ){r=h.getBoundingClientRect();document.body.appendChild(a);a.style.position='fixed';a.style.top=r.top+'px';a.style.left=r.right+4+'px';a.style.background='var(--nav-bg,#111)';a.style.zIndex=600}else if(a){ensureSubxCat.h.appendChild(a);a.style.position=a.style.top=a.style.left=a.style.background=''}if(!ensureSubxCat.w){ensureSubxCat.w=1;addEventListener('resize',ensureSubxCat);addEventListener('load',ensureSubxCat)}}
+  function ensureSubxCat(){var a=document.querySelector('.subx-cat-link'),m,h,r,u='url(https://subx.it/assets/brand/cat-mask.png) center/contain no-repeat';if(!a){m=document.querySelector('.sidebar-brand .brand-mark');if(!m)return;a=document.createElement('a');a.href='https://subx.it/';a.className='subx-cat-link';a.setAttribute('aria-label','SubX home');a.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;z-index:600;text-decoration:none;color:var(--nav-text,#fff)';a.innerHTML='<span style="width:28px;height:28px;background:currentColor;-webkit-mask:'+u+';mask:'+u+';filter:drop-shadow(0 0 1px #fff)drop-shadow(0 0 1px #fff)"></span>';m.parentNode.insertBefore(a,m)}if(!ensureSubxCat.h)ensureSubxCat.h=a.parentNode;h=document.getElementById('hamburger');if(h&&innerWidth<=MOBILE_NAV_MQ){r=h.getBoundingClientRect();document.body.appendChild(a);a.style.position='fixed';a.style.top=r.top+'px';a.style.left=r.right+4+'px';a.style.background='var(--nav-bg,#111)';a.style.zIndex=600}else if(a){ensureSubxCat.h.appendChild(a);a.style.position=a.style.top=a.style.left=a.style.background=''}if(!ensureSubxCat.w){ensureSubxCat.w=1;addEventListener('resize',ensureSubxCat);addEventListener('load',ensureSubxCat);addCss('cat-sp','@media (max-width:900px){:root{--subx-cat-space:52px}.thoughts-tabs,.view-back,.notif-header,.story-streamer,.race-strip,.home-h1,.city-gate{padding-left:calc(3.8rem + var(--subx-cat-space))!important}}')}}
   function applySiteChrome() {
     ensureSubxCat();
     if (!site) return;
@@ -1710,7 +1695,6 @@
       isAdminAuthor: uid === ADMIN_UID
     };
   }
-
   function firestoreQuery(spec, cursor) {
     var q = fbDb.collection(spec.collection);
     var i;
@@ -2898,7 +2882,6 @@
    refreshPorchUi();
    refreshNestSurfaces();
   }
-
   var RAIL_MAX = 3;
   function renderTrendCard(t) {
     const href = t.url || '#';
@@ -2969,7 +2952,6 @@
     if (page) page.innerHTML = html;
     maybeShowRailOverlay();
   }
-
   var railOverlayUiReady = false;
   var railOverlayTimer = null;
   var railOverlayDeadline = 0;
@@ -3213,7 +3195,6 @@
     if (PLUGIN.fetchCwfCards) return PLUGIN.fetchCwfCards.apply(null, arguments);
     return Promise.reject(new Error('factory-rail.js not loaded'));
   }
-
   function outboundCards() {
     var list = railCfg().outbound || [];
     var out = [];
@@ -3236,7 +3217,6 @@
     if (PLUGIN.fetchBartCards) return PLUGIN.fetchBartCards.apply(null, arguments);
     return Promise.reject(new Error('factory-rail.js not loaded'));
   }
-
   function fetchF1Cards() { // factory-gp.js
     if (PLUGIN.fetchF1Cards) return PLUGIN.fetchF1Cards.apply(null, arguments);
     return Promise.reject(new Error('factory-gp.js not loaded'));
@@ -3260,7 +3240,6 @@
     if (PLUGIN.mergeF1Rail) return PLUGIN.mergeF1Rail.apply(null, arguments);
     return (cards || []).concat(extra || []);
   }
-
   var f1RefreshTimer = null;
   var PORCH_DWELL_DEFAULT_MS = 9000;
   var porchDwellActive = false;
@@ -4618,7 +4597,6 @@
     const btn = document.getElementById('thoughts-post-btn');
     paintPostBtn(btn, text, pollReady);
   }
-
   var MAX_IMAGE_BYTES = 5 * 1024 * 1024;
   function isVideoFile(file) {
     var t = (file.type || '').toLowerCase();
@@ -5423,7 +5401,6 @@
      withSignin('onRegister');
    });
    document.getElementById('cv-google-login').addEventListener('click', function() {
-     // Popup must run in this tap. Prefetched at boot so this is usually sync.
      if (signinApi) { signinApi.onGoogleClick(); return; }
      withSignin('onGoogleClick');
    });
@@ -5454,7 +5431,6 @@
      if (nestPane) fillExploreNests(nestPane, filt(nestExploreCards()));
    });
   }
-
   var STORIES_TTL_MS = 24 * 60 * 60 * 1000;
   var STORIES_PER_DAY = 6;
   var STORIES_TEXT_MAX = 280;
