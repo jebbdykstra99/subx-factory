@@ -33,6 +33,19 @@
             "value": "noindex"
           }
         ]
+      },
+      {
+        "source": "/assets/brand/**",
+        "headers": [
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "*"
+          },
+          {
+            "key": "Cross-Origin-Resource-Policy",
+            "value": "cross-origin"
+          }
+        ]
       }
     ]
   }
