@@ -149,6 +149,33 @@ main() {
   python3 fold.py >/dev/null
   node --check factory.js
   node split.mjs
+  # 27chat #51 sign-in loop. The reviewed diff is against the split core at blob
+  # 7463cba (shell v1.2.8), so it is applied after split.mjs, not in the template.
+  if ! patch --forward --batch -p1 -i signin-loop.patch; then
+    echo "rebuild: sign-in loop patch failed. The split core no longer matches blob 7463cba." >&2
+    exit 1
+  fi
+  rm -f factory.js.orig
+  # Review fixes on top of the frozen signin-loop.patch: the lazy sign-in host
+  # exposes isLiveUser and closeAuth so onRegister can close the sheet when
+  # the user is already signed in. The patch file is not in this change set.
+  python3 -c '
+import pathlib, sys
+p = pathlib.Path("factory.js")
+t = p.read_text()
+old = """        composeErr: composeErr,
+        setAuthOpenWhenReady: function (v) { authOpenWhenReady = !!v; }"""
+new = """        composeErr: composeErr,
+        isLiveUser: isLiveUser,
+        closeAuth: closeAuth,
+        setAuthOpenWhenReady: function (v) { authOpenWhenReady = !!v; }"""
+if new in t:
+    pass
+elif old in t:
+    p.write_text(t.replace(old, new, 1))
+else:
+    sys.exit("rebuild: sign-in host object did not match; cannot add isLiveUser/closeAuth")
+'
   local f
   for f in "${OUT[@]}"; do node --check "$f"; done
   if [ "$mode" = check ]; then

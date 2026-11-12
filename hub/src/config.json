@@ -2,9 +2,9 @@
   "_doc": "tools/brand_render.py renders hub/src/templates (+ partials) to hub/site with brand/brand.json. hub/site is generated: edit here, then run python3 tools/brand_render.py.",
   "shell": {
     "repo": "jebbdykstra99/subx-factory",
-    "sha": "88ce6dc1fe9b2d7fce809695e8ac4ef94ec89236",
-    "base": "v1.2.6",
-    "integrity": "sha384-P1qjkeL0BmNyUksLCAUJJ0Lws2AX1bx7hdOGxVHEbHjXQsof63F7DxNAZQbDXFpY"
+    "sha": "c1e8fda95fbb53cec36cd615b90514bc970aa02f",
+    "base": "v1.2.9",
+    "integrity": "sha384-oQASW5URKe52dbE4Dn9ZuMm33RMvtr2ps1etlAT+49yakw3BwWO3e+tB+aFbAlmY"
   },
   "vendor": [
     {
