@@ -659,6 +659,13 @@ html body.hub-home .hub-search-closed-center .hub-search-field {
 html body.hub-home .hub-top {
   position: relative;
 }
+/* .hub-top keeps z-index: 8 from the shared rule, which would put the
+   whole header (and the desktop popover inside it) under the body-level
+   scrim. Drop that stacking context while search is open. The phone
+   sheet is already a body-level fixed dialog, so it is unaffected. */
+html[data-hub-search="open"] body.hub-home .hub-top {
+  z-index: auto;
+}
 html body.hub-home .hub-search-anchor {
   position: absolute;
   left: 16px;
