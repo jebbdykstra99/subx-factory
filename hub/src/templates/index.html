@@ -133,13 +133,65 @@
     }
     body.hub-home .hub-top .thoughts-tabs { padding-left: 16px; }
   }
+  body.hub-home .right-panel-brief-kicker {
+    font-size: 0.7rem; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 0.4rem;
+  }
+  body.hub-home .right-panel-brief-title {
+    font-family: var(--display);
+    font-size: 1.25rem; font-weight: 700;
+    letter-spacing: 0.02em; color: var(--nav-active);
+  }
+  body.hub-home .right-panel-brief {
+    padding: 0 1.15rem 1rem;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  body.hub-home .right-panel-brief p {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text);
+    margin: 0;
+  }
+  body.hub-home .right-panel-header-sub {
+    padding-top: 1rem;
+  }
+  body.hub-home .right-panel-legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.7rem;
+    margin: 0 0 0.7rem;
+    font-size: 0.8rem;
+  }
+  body.hub-home .right-panel-legal a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  body.hub-home .right-panel-legal a:hover {
+    color: var(--text-strong);
+    text-decoration: underline;
+  }
   @media (min-width: 1080px) {
     body.hub-home .hub-hero { padding: 28px 32px 24px; }
     body.hub-home .hub-hero-name { font-size: 64px; }
     body.hub-home .hub-strip { flex-wrap: wrap; overflow: visible; }
     body.hub-home .hub-schip { min-width: 160px; }
-    body.hub-home[data-home-design="hero-room"] .right-panel { display: none; }
-    body.hub-home[data-home-design="hero-room"] .main { margin-right: 0; }
+  }
+  /* Desktop MacBook widths: show a Room Brief right rail and let the center
+     column fill the space between the left nav and that rail. Phone is unchanged. */
+  @media (min-width: 1000px) {
+    body.hub-home[data-home-design="hero-room"] .right-panel {
+      display: flex;
+      flex-direction: column;
+    }
+    body.hub-home[data-home-design="hero-room"] .main {
+      margin-right: var(--right-w);
+    }
+    body.hub-home[data-home-design="hero-room"] #page-thoughts {
+      max-width: none;
+      width: 100%;
+    }
   }
   @media (min-width: 901px) {
     body.hub-home .hamburger { display: none !important; }
@@ -460,11 +512,25 @@
 <!-- ── Right rail ───────────────────────────────────── -->
 <aside class="right-panel" id="right-panel">
   <div class="right-panel-header">
+    <div class="right-panel-brief-kicker">Room Brief</div>
+    <div class="right-panel-brief-title">What {{brand.name}} is</div>
+  </div>
+  <div class="right-panel-brief">
+    <p>{{brand.name}} is a home for small public {{brand.roomNoun.many}}, each about one {{brand.topicNoun.one}}. Some {{brand.roomNoun.many}} also have their own web address. This hub at {{brand.primaryDomain}} brings the live {{brand.roomNoun.many}} together in one place.</p>
+  </div>
+  <div class="right-panel-header right-panel-header-sub">
     <div class="right-panel-kicker">Live {{brand.name}} rooms</div>
-    <div class="right-panel-title">Suggested rooms</div>
+    <div class="right-panel-title">Suggested {{brand.roomNoun.many}}</div>
   </div>
   <div class="right-panel-body" id="news-feed"></div>
   <div class="right-panel-footer">
+    <nav class="right-panel-legal" aria-label="Legal">
+      <a href="/terms.html">Terms</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/report.html">Report</a>
+      <a href="/about.html">About</a>
+      <a href="/guidelines.html">Guidelines</a>
+    </nav>
     <p>Each room has its own rules. Paused rooms are not listed.</p>
   </div>
 </aside>

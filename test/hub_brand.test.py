@@ -654,7 +654,33 @@ with tempfile.TemporaryDirectory() as t:
     ok(all('quillnest.example/z/' in read(os.path.join(out, f)) and 'subx' not in read(os.path.join(out, f)).replace(ALLOW[0], '').lower() for f in zt), 'rename: topic pages carry the new domain and prefix, no old brand')
     ok(all(f in s_['shell']['noShell'] for f in zt), 'rename: topic pages listed in noShell under /z/')
 
+# ---- Hero Room desktop right rail (2026-11-12) ----
+_home = read(os.path.join(SITE, 'index.html'))
+ok('data-home-design="hero-room"' in _home, 'home is Hero Room by default')
+ok('body.hub-home[data-home-design="hero-room"] .right-panel { display: none; }' not in _home,
+   'Hero Room no longer hides the right rail on desktop')
+ok('@media (min-width: 1000px)' in _home
+   and 'hero-room"] .right-panel' in _home
+   and 'display: flex' in _home
+   and 'margin-right: var(--right-w)' in _home,
+   'Hero Room shows the right rail at 1000px and up, and gives the center column that rail width')
+ok('What %s is' % brand['name'] in _home
+   and '%s is a home for small public %s' % (brand['name'], brand['roomNoun']['many']) in _home
+   and 'this hub at %s brings the live' % brand['primaryDomain'] in _home.lower(),
+   'right rail What-brand-is copy is the About sentence, via brand tokens')
+ok('What %s is' % brand['name'] in _home
+   and 'right-panel-brief-title' in _home
+   and 'id="news-feed"' in _home,
+   'right rail What-brand-is title uses classes the shell will not overwrite, and keeps the live news-feed (no invented counts)')
+_legal = re.search(r'class="right-panel-legal"[^>]*>(.*?)</nav>', _home, re.S)
+ok(_legal is not None and all(h in _legal.group(1) for h in (
+    '/terms.html', '/privacy.html', '/report.html', '/about.html', '/guidelines.html')),
+   'right rail legal nav has Terms, Privacy, Report, About, and Guidelines')
+ok('@media (max-width: 900px)' in _home and 'hub-brand-bar { padding-left: 3.8rem; }' in _home,
+   'phone brand-bar padding is unchanged')
+
 # renderer refuses gaps
+
 with tempfile.TemporaryDirectory() as t:
     bad = dict(brand); del bad['tagline']
     bp = os.path.join(t, 'b.json'); json.dump(bad, open(bp, 'w'))
