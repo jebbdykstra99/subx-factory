@@ -679,6 +679,42 @@ ok(_legal is not None and all(h in _legal.group(1) for h in (
 ok('@media (max-width: 900px)' in _home and 'hub-brand-bar { padding-left: 3.8rem; }' in _home,
    'phone brand-bar padding is unchanged')
 
+# ---- Also featured hero stack (2026-11-13) ----
+_cfg_home = json.load(open(os.path.join(SRC, 'config.json'), encoding='utf-8'))['home']
+ok(_cfg_home.get('hero_layout') == 'also-featured' and _cfg_home.get('hero_also') == [],
+   'config.json defaults hero_layout to also-featured and leaves hero_also empty so the stack rotates')
+ok('hero_layout' in _cfg_home.get('_doc', '') and 'hero_also' in _cfg_home.get('_doc', '')
+   and 'also-featured' in _cfg_home.get('_doc', '') and 'two-rooms' in _cfg_home.get('_doc', '')
+   and 'latest' in _cfg_home.get('_doc', '') and 'carousel' in _cfg_home.get('_doc', ''),
+   'config.json _doc documents hero_layout values and hero_also pin-or-rotate')
+ok('data-hero-layout="also-featured"' in _home and 'data-hero-also=""' in _home,
+   'home body defaults data-hero-layout to also-featured and data-hero-also to empty')
+ok('id="hub-also"' in _home and 'aria-label="Also featured"' in _home
+   and 'id="hub-also-list"' in _home and 'Also featured' in _home,
+   'hero includes the Also featured stack markup')
+ok('id="hub-hero-split"' in _home and 'class="hero-primary"' in _home,
+   'hero wraps the featured room and the stack in a split')
+ok('@media (min-width: 1000px)' in _home
+   and 'data-hero-layout="also-featured"] .hero-split' in _home
+   and 'grid-template-columns: 1fr 230px' in _home
+   and 'height: 75%' in _home
+   and 'background: var(--border-strong)' in _home
+   and '.hub-also::before' in _home,
+   'desktop Also featured stack sits to the right of the hero with a 75% --border-strong hairline')
+ok('@media (max-width: 999px)' in _home
+   and 'data-hero-layout="also-featured"] .hub-also' in _home
+   and 'border-top: 1px solid var(--border-strong)' in _home
+   and 'margin-top: 16px' in _home,
+   'phone Also featured stack sits under the CTA with a horizontal --border-strong hairline')
+_hub_js = read(os.path.join(SITE, 'hub.js'))
+ok('function resolveAlsoRooms' in _hub_js and 'function watchSuggestedRail' in _hub_js
+   and 'boyfriendchat' in _hub_js and 'behindtheblackwall' in _hub_js
+   and 'utcDayOfYear' in _hub_js,
+   'hub.js picks a rotating Also featured pair and drops those rooms from the Suggested rooms rail')
+ok('–' not in _home[ _home.find('hub-also'): _home.find('hub-also')+800 ]
+   and '—' not in _home.split('Also featured')[1][:200] if 'Also featured' in _home else True,
+   'Also featured copy has no em or en dash')
+
 # renderer refuses gaps
 
 with tempfile.TemporaryDirectory() as t:
