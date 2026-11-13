@@ -372,6 +372,12 @@
   <section class="page active" id="page-thoughts">
     <header class="hub-top" id="hub-intro">
       <div class="hub-brand-bar">
+        <div class="hub-search-closed hub-search-closed-center">
+          <button class="hub-search-field" type="button" data-hub-search-open aria-haspopup="dialog" aria-expanded="false" aria-controls="hub-search-popover" title="Search rooms">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span class="hub-search-field-label">Search rooms</span>
+          </button>
+        </div>
         <a class="hub-brand" href="#home" data-social="home" aria-label="{{brand.name}} home">
           <span class="brand-icon hub-page-cat" aria-hidden="true"></span>
           <span class="hub-wordmark">{{brand.name}}</span>
@@ -382,6 +388,27 @@
         </div>
       </div>
       <p class="hub-tagline" id="hub-tagline">{{brand.tagline}}</p>
+      <div class="hub-search-closed hub-search-closed-hero">
+        <button class="hub-search-field" type="button" data-hub-search-open aria-haspopup="dialog" aria-expanded="false" aria-controls="hub-search-sheet" title="Search rooms">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span class="hub-search-field-label">Search rooms</span>
+        </button>
+      </div>
+      <div class="hub-search-anchor" id="hub-search-anchor">
+        <div class="hub-search-popover" id="hub-search-popover" role="dialog" aria-modal="true" aria-label="Search rooms" aria-hidden="true">
+          <div class="hub-search-sheet-head">
+            <div class="hub-search-sheet-kicker">Search rooms</div>
+            <button type="button" class="hub-search-done" data-hub-search-close>Done</button>
+          </div>
+          <div class="hub-search-field" role="search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <label class="hub-search-sr" for="hub-search-input">Search rooms</label>
+            <input id="hub-search-input" class="hub-search-input" type="search" placeholder="Search rooms" value="" autocomplete="off" spellcheck="false">
+            <button type="button" class="hub-search-clear" data-hub-search-clear aria-label="Clear search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          </div>
+          <div class="hub-search-results" id="hub-search-results"></div>
+        </div>
+      </div>
       <section class="hub-hero" id="hub-hero" hidden>
         <div class="hero-split" id="hub-hero-split">
           <div class="hero-primary">
@@ -666,6 +693,20 @@
     <div class="hub-story-cards" id="hub-story-cards"></div>
     <button type="button" class="hub-pick-close" data-hub-close>Close</button>
   </div>
+</div>
+<div class="hub-search-scrim" id="hub-search-scrim" data-hub-search-close tabindex="-1" aria-label="Close search"></div>
+<div class="hub-search-sheet" id="hub-search-sheet" role="dialog" aria-modal="true" aria-label="Search rooms" aria-hidden="true">
+  <div class="hub-search-sheet-head">
+    <div class="hub-search-sheet-kicker">Search rooms</div>
+    <button type="button" class="hub-search-done" data-hub-search-close>Done</button>
+  </div>
+  <div class="hub-search-field" role="search">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <label class="hub-search-sr" for="hub-search-input-sheet">Search rooms</label>
+    <input id="hub-search-input-sheet" class="hub-search-input" type="search" placeholder="Search rooms" value="" autocomplete="off" spellcheck="false">
+    <button type="button" class="hub-search-clear" data-hub-search-clear aria-label="Clear search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="hub-search-results" id="hub-search-results-sheet"></div>
 </div>
 {{> scripts}}
 </body>

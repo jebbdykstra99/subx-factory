@@ -415,3 +415,329 @@ body.partner-room-home .right-panel-body .news-item { background: transparent; }
   .hub-top-actions { width: 100%; }
   .hub-top-actions .hub-cta { flex: 1 1 auto; text-align: center; }
 }
+
+/* Search rooms field on the hero (option 2). Icon and field text are
+   #0F1419 on #FFFFFF in light and #EFF3F4 on #000000 in dark.
+   Placeholder and muted copy use --text-muted. Focus rings use
+   --text-muted, not the hub accent. */
+body.hub-home .hub-search-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+body.hub-home .hub-search-field,
+body.hub-home .hub-search-popover,
+body.hub-home .hub-search-sheet,
+body.hub-home .hub-search-done {
+  box-sizing: border-box;
+  background: #FFFFFF;
+  color: #0F1419;
+}
+body.hub-home .hub-search-field svg,
+body.hub-home .hub-search-clear,
+body.hub-home .hub-search-hit-name,
+body.hub-home .hub-search-done {
+  color: #0F1419;
+}
+body.hub-home .hub-search-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 8px 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  max-width: 100%;
+}
+body.hub-home .hub-search-field:focus-within {
+  border-color: var(--text-muted);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-muted) 25%, transparent);
+}
+body.hub-home .hub-search-field svg {
+  flex: none;
+}
+body.hub-home .hub-search-field-label {
+  font: 400 15px/1.2 var(--ui);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.hub-home button.hub-search-field {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+body.hub-home .hub-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: #0F1419;
+  font: 400 15px/1.2 var(--ui);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+body.hub-home .hub-search-input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+body.hub-home .hub-search-input::-webkit-search-decoration,
+body.hub-home .hub-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+body.hub-home .hub-search-clear {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  flex: none;
+}
+html[data-hub-search="open"] body.hub-home .hub-search-clear {
+  display: inline-flex;
+}
+body.hub-home .hub-search-clear:hover,
+body.hub-home .hub-search-done:hover,
+body.hub-home .hub-search-hit:hover {
+  background: var(--surface);
+}
+body.hub-home .hub-search-results {
+  padding: 8px 4px 4px;
+  max-height: min(60vh, 420px);
+  overflow: auto;
+}
+body.hub-home .hub-search-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+body.hub-home .hub-search-hit {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+body.hub-home .hub-search-hit-name {
+  display: block;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+body.hub-home .hub-search-hit-tag {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+body.hub-home .hub-search-hit-meta {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+body.hub-home .hub-search-empty,
+body.hub-home .hub-search-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  padding: 10px 12px 8px;
+  margin: 0;
+}
+body.hub-home .hub-search-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 20, 25, 0.28);
+  z-index: 400;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+html[data-hub-search="open"] body.hub-home .hub-search-scrim {
+  display: block;
+}
+body.hub-home .hub-search-popover,
+body.hub-home .hub-search-sheet {
+  display: none;
+  background: #FFFFFF;
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(15, 20, 25, 0.16);
+  padding: 10px;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+body.hub-home .hub-search-popover {
+  position: absolute;
+  z-index: 410;
+}
+html[data-hub-search="open"] body.hub-home .hub-search-popover {
+  display: block;
+}
+body.hub-home .hub-search-sheet {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  z-index: 610;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+}
+html[data-hub-search="open"] body.hub-home .hub-search-sheet {
+  display: block;
+}
+body.hub-home .hub-search-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 8px;
+}
+body.hub-home .hub-search-sheet-kicker {
+  font: 700 11px/1 var(--ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+body.hub-home .hub-search-done {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  font: 700 13px/1 var(--ui);
+  cursor: pointer;
+}
+body.hub-home .hub-search-field:focus-visible,
+body.hub-home .hub-search-done:focus-visible,
+body.hub-home .hub-search-clear:focus-visible,
+body.hub-home .hub-search-hit:focus-visible {
+  outline: 2px solid var(--text-muted);
+  outline-offset: 2px;
+}
+
+/* Placement: closed field at the far left of the center column, on
+   top of the featured room. On open, the overlay expands in place. */
+html body.hub-home .hub-brand-bar {
+  gap: 12px;
+}
+html body.hub-home .hub-search-closed-center {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+html body.hub-home .hub-search-closed-center .hub-search-field {
+  width: 220px;
+  max-width: 100%;
+}
+html body.hub-home .hub-top {
+  position: relative;
+}
+html body.hub-home .hub-search-anchor {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 12px;
+  z-index: 410;
+  pointer-events: none;
+}
+html body.hub-home .hub-search-popover {
+  pointer-events: auto;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: auto;
+  max-width: none;
+}
+html[data-hub-search="open"] body.hub-home .hub-search-closed-center {
+  visibility: hidden;
+}
+html body.hub-home .hub-search-closed-hero {
+  display: none;
+}
+
+@media (min-width: 901px) {
+  html body.hub-home .hub-search-sheet {
+    display: none !important;
+  }
+  html body.hub-home .hub-brand-bar {
+    justify-content: flex-start;
+  }
+  html body.hub-home .hub-brand-actions {
+    margin-left: auto;
+  }
+  html body.hub-home .hub-search-closed-hero {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  html body.hub-home .hub-search-closed-center {
+    display: none;
+  }
+  html body.hub-home .hub-search-popover {
+    display: none !important;
+  }
+  html body.hub-home .hub-search-closed-hero {
+    display: flex;
+    margin: 0 16px 14px;
+    max-width: calc(100% - 32px);
+  }
+  html body.hub-home .hub-search-closed-hero .hub-search-field {
+    width: 100%;
+  }
+  html[data-hub-search="open"] body.hub-home .hub-search-closed-hero {
+    visibility: hidden;
+  }
+  html body.hub-home .hub-search-scrim {
+    z-index: 600;
+  }
+}
+
+html[data-hub-theme="dark"] body.hub-home .hub-search-field,
+html[data-hub-theme="dark"] body.hub-home .hub-search-popover,
+html[data-hub-theme="dark"] body.hub-home .hub-search-sheet,
+html[data-hub-theme="dark"] body.hub-home .hub-search-done {
+  background: #000000;
+  color: #EFF3F4;
+}
+html[data-hub-theme="dark"] body.hub-home .hub-search-field svg,
+html[data-hub-theme="dark"] body.hub-home .hub-search-clear,
+html[data-hub-theme="dark"] body.hub-home .hub-search-hit-name,
+html[data-hub-theme="dark"] body.hub-home .hub-search-done,
+html[data-hub-theme="dark"] body.hub-home .hub-search-input {
+  color: #EFF3F4;
+}
+html[data-hub-theme="dark"] body.hub-home .hub-search-scrim {
+  background: rgba(0, 0, 0, 0.48);
+}
+html[data-hub-theme="dark"] body.hub-home .hub-search-popover,
+html[data-hub-theme="dark"] body.hub-home .hub-search-sheet {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
