@@ -207,9 +207,9 @@
     }
   }
   /* Also featured stack (hero_layout=also-featured). Desktop: compact list
-     to the right of the hero, split by a 1px --border hairline at 75% of
+     to the right of the hero, split by a 1px --border-strong hairline at 75% of
      the hero height. Phone: the stack sits under the Open CTA with a
-     horizontal --border hairline above it. */
+     horizontal --border-strong hairline above it. */
   body.hub-home .hero-split { display: block; }
   body.hub-home .hero-primary, body.hub-home .hub-also { min-width: 0; }
   body.hub-home .hub-also-kicker {
@@ -252,14 +252,14 @@
       top: 12.5%;
       height: 75%;
       width: 1px;
-      background: var(--border);
+      background: var(--border-strong);
     }
   }
   @media (max-width: 999px) {
     body.hub-home[data-home-design="hero-room"][data-hero-layout="also-featured"] .hub-also {
       margin-top: 16px;
       padding-top: 14px;
-      border-top: 1px solid var(--border);
+      border-top: 1px solid var(--border-strong);
     }
   }
   </style>

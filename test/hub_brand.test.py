@@ -698,14 +698,14 @@ ok('@media (min-width: 1000px)' in _home
    and 'data-hero-layout="also-featured"] .hero-split' in _home
    and 'grid-template-columns: 1fr 230px' in _home
    and 'height: 75%' in _home
-   and 'background: var(--border)' in _home
+   and 'background: var(--border-strong)' in _home
    and '.hub-also::before' in _home,
-   'desktop Also featured stack sits to the right of the hero with a 75% --border hairline')
+   'desktop Also featured stack sits to the right of the hero with a 75% --border-strong hairline')
 ok('@media (max-width: 999px)' in _home
    and 'data-hero-layout="also-featured"] .hub-also' in _home
-   and 'border-top: 1px solid var(--border)' in _home
+   and 'border-top: 1px solid var(--border-strong)' in _home
    and 'margin-top: 16px' in _home,
-   'phone Also featured stack sits under the CTA with a horizontal --border hairline')
+   'phone Also featured stack sits under the CTA with a horizontal --border-strong hairline')
 _hub_js = read(os.path.join(SITE, 'hub.js'))
 ok('function resolveAlsoRooms' in _hub_js and 'function watchSuggestedRail' in _hub_js
    and 'boyfriendchat' in _hub_js and 'behindtheblackwall' in _hub_js
