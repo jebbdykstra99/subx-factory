@@ -9,7 +9,9 @@
   "home": {
     "home_design": "hero-room",
     "hero_room": "gpchat",
-    "_doc": "home_design is hero-room (concept C, the default) or feed-first (concept A). Swapping is a one-line change of home_design, then a re-render, for A/B testing. hero_room is the featured room id on the Hero Room home. It can rotate so SubX does not read as a single-topic site."
+    "hero_layout": "also-featured",
+    "hero_also": [],
+    "_doc": "home_design is hero-room (concept C, the default) or feed-first (concept A). Swapping is a one-line change of home_design, then a re-render, for A/B testing. hero_room is the featured room id on the Hero Room home. It can rotate so SubX does not read as a single-topic site. hero_layout is also-featured (the default), two-rooms, latest, or carousel. Only also-featured is built; any other value falls back to also-featured. Switching layout is a one-line change of hero_layout, then a re-render, the same way home_design works. hero_also is an optional pin of room ids for the Also featured stack (for example [\"popechat\",\"gaichat\"]). When it is empty, the stack picks two eligible rooms with a UTC day-of-year seed at page load. Eligible rooms come from rooms.json, minus the hero room, paused rooms (amachat, atmchat, behindtheblackwall), and boyfriendchat. Agent Room joins that pool only if rooms.json already has a public display name for it that does not use a reserved model name, and it is marked live or ready."
   },
   "vendor": [
     {

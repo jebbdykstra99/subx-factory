@@ -206,10 +206,66 @@
       width: 100%;
     }
   }
+  /* Also featured stack (hero_layout=also-featured). Desktop: compact list
+     to the right of the hero, split by a 1px --border hairline at 75% of
+     the hero height. Phone: the stack sits under the Open CTA with a
+     horizontal --border hairline above it. */
+  body.hub-home .hero-split { display: block; }
+  body.hub-home .hero-primary, body.hub-home .hub-also { min-width: 0; }
+  body.hub-home .hub-also-kicker {
+    font: 700 11px/1 var(--ui); letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 10px;
+  }
+  body.hub-home .hub-also-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 10px; padding: 8px 0; border-top: 1px solid var(--border);
+  }
+  body.hub-home .hub-also-row:first-child { border-top: 0; padding-top: 0; }
+  body.hub-home .hub-also-name {
+    font-weight: 800; font-size: 16px; letter-spacing: -0.03em;
+    color: var(--text-strong); line-height: 1.15;
+  }
+  body.hub-home .hub-also-tag { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  body.hub-home .hub-also-open {
+    font-size: 13px; font-weight: 700; color: var(--text);
+    text-decoration: none; white-space: nowrap; flex: none; padding-top: 2px;
+  }
+  body.hub-home .hub-also-open:hover { text-decoration: underline; }
+  body.hub-home .hub-also[hidden] { display: none !important; }
+  @media (min-width: 1000px) {
+    body.hub-home[data-home-design="hero-room"][data-hero-layout="also-featured"] .hero-split {
+      display: grid;
+      grid-template-columns: 1fr 230px;
+      gap: 0 28px;
+      align-items: start;
+    }
+    body.hub-home[data-home-design="hero-room"][data-hero-layout="also-featured"] .hub-also {
+      margin: 0;
+      padding: 2px 0 2px 0;
+      position: relative;
+      align-self: start;
+    }
+    body.hub-home[data-home-design="hero-room"][data-hero-layout="also-featured"] .hub-also::before {
+      content: "";
+      position: absolute;
+      left: -14px;
+      top: 12.5%;
+      height: 75%;
+      width: 1px;
+      background: var(--border);
+    }
+  }
+  @media (max-width: 999px) {
+    body.hub-home[data-home-design="hero-room"][data-hero-layout="also-featured"] .hub-also {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+  }
   </style>
   <link rel="preload" href="{{asset:/site.json}}" as="fetch" crossorigin="anonymous">
 </head>
-<body class="hub-home" data-home-design="hero-room" data-hero-room="gpchat">
+<body class="hub-home" data-home-design="hero-room" data-hero-room="gpchat" data-hero-layout="also-featured" data-hero-also="">
 
 <button class="hamburger" id="hamburger" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">
   <span></span><span></span><span></span>
@@ -327,11 +383,19 @@
       </div>
       <p class="hub-tagline" id="hub-tagline">{{brand.tagline}}</p>
       <section class="hub-hero" id="hub-hero" hidden>
-        <div class="hub-hero-eyebrow">A {{brand.name}} room · featured</div>
-        <h1 class="hub-hero-name" id="hub-hero-name"></h1>
-        <p class="hub-hero-tag" id="hub-hero-tag"></p>
-        <div class="hub-cta-row">
-          <a class="hub-cta" id="hub-hero-open" rel="noopener">Open</a>
+        <div class="hero-split" id="hub-hero-split">
+          <div class="hero-primary">
+            <div class="hub-hero-eyebrow">A {{brand.name}} room · featured</div>
+            <h1 class="hub-hero-name" id="hub-hero-name"></h1>
+            <p class="hub-hero-tag" id="hub-hero-tag"></p>
+            <div class="hub-cta-row">
+              <a class="hub-cta" id="hub-hero-open" rel="noopener">Open</a>
+            </div>
+          </div>
+          <aside class="hub-also" id="hub-also" aria-label="Also featured" hidden>
+            <div class="hub-also-kicker">Also featured</div>
+            <div id="hub-also-list"></div>
+          </aside>
         </div>
       </section>
       <div class="hub-cta-row" id="hub-feed-cta" hidden>

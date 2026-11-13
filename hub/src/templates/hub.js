@@ -140,6 +140,157 @@
     return /^[a-z0-9-]{1,40}$/.test(v) ? v : 'gpchat';
   }
   var homeSwitch = null;
+  var PAUSED_ROOMS = { amachat: 1, atmchat: 1, behindtheblackwall: 1 };
+  function heroLayout() {
+    var fromJson = homeSwitch && homeSwitch.hero_layout;
+    var fromDom = document.body && document.body.getAttribute('data-hero-layout');
+    var v = fromJson || fromDom || 'also-featured';
+    // two-rooms, latest, and carousel are reserved for A/B tests and fall back
+    // until those layouts are built.
+    return v === 'also-featured' ? 'also-featured' : 'also-featured';
+  }
+  function heroAlsoPins() {
+    var raw = homeSwitch && homeSwitch.hero_also;
+    if (raw == null) {
+      var fromDom = document.body && document.body.getAttribute('data-hero-also');
+      raw = fromDom;
+    }
+    if (raw == null || raw === '') return [];
+    if (typeof raw === 'string') raw = raw.split(/[,\s]+/);
+    if (!Array.isArray(raw)) return [];
+    var out = [], i, v;
+    for (i = 0; i < raw.length; i++) {
+      v = String(raw[i] || '').trim();
+      if (/^[a-z0-9-]{1,40}$/.test(v)) out.push(v);
+    }
+    return out;
+  }
+  function utcDayOfYear(now) {
+    now = now || new Date();
+    var y = now.getUTCFullYear();
+    var start = Date.UTC(y, 0, 1);
+    var today = Date.UTC(y, now.getUTCMonth(), now.getUTCDate());
+    return Math.floor((today - start) / 86400000) + 1;
+  }
+  function pickTwoSeeded(list, seed) {
+    var a = list.slice(), s = (seed >>> 0) || 1, i, j, t;
+    for (i = a.length - 1; i > 0; i--) {
+      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+      j = s % (i + 1);
+      t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a.slice(0, 2);
+  }
+  function isReservedModelName(s) {
+    return /grok/i.test(String(s || ''));
+  }
+  function alsoEligible(rooms, heroId) {
+    var out = [], i, r, name, st, isAgent;
+    for (i = 0; i < rooms.length; i++) {
+      r = rooms[i];
+      if (!r || !r.room) continue;
+      if (r.room === heroId) continue;
+      if (r.partner === true && r.enabled !== true) continue;
+      if (r.status === 'paused' || PAUSED_ROOMS[r.room]) continue;
+      if (r.room === 'boyfriendchat') continue;
+      name = r.name || r.room;
+      if (isReservedModelName(name) || isReservedModelName(r.room)) continue;
+      isAgent = /^agentroom$/i.test(r.room) || /^agent room$/i.test(String(name));
+      if (isAgent) {
+        st = String(r.status || '');
+        if (st !== 'live' && st !== 'ready') continue;
+      }
+      out.push(r);
+    }
+    return out;
+  }
+  function resolveAlsoRooms(rooms, heroId) {
+    var eligible = alsoEligible(rooms, heroId);
+    var byId = {}, i, r, pins, picked, id;
+    for (i = 0; i < eligible.length; i++) byId[eligible[i].room] = eligible[i];
+    pins = heroAlsoPins();
+    if (pins.length) {
+      picked = [];
+      for (i = 0; i < pins.length && picked.length < 2; i++) {
+        r = byId[pins[i]];
+        if (r) picked.push(r);
+      }
+      return picked;
+    }
+    return pickTwoSeeded(eligible, (new Date().getUTCFullYear() * 1000) + utcDayOfYear());
+  }
+  function alsoRowHtml(r) {
+    var url = safeUrl('https://' + r.domain + '/');
+    if (!url) return '';
+    return '<div class="hub-also-row">' +
+      '<div><div class="hub-also-name">' + esc(r.name || r.room) + '</div>' +
+      (r.tagline ? '<div class="hub-also-tag">' + esc(r.tagline) + '</div>' : '') +
+      '</div>' +
+      '<a class="hub-also-open" href="' + esc(url) + '" rel="noopener">Open</a></div>';
+  }
+  function paintAlsoFeatured(rooms, heroId, design) {
+    var box = document.getElementById('hub-also');
+    var listEl = document.getElementById('hub-also-list');
+    var layout = heroLayout();
+    var picked = (design === 'hero-room' && layout === 'also-featured') ? resolveAlsoRooms(rooms, heroId) : [];
+    if (document.body) document.body.setAttribute('data-hero-layout', layout);
+    if (!box || !listEl) return picked;
+    if (!picked.length) {
+      box.hidden = true;
+      listEl.innerHTML = '';
+      return picked;
+    }
+    box.hidden = false;
+    listEl.innerHTML = picked.map(alsoRowHtml).join('');
+    return picked;
+  }
+  function hideName(r) {
+    var out = {};
+    if (!r) return out;
+    if (r.room) out[String(r.room).toLowerCase()] = 1;
+    if (r.name) out[String(r.name).toLowerCase()] = 1;
+    if (r.domain) out[String(r.domain).toLowerCase()] = 1;
+    return out;
+  }
+function filterSuggestedRail(hideRooms) {
+    var rail = document.getElementById('news-feed');
+    if (!rail) return;
+    var hide = {}, i, r, key;
+    for (i = 0; i < (hideRooms || []).length; i++) {
+      r = hideName(hideRooms[i]);
+      for (key in r) if (Object.prototype.hasOwnProperty.call(r, key)) hide[key] = 1;
+    }
+    var items = rail.querySelectorAll('.news-item');
+    for (i = 0; i < items.length; i++) {
+      var el = items[i];
+      var link = el.matches('a[href]') ? el : el.querySelector('a[href]');
+      var href = (link && link.getAttribute('href')) || '';
+      var headline = ((el.querySelector('.news-item-headline') || {}).textContent || '').trim().toLowerCase();
+      var meta = ((el.querySelector('.news-item-meta') || {}).textContent || '').trim().toLowerCase();
+      var drop = !!(headline && hide[headline]);
+      if (!drop && meta && hide[meta]) drop = true;
+      if (!drop && href) {
+        try {
+          var host = new URL(href).hostname.replace(/^www\./, '').toLowerCase();
+          if (hide[host]) drop = true;
+        } catch (e) {}
+      }
+      if (drop) el.parentNode.removeChild(el);
+    }
+  }
+  function watchSuggestedRail(hideRooms) {
+    var rail = document.getElementById('news-feed');
+    if (!rail) return;
+    filterSuggestedRail(hideRooms);
+    if (rail._hubAlsoObs) rail._hubAlsoObs.disconnect();
+    var obs = new MutationObserver(function () {
+      obs.disconnect();
+      filterSuggestedRail(hideRooms);
+      obs.observe(rail, { childList: true, subtree: true });
+    });
+    obs.observe(rail, { childList: true, subtree: true });
+    rail._hubAlsoObs = obs;
+  }
   function findRoom(rooms, id) {
     var i, r, fallback = null;
     for (i = 0; i < rooms.length; i++) {
@@ -187,8 +338,13 @@
     if (others && others.parentNode) others.parentNode.insertBefore(block, others.nextSibling);
   }
   function paintHome(d, rooms) {
-    if (d && (d.home_design || d.hero_room)) {
-      homeSwitch = { home_design: d.home_design, hero_room: d.hero_room };
+    if (d && (d.home_design || d.hero_room || d.hero_layout || d.hero_also)) {
+      homeSwitch = {
+        home_design: d.home_design,
+        hero_room: d.hero_room,
+        hero_layout: d.hero_layout,
+        hero_also: d.hero_also
+      };
     }
     var design = homeDesign();
     var heroId = heroRoomId();
@@ -248,6 +404,11 @@
         strip.innerHTML = '';
       }
     }
+    var alsoRooms = paintAlsoFeatured(list, heroId, design);
+    var hideFromRail = [];
+    if (hero && design === 'hero-room') hideFromRail.push(hero);
+    hideFromRail = hideFromRail.concat(alsoRooms || []);
+    watchSuggestedRail(hideFromRail);
     placePartners(design, feed ? feed.querySelectorAll('.hub-card') : []);
   }
   if (feed) {
