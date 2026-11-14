@@ -441,6 +441,7 @@ def main():
             accent, brief = accent_of(site_doc), brief_line(site_doc)
             if accent: entry['accent'] = accent
             if brief: entry['brief'] = brief
+            if r.get('heroImages'): entry['heroImages'] = r['heroImages']  # the room's own hero photos (hub/src/rooms.json), shown only when it is featured
             suggest.append(entry)
         per_room = f_per if room in featured else o_per
         if not r.get('highlights') or per_room <= 0:
