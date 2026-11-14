@@ -85,6 +85,150 @@
     {
       "from": "hub/src/whomark/art/whomark-hybrid-s16-color.svg",
       "to": "assets/whomark/whomark-hybrid-s16-color.svg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp01-canada-2010-race-start-1200.jpg",
+      "to": "assets/hero/gpchat/gp01-canada-2010-race-start-1200.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp01-canada-2010-race-start-1200.webp",
+      "to": "assets/hero/gpchat/gp01-canada-2010-race-start-1200.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp01-canada-2010-race-start-600.jpg",
+      "to": "assets/hero/gpchat/gp01-canada-2010-race-start-600.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp01-canada-2010-race-start-600.webp",
+      "to": "assets/hero/gpchat/gp01-canada-2010-race-start-600.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp02-monza-2019-leclerc-hamilton-1200.jpg",
+      "to": "assets/hero/gpchat/gp02-monza-2019-leclerc-hamilton-1200.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp02-monza-2019-leclerc-hamilton-1200.webp",
+      "to": "assets/hero/gpchat/gp02-monza-2019-leclerc-hamilton-1200.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp02-monza-2019-leclerc-hamilton-600.jpg",
+      "to": "assets/hero/gpchat/gp02-monza-2019-leclerc-hamilton-600.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp02-monza-2019-leclerc-hamilton-600.webp",
+      "to": "assets/hero/gpchat/gp02-monza-2019-leclerc-hamilton-600.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp03-lotus-25-1964-1200.jpg",
+      "to": "assets/hero/gpchat/gp03-lotus-25-1964-1200.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp03-lotus-25-1964-1200.webp",
+      "to": "assets/hero/gpchat/gp03-lotus-25-1964-1200.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp03-lotus-25-1964-600.jpg",
+      "to": "assets/hero/gpchat/gp03-lotus-25-1964-600.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp03-lotus-25-1964-600.webp",
+      "to": "assets/hero/gpchat/gp03-lotus-25-1964-600.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp04-emeryson-monaco-historic-2018-1200.jpg",
+      "to": "assets/hero/gpchat/gp04-emeryson-monaco-historic-2018-1200.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp04-emeryson-monaco-historic-2018-1200.webp",
+      "to": "assets/hero/gpchat/gp04-emeryson-monaco-historic-2018-1200.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp04-emeryson-monaco-historic-2018-600.jpg",
+      "to": "assets/hero/gpchat/gp04-emeryson-monaco-historic-2018-600.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp04-emeryson-monaco-historic-2018-600.webp",
+      "to": "assets/hero/gpchat/gp04-emeryson-monaco-historic-2018-600.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp06-bmw-f2-hahne-1970-1200.jpg",
+      "to": "assets/hero/gpchat/gp06-bmw-f2-hahne-1970-1200.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp06-bmw-f2-hahne-1970-1200.webp",
+      "to": "assets/hero/gpchat/gp06-bmw-f2-hahne-1970-1200.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp06-bmw-f2-hahne-1970-600.jpg",
+      "to": "assets/hero/gpchat/gp06-bmw-f2-hahne-1970-600.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp06-bmw-f2-hahne-1970-600.webp",
+      "to": "assets/hero/gpchat/gp06-bmw-f2-hahne-1970-600.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp07-historic-gp-zandvoort-2015-1200.jpg",
+      "to": "assets/hero/gpchat/gp07-historic-gp-zandvoort-2015-1200.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp07-historic-gp-zandvoort-2015-1200.webp",
+      "to": "assets/hero/gpchat/gp07-historic-gp-zandvoort-2015-1200.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp07-historic-gp-zandvoort-2015-600.jpg",
+      "to": "assets/hero/gpchat/gp07-historic-gp-zandvoort-2015-600.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp07-historic-gp-zandvoort-2015-600.webp",
+      "to": "assets/hero/gpchat/gp07-historic-gp-zandvoort-2015-600.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp08-zandvoort-1966-brabham-clark-1200.jpg",
+      "to": "assets/hero/gpchat/gp08-zandvoort-1966-brabham-clark-1200.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp08-zandvoort-1966-brabham-clark-1200.webp",
+      "to": "assets/hero/gpchat/gp08-zandvoort-1966-brabham-clark-1200.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp08-zandvoort-1966-brabham-clark-600.jpg",
+      "to": "assets/hero/gpchat/gp08-zandvoort-1966-brabham-clark-600.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp08-zandvoort-1966-brabham-clark-600.webp",
+      "to": "assets/hero/gpchat/gp08-zandvoort-1966-brabham-clark-600.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp09-zandvoort-1968-stewart-rain-1200.jpg",
+      "to": "assets/hero/gpchat/gp09-zandvoort-1968-stewart-rain-1200.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp09-zandvoort-1968-stewart-rain-1200.webp",
+      "to": "assets/hero/gpchat/gp09-zandvoort-1968-stewart-rain-1200.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp09-zandvoort-1968-stewart-rain-600.jpg",
+      "to": "assets/hero/gpchat/gp09-zandvoort-1968-stewart-rain-600.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp09-zandvoort-1968-stewart-rain-600.webp",
+      "to": "assets/hero/gpchat/gp09-zandvoort-1968-stewart-rain-600.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp10-zandvoort-1955-fangio-mercedes-1200.jpg",
+      "to": "assets/hero/gpchat/gp10-zandvoort-1955-fangio-mercedes-1200.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp10-zandvoort-1955-fangio-mercedes-1200.webp",
+      "to": "assets/hero/gpchat/gp10-zandvoort-1955-fangio-mercedes-1200.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp10-zandvoort-1955-fangio-mercedes-600.jpg",
+      "to": "assets/hero/gpchat/gp10-zandvoort-1955-fangio-mercedes-600.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/gpchat/gp10-zandvoort-1955-fangio-mercedes-600.webp",
+      "to": "assets/hero/gpchat/gp10-zandvoort-1955-fangio-mercedes-600.webp"
     }
   ],
   "data": [

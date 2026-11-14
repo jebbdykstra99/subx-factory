@@ -297,8 +297,42 @@
       border-top: 1px solid var(--border-strong);
     }
   }
+  /* Rotating hero photo (featured room heroImages, layout A on desktop and C on
+     phone). hub.js adds the figure and .hx-on only when the featured room has
+     photos; with none there is no element and no class, so nothing here applies.
+     Phone: a 16:9 photo edge to edge under Search rooms, above the title.
+     Desktop: a 16:6 banner (max 200px) under the title row; from a hero content
+     width of 760px the photo card fills the middle column and Also featured
+     keeps its place on the right. The photo stays at z-index 1 or below inside
+     an isolated hero, so the search panel and scrim cover it. */
+  body.hub-home .hub-hero.hx-on { isolation: isolate; container: hxhero / inline-size; }
+  body.hub-home .hx-hub { display: block; aspect-ratio: 16 / 9; margin: 0 -16px 16px; }
+  @media (min-width: 1000px) {
+    body.hub-home[data-home-design="hero-room"][data-hero-layout="also-featured"] .hub-hero.hx-on .hero-split {
+      grid-template-columns: minmax(0, 1fr) 230px;
+    }
+    body.hub-home .hub-hero.hx-on .hero-primary { grid-column: 1; grid-row: 1; }
+    body.hub-home .hub-hero.hx-on .hub-also { grid-column: 2; grid-row: 1; }
+    body.hub-home .hx-hub {
+      grid-column: 1 / -1; grid-row: 2;
+      aspect-ratio: 16 / 6; max-height: 200px; width: 100%;
+      margin: 20px 0 0; border-radius: 16px; border: 1px solid var(--border);
+    }
+    @container hxhero (min-width: 760px) {
+      body.hub-home[data-home-design="hero-room"][data-hero-layout="also-featured"] .hub-hero.hx-on .hero-split {
+        grid-template-columns: max-content minmax(240px, 1fr) 230px;
+        align-items: stretch;
+      }
+      body.hub-home .hx-hub {
+        grid-column: 2; grid-row: 1;
+        aspect-ratio: auto; max-height: none; min-height: 176px; max-width: 520px;
+        margin: 0; justify-self: center; align-self: stretch;
+      }
+      body.hub-home .hub-hero.hx-on .hub-also { grid-column: 3; align-self: start; }
+    }
+  }
   </style>
-  <link rel="preload" href="/site.json?v=23eff19959" as="fetch" crossorigin="anonymous">
+  <link rel="preload" href="/site.json?v=78ed4afa70" as="fetch" crossorigin="anonymous">
 </head>
 <body class="hub-home" data-home-design="hero-room" data-hero-room="gpchat" data-hero-layout="also-featured" data-hero-also="">
 
@@ -752,8 +786,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" integrity="sha384-TnlRYaR4JYz/lpaGuaiU61PjNberSA4vjLjtF+oRC/IkohkJqnWxw5EmDSOt1vA1" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" integrity="sha384-qn4Jh88HhJA8dplNQyGjOh9OGI4izVhrfj/qIFgaKcdgOE06pXqIKGlsCILZcLAC" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js" integrity="sha384-6I0gWsz4FIAr30c0TxIxJnPQuJiZ1FfILdZrgJdjxTH3R8dgPGTvexbyqTvReV6Z" crossorigin="anonymous"></script>
-<script src="/shell/v1.2.10/factory.js" integrity="sha384-DLkLAcqTjh9KyevXVNaxLwrHD8Bh3idmP7F43Fl8QX7RdFy7RPGFUgtv1KdXNaIa" crossorigin="anonymous" data-site="/site.json?v=23eff19959"></script>
-<script src="/hub.js?v=5149c14779" defer></script>
+<script src="/shell/v1.2.10/factory.js" integrity="sha384-DLkLAcqTjh9KyevXVNaxLwrHD8Bh3idmP7F43Fl8QX7RdFy7RPGFUgtv1KdXNaIa" crossorigin="anonymous" data-site="/site.json?v=78ed4afa70"></script>
+<script src="/hub.js?v=06a9772279" defer></script>
 <script src="/takedown.js?v=34894c915e" defer></script>
 </body>
 </html>
