@@ -3,6 +3,7 @@
  * Room differences belong in site.json (features, skin, rail, nests, minAge) or in EXCEPTIONS.md. */
 (function() {
   'use strict';
+  function addon(n){var s=document.createElement('script');s.src=FACTORY_SRC?FACTORY_SRC.replace(/factory\.js(\?[^#]*)?(#.*)?$/i,n+'.js$1$2'):n+'.js';document.head.append(s);return s}
   function addCss(id,c){if(document.getElementById(id))return;var s=document.createElement('style');s.id=id;s.textContent=c;document.head.appendChild(s);}
   const MOBILE_NAV_MQ = 900;
   const LS_USER = 'subx.user';
@@ -1070,12 +1071,9 @@
         closeAuth: closeAuth,
         setAuthOpenWhenReady: function(v) { authOpenWhenReady = !!v; }
       };
-      var s = document.createElement('script');
-      s.src = FACTORY_SRC ? FACTORY_SRC.replace(/factory\.js(\?[^#]*)?(#.*)?$/i, 'factory-signin.js$1$2') : 'factory-signin.js';
-      s.async = true;
+      var s = addon('factory-signin');
       s.onerror = function() { signinP = null; reject(new Error('Could not load factory-signin.js')); };
       s.onload = function() { if (!signinApi) { signinP = null; reject(new Error('factory-signin.js did not install')); } };
-      (document.head || document.documentElement).appendChild(s);
     });
     return signinP;
   }
@@ -2639,7 +2637,7 @@
   function renderPostMedia(post) {
     if (isPostHidden(post)) return '';
     var html = '';
-    if (post.imageUrl) {
+    if (/^https:/i.test(post.imageUrl)) {
       html += '<div class="post-image"><img src="' + escapeHtml(post.imageUrl) + '" alt="" loading="lazy"></div>';
     }
     if (post.poll && post.poll.options && post.poll.options.length) {
@@ -2864,6 +2862,7 @@
      var kids = repliesFor(p.id);
      return renderPost(p, false) + kids.map(function(r) { return renderPost(r, true); }).join('');
    }).join('') + nestMoreHtml();
+   PLUGIN.feat&&PLUGIN.feat(el);
    highlightDeepPost();
    refreshPorchUi();
    refreshNestSurfaces();
@@ -2918,16 +2917,7 @@
       '<div class="news-item-tag">Porch</div><div class="news-item-headline">' + escapeHtml(prompt) + '</div><div class="news-item-snippet">Pick a side. Posts to this room.</div><div class="porch-btns">' + btns + '</div><div class="porch-tally" aria-live="polite">' + escapeHtml(porchTallyLine()) + '</div><div class="news-item-meta">This room</div></div>';
   }
   function ensureRailCss() {
-    if (document.getElementById('rail-porch-css')) return;
-    var st = document.createElement('style');
-    st.id = 'rail-porch-css';
-    st.textContent =
-      '.news-item{display:block;padding:1rem 1.4rem;border-bottom:1px solid rgba(255,255,255,0.06);}a.news-item{text-decoration:none;cursor:pointer;}.porch-btns{display:flex;gap:0.45rem;margin:0.45rem 0 0.2rem;flex-wrap:wrap;}.porch-btn{font:inherit;font-size:0.78rem;font-weight:600;padding:0.35rem 0.8rem;border-radius:999px;border:1px solid rgba(255,255,255,0.22);background:rgba(255,255,255,0.08);color:#f0f4f7;cursor:pointer;}.porch-btn:hover{background:rgba(255,255,255,0.16);}.porch-btn-picked{border-color:var(--accent,#e07a3d);background:rgba(224,122,61,0.28);box-shadow:inset 0 0 0 1px var(--accent,#e07a3d);}.porch-tally{font-size:0.75rem;line-height:1.4;color:#8aa0b0;margin:0.28rem 0 0.1rem;}.news-page-list .news-item{background:var(--surface,#f4f7fa);border:1px solid var(--border,#c9d5de);border-radius:10px;padding:1.05rem 1.15rem;}.news-page-list .porch-btn{border-color:var(--border,#c9d5de);background:#fff;color:var(--text,#12202c);}.news-page-list .porch-btn:hover{border-color:var(--accent,#c0362c);color:var(--accent,#c0362c);}.news-page-list .porch-btn-picked{border-color:var(--accent,#c0362c);color:var(--accent,#c0362c);background:rgba(192,54,44,0.08);}.news-page-list .porch-tally{color:var(--text-muted,#4a5f66);}[data-porch-dwell] .news-item-porch{padding-top:1.25rem;padding-bottom:1.25rem;}';
-    if (featureOn('topicFollow')) {
-      st.textContent +=
-        '.news-item{padding:1rem 2.8rem 1rem 1.4rem;position:relative;}a.news-item,.news-item-main{text-decoration:none;cursor:pointer;color:inherit;display:block;padding-right:2.15rem;}.news-follow-btn{position:absolute;top:0.75rem;right:0.85rem;z-index:2;width:28px;height:28px;padding:0;border-radius:999px;border:1px solid var(--accent,#e10600);background:transparent;color:var(--accent,#e10600);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}.news-follow-btn:hover{background:rgba(225,6,0,0.14);}.news-follow-btn:focus-visible{outline:2px solid var(--accent,#e10600);outline-offset:2px;}.news-follow-btn.is-following{background:var(--accent,#e10600);color:#fff;border-color:var(--accent,#e10600);}.news-page-list .news-follow-btn{border-color:var(--accent,#c0362c);color:var(--accent,#c0362c);}.news-page-list .news-follow-btn.is-following{background:var(--accent,#c0362c);color:#fff;border-color:var(--accent,#c0362c);}';
-    }
-    document.head.appendChild(st);
+    addCss('rail-porch-css', '.news-item{display:block;padding:1rem 1.4rem;border-bottom:1px solid rgba(255,255,255,0.06);}a.news-item{text-decoration:none;cursor:pointer;}.porch-btns{display:flex;gap:0.45rem;margin:0.45rem 0 0.2rem;flex-wrap:wrap;}.porch-btn{font:inherit;font-size:0.78rem;font-weight:600;padding:0.35rem 0.8rem;border-radius:999px;border:1px solid rgba(255,255,255,0.22);background:rgba(255,255,255,0.08);color:#f0f4f7;cursor:pointer;}.porch-btn:hover{background:rgba(255,255,255,0.16);}.porch-btn-picked{border-color:var(--accent,#e07a3d);background:rgba(224,122,61,0.28);box-shadow:inset 0 0 0 1px var(--accent,#e07a3d);}.porch-tally{font-size:0.75rem;line-height:1.4;color:#8aa0b0;margin:0.28rem 0 0.1rem;}.news-page-list .news-item{background:var(--surface,#f4f7fa);border:1px solid var(--border,#c9d5de);border-radius:10px;padding:1.05rem 1.15rem;}.news-page-list .porch-btn{border-color:var(--border,#c9d5de);background:#fff;color:var(--text,#12202c);}.news-page-list .porch-btn:hover{border-color:var(--accent,#c0362c);color:var(--accent,#c0362c);}.news-page-list .porch-btn-picked{border-color:var(--accent,#c0362c);color:var(--accent,#c0362c);background:rgba(192,54,44,0.08);}.news-page-list .porch-tally{color:var(--text-muted,#4a5f66);}[data-porch-dwell] .news-item-porch{padding-top:1.25rem;padding-bottom:1.25rem;}' + (featureOn('topicFollow') ? '.news-item{padding:1rem 2.8rem 1rem 1.4rem;position:relative;}a.news-item,.news-item-main{text-decoration:none;cursor:pointer;color:inherit;display:block;padding-right:2.15rem;}.news-follow-btn{position:absolute;top:0.75rem;right:0.85rem;z-index:2;width:28px;height:28px;padding:0;border-radius:999px;border:1px solid var(--accent,#e10600);background:transparent;color:var(--accent,#e10600);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}.news-follow-btn:hover{background:rgba(225,6,0,0.14);}.news-follow-btn:focus-visible{outline:2px solid var(--accent,#e10600);outline-offset:2px;}.news-follow-btn.is-following{background:var(--accent,#e10600);color:#fff;border-color:var(--accent,#e10600);}.news-page-list .news-follow-btn{border-color:var(--accent,#c0362c);color:var(--accent,#c0362c);}.news-page-list .news-follow-btn.is-following{background:var(--accent,#c0362c);color:#fff;border-color:var(--accent,#c0362c);}' : ''));
   }
   function paintRail(items) {
     ensureRailCss();
@@ -2936,6 +2926,7 @@
     var page = document.getElementById('news-page-list');
     if (rail) rail.innerHTML = html;
     if (page) page.innerHTML = html;
+    PLUGIN.feat&&PLUGIN.feat();
     maybeShowRailOverlay();
   }
   var railOverlayUiReady = false;
@@ -6232,6 +6223,7 @@
     renderThreads();
     renderSidebarAuth();
     renderFeed();
+    if(site.featured)addon('factory-featured').onload=function(){var f=window.__subxFeat;f&&Object.assign(PLUGIN,f(CORE));renderFeed()};
     railOverlayUiReady = true;
     wireRailOverlay();
     maybeShowRailOverlay();
