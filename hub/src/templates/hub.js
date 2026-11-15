@@ -3,6 +3,52 @@
    Each part runs on its own: the home page has #hub-feed (+ #hub-rooms), rooms.html has only #hub-rooms. */
 (function () {
   'use strict';
+  /* featured-rotation:start (test/hub_featured_rotation.test.py runs this block in node). The page carries one hero
+     card per allowlisted room (config.json home.featured_rotation, written by build_highlights.py --featured). Today's
+     card is index = (days from data-feat-epoch to today's US Mountain Time date) mod N, or data-feat-pin when set. The
+     Also featured stack is the next two rooms. No randomness, no timer. This runs first, before any fetch. */
+  function featYmd(now, tz) {
+    try {
+      var parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+      var o = {}, k;
+      for (k = 0; k < parts.length; k++) o[parts[k].type] = parts[k].value;
+      if (o.year && o.month && o.day) return [+o.year, +o.month, +o.day];
+    } catch (e) {}
+    var d = new Date(now.getTime() - 7 * 3600000);
+    return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()];
+  }
+  function featPick(order, epoch, now, tz, pin) {
+    var n = order.length, i = pin ? order.indexOf(pin) : -1, also = [], k, r;
+    if (!n) return null;
+    if (i < 0) {
+      var e = String(epoch || '').split('-'), t = featYmd(now, tz || 'US/Mountain');
+      var days = Math.round((Date.UTC(t[0], t[1] - 1, t[2]) - Date.UTC(+e[0], +e[1] - 1, +e[2])) / 86400000);
+      i = isFinite(days) ? ((days % n) + n) % n : 0;
+    }
+    for (k = 1; k <= 2; k++) {
+      r = order[(i + k) % n];
+      if (r !== order[i] && also.indexOf(r) < 0) also.push(r);
+    }
+    return { room: order[i], also: also };
+  }
+  /* featured-rotation:end */
+  var featPicked = (function () {
+    var hero = document.getElementById('hub-hero');
+    if (!hero || !hero.hasAttribute('data-feat-order')) return null;
+    var order = (hero.getAttribute('data-feat-order') || '').split(/\s+/).filter(function (x) { return /^[a-z0-9-]{1,40}$/.test(x); });
+    var p = featPick(order, hero.getAttribute('data-feat-epoch'), new Date(), hero.getAttribute('data-feat-tz'), hero.getAttribute('data-feat-pin'));
+    var cards = hero.querySelectorAll('.hub-feat[data-feat]'), sets = hero.querySelectorAll('.hub-also-set[data-feat]'), i, has = false;
+    for (i = 0; p && i < cards.length; i++) if (cards[i].getAttribute('data-feat') === p.room) has = true;
+    if (!has) p = { room: hero.getAttribute('data-feat-default') || '', also: [] };
+    for (i = 0; i < cards.length; i++) cards[i].hidden = cards[i].getAttribute('data-feat') !== p.room;
+    for (i = 0; i < sets.length; i++) sets[i].hidden = sets[i].getAttribute('data-feat') !== p.room;
+    hero.setAttribute('data-feat-room', p.room);
+    hero.classList.add('feat-ready');
+    return p;
+  })();
+  function featShown() {
+    return !!document.querySelector('#hub-hero .hub-feat[data-feat]:not([hidden])');
+  }
   var ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ESC[c]; }); }
   function safeUrl(u) { return /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}\/(\?p=[A-Za-z0-9_-]+)?$/i.test(String(u || '')) ? u : ''; }
@@ -330,13 +376,13 @@
     return d === 'feed-first' ? 'feed-first' : 'hero-room';
   }
   function heroRoomId() {
+    if (featPicked && featPicked.room) return featPicked.room;
     var fromJson = homeSwitch && homeSwitch.hero_room;
     var fromDom = document.body && document.body.getAttribute('data-hero-room');
     var v = fromJson || fromDom || 'gpchat';
     return /^[a-z0-9-]{1,40}$/.test(v) ? v : 'gpchat';
   }
   var homeSwitch = null;
-  var PAUSED_ROOMS = { amachat: 1, atmchat: 1, behindtheblackwall: 1 };
   function heroLayout() {
     var fromJson = homeSwitch && homeSwitch.hero_layout;
     var fromDom = document.body && document.body.getAttribute('data-hero-layout');
@@ -345,75 +391,14 @@
     // until those layouts are built.
     return v === 'also-featured' ? 'also-featured' : 'also-featured';
   }
-  function heroAlsoPins() {
-    var raw = homeSwitch && homeSwitch.hero_also;
-    if (raw == null) {
-      var fromDom = document.body && document.body.getAttribute('data-hero-also');
-      raw = fromDom;
-    }
-    if (raw == null || raw === '') return [];
-    if (typeof raw === 'string') raw = raw.split(/[,\s]+/);
-    if (!Array.isArray(raw)) return [];
-    var out = [], i, v;
-    for (i = 0; i < raw.length; i++) {
-      v = String(raw[i] || '').trim();
-      if (/^[a-z0-9-]{1,40}$/.test(v)) out.push(v);
-    }
-    return out;
-  }
-  function utcDayOfYear(now) {
-    now = now || new Date();
-    var y = now.getUTCFullYear();
-    var start = Date.UTC(y, 0, 1);
-    var today = Date.UTC(y, now.getUTCMonth(), now.getUTCDate());
-    return Math.floor((today - start) / 86400000) + 1;
-  }
-  function pickTwoSeeded(list, seed) {
-    var a = list.slice(), s = (seed >>> 0) || 1, i, j, t;
-    for (i = a.length - 1; i > 0; i--) {
-      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-      j = s % (i + 1);
-      t = a[i]; a[i] = a[j]; a[j] = t;
-    }
-    return a.slice(0, 2);
-  }
-  function isReservedModelName(s) {
-    return /grok/i.test(String(s || ''));
-  }
-  function alsoEligible(rooms, heroId) {
-    var out = [], i, r, name, st, isAgent;
-    for (i = 0; i < rooms.length; i++) {
-      r = rooms[i];
-      if (!r || !r.room) continue;
-      if (r.room === heroId) continue;
-      if (r.partner === true && r.enabled !== true) continue;
-      if (r.status === 'paused' || PAUSED_ROOMS[r.room]) continue;
-      if (r.room === 'boyfriendchat') continue;
-      name = r.name || r.room;
-      if (isReservedModelName(name) || isReservedModelName(r.room)) continue;
-      isAgent = /^agentroom$/i.test(r.room) || /^agent room$/i.test(String(name));
-      if (isAgent) {
-        st = String(r.status || '');
-        if (st !== 'live' && st !== 'ready') continue;
-      }
-      out.push(r);
-    }
-    return out;
-  }
+  // Also featured (2026-11-15): the next two rooms in the rotation, rendered in the page by build_highlights.py
+  // --featured. Paused rooms, boyfriendchat (held), boozechat (21+), and Agent Room are never on the allowlist.
   function resolveAlsoRooms(rooms, heroId) {
-    var eligible = alsoEligible(rooms, heroId);
-    var byId = {}, i, r, pins, picked, id;
-    for (i = 0; i < eligible.length; i++) byId[eligible[i].room] = eligible[i];
-    pins = heroAlsoPins();
-    if (pins.length) {
-      picked = [];
-      for (i = 0; i < pins.length && picked.length < 2; i++) {
-        r = byId[pins[i]];
-        if (r) picked.push(r);
-      }
-      return picked;
+    var ids = (featPicked && featPicked.room === heroId) ? featPicked.also : [], out = [], i, j;
+    for (i = 0; i < ids.length; i++) {
+      for (j = 0; j < rooms.length; j++) if (rooms[j] && rooms[j].room === ids[i]) { out.push(rooms[j]); break; }
     }
-    return pickTwoSeeded(eligible, (new Date().getUTCFullYear() * 1000) + utcDayOfYear());
+    return out;
   }
   function alsoRowHtml(r) {
     var url = safeUrl('https://' + r.domain + '/');
@@ -428,9 +413,14 @@
     var box = document.getElementById('hub-also');
     var listEl = document.getElementById('hub-also-list');
     var layout = heroLayout();
-    var picked = (design === 'hero-room' && layout === 'also-featured') ? resolveAlsoRooms(rooms, heroId) : [];
+    var on = design === 'hero-room' && layout === 'also-featured';
+    var picked = on ? resolveAlsoRooms(rooms, heroId) : [];
     if (document.body) document.body.setAttribute('data-hero-layout', layout);
     if (!box || !listEl) return picked;
+    if (listEl.querySelector('.hub-also-set')) {
+      box.hidden = !(on && listEl.querySelector('.hub-also-set:not([hidden]) .hub-also-row'));
+      return picked;
+    }
     if (!picked.length) {
       box.hidden = true;
       listEl.innerHTML = '';
@@ -548,26 +538,17 @@ function filterSuggestedRail(hideRooms) {
     var when = builtWhen(d);
     var list = (rooms || []).filter(function (r) { return r && !(r.partner === true && r.enabled !== true); });
     var hero = findRoom(list, heroId);
+    if (hero && hero.room !== heroId) hero = null;  // never another room's entry (or photos) under today's card
     var heroEl = document.getElementById('hub-hero');
     var feedCta = document.getElementById('hub-feed-cta');
     var others = document.getElementById('hub-others');
     var strip = document.getElementById('hub-strip');
     var note = document.getElementById('hub-sample-note');
-    var nameEl = document.getElementById('hub-hero-name');
-    var tagEl = document.getElementById('hub-hero-tag');
-    var openEl = document.getElementById('hub-hero-open');
     if (document.body) document.body.setAttribute('data-home-design', design);
-    if (heroEl) heroEl.hidden = design !== 'hero-room' || !hero;
+    if (heroEl) heroEl.hidden = design !== 'hero-room' || !featShown();
     paintHeroPhotos(hero && design === 'hero-room' ? hero : null);
     if (feedCta) feedCta.hidden = design !== 'feed-first';
     if (hero && design === 'hero-room') {
-      if (nameEl) nameEl.textContent = hero.name || hero.room;
-      if (tagEl) tagEl.textContent = hero.tagline || hero.brief || '';
-      if (openEl) {
-        var href = safeUrl('https://' + hero.domain + '/');
-        openEl.href = href || '#';
-        openEl.textContent = 'Open ' + (hero.name || hero.room);
-      }
       if (note) {
         note.hidden = false;
         note.textContent = 'Public highlights from this room, copied at build time' +
@@ -731,7 +712,7 @@ function filterSuggestedRail(hideRooms) {
     var others = document.getElementById('hub-others');
     var note = document.getElementById('hub-sample-note');
     var partnerFeed = partnerBlock();
-    if (heroEl) heroEl.hidden = !(onHome && design === 'hero-room' && (document.getElementById('hub-hero-name') || {}).textContent);
+    if (heroEl) heroEl.hidden = !(onHome && design === 'hero-room' && featShown());
     if (feedCta) feedCta.hidden = !(onHome && design === 'feed-first');
     if (others) others.hidden = !(onHome && design === 'hero-room' && others.querySelector('.hub-schip'));
     if (note) note.hidden = !(onHome && design === 'hero-room' && note.textContent);

@@ -11,7 +11,30 @@
     "hero_room": "gpchat",
     "hero_layout": "also-featured",
     "hero_also": [],
-    "_doc": "home_design is hero-room (concept C, the default) or feed-first (concept A). Swapping is a one-line change of home_design, then a re-render, for A/B testing. hero_room is the featured room id on the Hero Room home. It can rotate so SubX does not read as a single-topic site. hero_layout is also-featured (the default), two-rooms, latest, or carousel. Only also-featured is built; any other value falls back to also-featured. Switching layout is a one-line change of hero_layout, then a re-render, the same way home_design works. hero_also is an optional pin of room ids for the Also featured stack (for example [\"popechat\",\"gaichat\"]). When it is empty, the stack picks two eligible rooms with a UTC day-of-year seed at page load. Eligible rooms come from rooms.json, minus the hero room, paused rooms (amachat, atmchat, behindtheblackwall), and boyfriendchat. Agent Room joins that pool only if rooms.json already has a public display name for it that does not use a reserved model name, and it is marked live or ready."
+    "_doc": "home_design is hero-room (concept C, the default) or feed-first (concept A). Swapping is a one-line change of home_design, then a re-render, for A/B testing. hero_layout is also-featured (the default), two-rooms, latest, or carousel. Only also-featured is built; any other value falls back to also-featured. Switching layout is a one-line change of hero_layout, then a re-render, the same way home_design works. featured_rotation (2026-11-15) picks the featured room: rooms is an explicit allowlist in alphabetical order, and the featured room is index = (days from epoch, by the US Mountain Time calendar date) mod the number of rooms, so it changes at midnight Mountain Time with no deploy. The Also featured stack is the next two rooms in that order. pin is null, or one allowlisted room id to hold it as the featured room (for a race weekend or a launch); the stack then shows the two rooms after it. hub/src/build_highlights.py --featured writes one card per room into templates/index.html (the build date's room is the no-JavaScript default) and hub.js shows today's card. A room joins only by being added to rooms here. Keep out paused rooms (airlineschat, amachat, atmchat, behindtheblackwall), boyfriendchat while it is held, boozechat until its 21+ gate ships, Agent Room, and any room that is not live. The hub cannot see the live kill switch, so a room that is switched off leaves the rotation by removing it from rooms with a small PR. briefs can hold a Room Brief line for a room whose data has none; it must come from that room's own tagline or description. hero_room is the fallback featured room only when rooms is empty. hero_also is retired by the rotation and stays empty.",
+    "featured_rotation": {
+      "rooms": [
+        "27chat",
+        "311chat",
+        "415chat",
+        "808chat",
+        "bartchat",
+        "buffetchat",
+        "buffettchat",
+        "ciachat",
+        "cobrachat",
+        "gaichat",
+        "gpchat",
+        "popechat",
+        "recruitchat",
+        "samochat"
+      ],
+      "epoch": "2026-11-16",
+      "timezone": "US/Mountain",
+      "pin": null,
+      "label": "A {{brand.name}} room · Featured today",
+      "briefs": {}
+    }
   },
   "vendor": [
     {
