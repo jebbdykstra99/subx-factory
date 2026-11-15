@@ -5,8 +5,10 @@
   'use strict';
   /* featured-rotation:start (test/hub_featured_rotation.test.py runs this block in node). The page carries one hero
      card per allowlisted room (config.json home.featured_rotation, written by build_highlights.py --featured). Today's
-     card is index = (days from data-feat-epoch to today's US Mountain Time date) mod N, or data-feat-pin when set. The
-     Also featured stack is the next two rooms. No randomness, no timer. This runs first, before any fetch. */
+     card is data-feat-pin when set, else the data-feat-weekday room for today (for example sun:popechat), else
+     index = (round-robin days from data-feat-epoch to today's US Mountain Time date) mod N, where round-robin days skip
+     the weekday rule's days, so no room is stuck on a Sunday (N = 14 is a multiple of 7). The Also featured stack is the next
+     two rooms. No randomness, no timer. This runs first, before any fetch. */
   function featYmd(now, tz) {
     try {
       var parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
@@ -17,13 +19,22 @@
     var d = new Date(now.getTime() - 7 * 3600000);
     return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()];
   }
-  function featPick(order, epoch, now, tz, pin) {
+  var FEAT_DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  function featPick(order, epoch, now, tz, pin, weekday) {
     var n = order.length, i = pin ? order.indexOf(pin) : -1, also = [], k, r;
     if (!n) return null;
+    var t = featYmd(now, tz || 'US/Mountain');
+    if (i < 0 && weekday) {
+      var wd = weekday[FEAT_DAYS[new Date(Date.UTC(t[0], t[1] - 1, t[2])).getUTCDay()]];
+      if (wd) i = order.indexOf(wd);
+    }
     if (i < 0) {
-      var e = String(epoch || '').split('-'), t = featYmd(now, tz || 'US/Mountain');
-      var days = Math.round((Date.UTC(t[0], t[1] - 1, t[2]) - Date.UTC(+e[0], +e[1] - 1, +e[2])) / 86400000);
-      i = isFinite(days) ? ((days % n) + n) % n : 0;
+      var e = String(epoch || '').split('-'), e0 = Date.UTC(+e[0], +e[1] - 1, +e[2]), ruled = {}, nr = 0, j;
+      var days = Math.round((Date.UTC(t[0], t[1] - 1, t[2]) - e0) / 86400000);
+      for (j = 0; j < 7; j++) if (weekday && order.indexOf(weekday[FEAT_DAYS[j]]) >= 0) { ruled[j] = 1; nr++; }
+      var weeks = Math.floor(days / 7), rem = days - weeks * 7, ed = new Date(e0).getUTCDay(), count = weeks * (7 - nr);
+      for (j = 0; j < rem; j++) if (!ruled[(ed + j) % 7]) count++;
+      i = isFinite(count) ? ((count % n) + n) % n : 0;
     }
     for (k = 1; k <= 2; k++) {
       r = order[(i + k) % n];
@@ -36,7 +47,12 @@
     var hero = document.getElementById('hub-hero');
     if (!hero || !hero.hasAttribute('data-feat-order')) return null;
     var order = (hero.getAttribute('data-feat-order') || '').split(/\s+/).filter(function (x) { return /^[a-z0-9-]{1,40}$/.test(x); });
-    var p = featPick(order, hero.getAttribute('data-feat-epoch'), new Date(), hero.getAttribute('data-feat-tz'), hero.getAttribute('data-feat-pin'));
+    var weekday = {};
+    (hero.getAttribute('data-feat-weekday') || '').split(/\s+/).forEach(function (x) {
+      var m = /^(sun|mon|tue|wed|thu|fri|sat):([a-z0-9-]{1,40})$/.exec(x);
+      if (m) weekday[m[1]] = m[2];
+    });
+    var p = featPick(order, hero.getAttribute('data-feat-epoch'), new Date(), hero.getAttribute('data-feat-tz'), hero.getAttribute('data-feat-pin'), weekday);
     var cards = hero.querySelectorAll('.hub-feat[data-feat]'), sets = hero.querySelectorAll('.hub-also-set[data-feat]'), i, has = false;
     for (i = 0; p && i < cards.length; i++) if (cards[i].getAttribute('data-feat') === p.room) has = true;
     if (!has) p = { room: hero.getAttribute('data-feat-default') || '', also: [] };

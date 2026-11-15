@@ -47,7 +47,11 @@ ok(len(allow) >= 3 and allow == sorted(allow) and len(set(allow)) == len(allow),
 ok(not (set(allow) & NEVER) and not any('grok' in r or 'agent' in r for r in allow), 'allowlist has no paused, held, 21+, or Agent Room entry')
 ok(all(src.get(r, {}).get('status') == 'live' and src[r].get('highlights') is True and not src[r].get('hold') for r in allow),
    'every allowlisted room is live, public, and unheld in hub/src/rooms.json')
-ok(fr.get('pin', 'missing') is None, 'pin is present and null by default')
+PIN = fr.get('pin', 'missing')
+ok(PIN is None, 'pin is present and null (the Sunday rule replaces a one-time pin)')
+WD = fr.get('weekday_featured')
+ok(WD == {'sun': 'popechat'}, 'weekday_featured gives popechat every Sunday (decided 2026-11-15 3:53 PM MT)')
+ok('weekday_featured' in cfg_home.get('_doc', '') and 'Sunday' in cfg_home.get('_doc', ''), 'config _doc explains the weekday rule')
 ok(fr.get('timezone') == 'US/Mountain' and re.match(r'^[0-9]{4}-[0-9]{2}-[0-9]{2}$', fr.get('epoch', '')) is not None, 'epoch is a date, timezone is US/Mountain')
 ok(fr.get('label') == 'A {{brand.name}} room · Featured today', 'label is "A {brand} room · Featured today"')
 ok(not DASH.search(json.dumps(fr, ensure_ascii=False)) and not DASH.search(cfg_home.get('_doc', '')), 'no em or en dash in the rotation config or its doc')
@@ -60,14 +64,24 @@ N = len(order)
 epoch = date.fromisoformat(fr['epoch'])
 
 # ---- Python pick over full cycles ----
-def py_pick(d, pin=None):
-    return B.feat_pick(order, fr['epoch'], d.isoformat(), pin)
+def py_pick(d, pin=None, weekday=WD):
+    return B.feat_pick(order, fr['epoch'], d.isoformat(), pin, weekday)
 
 
 for start in (epoch, date(2026, 10, 20), date(2027, 3, 1)):
-    seen = [py_pick(start + timedelta(days=k))[0] for k in range(N)]
-    ok(sorted(seen) == order, 'one full cycle from %s shows every allowlisted room exactly once' % start)
-ok(py_pick(epoch)[0] == order[0] and py_pick(epoch - timedelta(days=1))[0] == order[-1], 'the epoch day is the first room; the day before wraps to the last')
+    days = [start + timedelta(days=k) for k in range(N * 7 // 6 + 7)]
+    rr = [py_pick(d)[0] for d in days if d.weekday() != 6][:N]
+    ok(sorted(rr) == order, 'one full round-robin cycle from %s (Sundays skipped) shows every allowlisted room exactly once' % start)
+    ok(sorted(py_pick(start + timedelta(days=k), weekday={})[0] for k in range(N)) == order, 'with no weekday rule, %d consecutive days from %s show every room once' % (N, start))
+sundays = [epoch + timedelta(days=k) for k in range(-7, 7 * N + 7) if (epoch + timedelta(days=k)).weekday() == 6]
+ok(len(sundays) >= N and all(py_pick(d)[0] == 'popechat' for d in sundays), 'every Sunday across a full cycle (%d Sundays) is popechat' % len(sundays))
+ok(all(py_pick(d)[1] == [order[(order.index('popechat') + 1) % N], order[(order.index('popechat') + 2) % N]] for d in sundays), 'on Sundays, Also featured is the next two after popechat')
+ok(py_pick(date(2026, 11, 16))[0] == '27chat' == order[0], 'Monday 2026-11-16 (the epoch) is still 27chat')
+ok(py_pick(date(2026, 11, 15))[0] == 'popechat', 'today, Sunday 2026-11-15, shows popechat')
+ok(py_pick(date(2026, 11, 14))[0] == order[-1], 'the Saturday before the epoch wraps to the last room')
+rr_all = [py_pick(epoch + timedelta(days=k))[0] for k in range(7 * N) if (epoch + timedelta(days=k)).weekday() != 6]
+ok(all(rr_all.count(r) == 6 for r in order), 'over 14 weeks every room gets exactly 6 round-robin days (none is stuck on Sunday)')
+ok(all(py_pick(d, 'gaichat')[0] == 'gaichat' for d in sundays), 'pin beats the Sunday rule (gaichat on every Sunday when pinned)')
 good_also = True
 for k in range(-N, 3 * N):
     room, also = py_pick(epoch + timedelta(days=k))
@@ -95,9 +109,9 @@ for s in ('2026-10-31T05:59:59Z', '2026-10-31T06:00:00Z', '2026-11-01T05:59:59Z'
           '2026-11-02T07:00:00Z', '2027-03-14T06:59:59Z', '2027-03-14T07:00:00Z', '2027-03-15T05:59:59Z', '2027-03-15T06:00:00Z'):
     instants.append(datetime.fromisoformat(s.replace('Z', '+00:00')))
 harness = blk + '\n' + (
-    'var order = %s, epoch = %s, ts = %s, pins = [null, "gaichat"], out = [];\n'
-    'for (var p = 0; p < pins.length; p++) for (var k = 0; k < ts.length; k++) { var r = featPick(order, epoch, new Date(ts[k]), "US/Mountain", pins[p]); out.push(r.room + "|" + r.also.join(",")); }\n'
-    'process.stdout.write(JSON.stringify(out));\n') % (json.dumps(order), json.dumps(fr['epoch']), json.dumps([int(t.timestamp() * 1000) for t in instants]))
+    'var order = %s, epoch = %s, ts = %s, wd = %s, pins = [null, "gaichat"], out = [];\n'
+    'for (var p = 0; p < pins.length; p++) for (var k = 0; k < ts.length; k++) { var r = featPick(order, epoch, new Date(ts[k]), "US/Mountain", pins[p], wd); out.push(r.room + "|" + r.also.join(",")); }\n'
+    'process.stdout.write(JSON.stringify(out));\n') % (json.dumps(order), json.dumps(fr['epoch']), json.dumps([int(t.timestamp() * 1000) for t in instants]), json.dumps(WD))
 try:
     res = subprocess.run(['node', '-e', harness], capture_output=True, text=True, timeout=60)
     got = json.loads(res.stdout) if res.returncode == 0 else None
@@ -121,21 +135,30 @@ if got is not None:
 home = read('hub', 'site', 'index.html')
 sec = home[home.find('<!-- featured-rotation:start'):home.find('<!-- featured-rotation:end -->')]
 ok(bool(sec) and 'data-feat-order="%s"' % ' '.join(order) in sec and 'data-feat-epoch="%s"' % fr['epoch'] in sec
-   and 'data-feat-tz="US/Mountain"' in sec and 'data-feat-pin=""' in sec, 'built hero carries the order, epoch, timezone, and empty pin')
+   and 'data-feat-tz="US/Mountain"' in sec and 'data-feat-pin=""' in sec and 'data-feat-weekday="sun:popechat"' in sec,
+   'built hero carries the order, epoch, timezone, empty pin, and the Sunday rule')
 cards = re.findall(r'<div class="hub-feat( is-type)?" data-feat="([a-z0-9-]+)"( style="--feat-a:(#[0-9a-f]{6});--feat-b:(#[0-9a-f]{6})")?( hidden)?>', sec)
 sets = re.findall(r'<div class="hub-also-set" data-feat="([a-z0-9-]+)"( hidden)?>(.*?)</div></div>(?=\s*<div class="hub-also-set|\s*</div>)', sec, re.S)
 ok([c[1] for c in cards] == order, 'one hero card per allowlisted room, in order')
 shown = [c[1] for c in cards if not c[5]]
 dflt = re.search(r'data-feat-default="([a-z0-9-]+)"', sec)
 ok(len(shown) == 1 and dflt is not None and shown[0] == dflt.group(1), 'exactly one card is shown without JavaScript: the build date default (%s)' % shown)
+if got is not None:
+    sun_ms = [int(datetime(d.year, d.month, d.day, 12, tzinfo=DEN).timestamp() * 1000) for d in sundays]
+    hp = subprocess.run(['node', '-e', blk + '\nvar o=%s,ts=%s,r=[];for(var k=0;k<ts.length;k++){r.push(featPick(o,%s,new Date(ts[k]),"US/Mountain",null,%s).room+"/"+featPick(o,%s,new Date(ts[k]),"US/Mountain","gaichat",%s).room);}process.stdout.write(JSON.stringify(r));'
+                        % (json.dumps(order), json.dumps(sun_ms), json.dumps(fr['epoch']), json.dumps(WD), json.dumps(fr['epoch']), json.dumps(WD))], capture_output=True, text=True)
+    ok(hp.returncode == 0 and set(json.loads(hp.stdout)) == {'popechat/gaichat'}, 'hub.js: every Sunday is popechat, and a pin beats the Sunday rule')
+    mon = subprocess.run(['node', '-e', blk + '\nprocess.stdout.write(featPick(%s,%s,new Date(Date.UTC(2026,10,16,19)),"US/Mountain",null,%s).room+" "+featPick(%s,%s,new Date(Date.UTC(2026,10,15,19)),"US/Mountain",null,%s).room);'
+                         % (json.dumps(order), json.dumps(fr['epoch']), json.dumps(WD), json.dumps(order), json.dumps(fr['epoch']), json.dumps(WD))], capture_output=True, text=True)
+    ok(mon.stdout == '27chat popechat', 'hub.js: Monday 2026-11-16 is 27chat and today, Sunday 2026-11-15, is popechat (%r)' % mon.stdout)
 ok([s[0] for s in sets] == order and [s[0] for s in sets if not s[1]] == shown, 'one Also featured set per room; the default set matches the default card')
 for s in sets:
     names = re.findall(r'class="hub-also-name">([^<]+)<', s[2])
     i = order.index(s[0])
     ok(names == [order[(i + 1) % N], order[(i + 2) % N]], 'Also featured under %s is the next two rooms %s' % (s[0], names))
 if dflt:
-    k = order.index(dflt.group(1))
-    ok(B.feat_block(rot, (epoch + timedelta(days=k)).isoformat()) in read('hub', 'src', 'templates', 'index.html'),
+    bd = next(epoch + timedelta(days=k) for k in range(-7, 7 * N) if py_pick(epoch + timedelta(days=k))[0] == dflt.group(1))
+    ok(B.feat_block(rot, bd.isoformat()) in read('hub', 'src', 'templates', 'index.html'),
        'templates/index.html block is exactly what build_highlights.py --featured writes')
 for c in cards:
     photos = bool(src[c[1]].get('heroImages'))

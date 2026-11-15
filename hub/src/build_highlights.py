@@ -414,17 +414,29 @@ def feat_excluded(room_id, name=''):
     return (room_id in PAUSED or room_id in FEAT_HELD or 'grok' in hay or 'agentroom' in hay.replace(' ', ''))
 
 
-def feat_pick(order, epoch, ymd, pin=None):
-    """index = (days from epoch to the US Mountain Time calendar date ymd) mod N, or the pinned room. Returns (room, [next, next])."""
+FEAT_DAYS = ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')
+
+
+def feat_pick(order, epoch, ymd, pin=None, weekday=None):
+    """The pinned room, else the weekday_featured room for that day of the week, else index = (round-robin days from
+    epoch to the US Mountain Time calendar date ymd) mod N. Round-robin days skip the weekday_featured days, so with
+    N = 14 (a multiple of 7) no room is stuck on a Sunday and every room still gets its turn. Returns (room, [next, next])."""
     n = len(order)
     if not n:
         return None, []
+    d = datetime.strptime(ymd, '%Y-%m-%d').date() if isinstance(ymd, str) else ymd
+    wd = (weekday or {}).get(FEAT_DAYS[d.weekday()])
     if pin in order:
         i = order.index(pin)
+    elif wd in order:
+        i = order.index(wd)
     else:
         e = datetime.strptime(epoch, '%Y-%m-%d').date()
-        d = datetime.strptime(ymd, '%Y-%m-%d').date() if isinstance(ymd, str) else ymd
-        i = (d - e).days % n
+        ruled = {k for k, v in (weekday or {}).items() if v in order}
+        days = (d - e).days
+        weeks, rem = days // 7, days % 7
+        count = weeks * (7 - len(ruled)) + sum(1 for j in range(rem) if FEAT_DAYS[(e.weekday() + j) % 7] not in ruled)
+        i = count % n
     also = []
     for k in (1, 2):
         r = order[(i + k) % n]
@@ -483,6 +495,10 @@ def feat_rooms(cfg_home=None):
     pin = fr.get('pin')
     if pin is not None and pin not in allow:
         errs.append('featured_rotation.pin must be null or an allowlisted room')
+    weekday = fr.get('weekday_featured') or {}
+    if not isinstance(weekday, dict) or any(k not in FEAT_DAYS or v not in allow for k, v in weekday.items()):
+        errs.append('featured_rotation.weekday_featured must map sun..sat to allowlisted rooms')
+        weekday = {}
     label = str(fr.get('label') or '')
     if not label or DASH_RE.search(label):
         errs.append('featured_rotation.label must be set and have no em or en dash')
@@ -514,7 +530,9 @@ def feat_rooms(cfg_home=None):
         raise ValueError('featured_rotation: ' + '; '.join(errs))
     if pin is not None and pin not in [c['room'] for c in out]:
         pin = None
-    return {'rooms': out, 'epoch': fr['epoch'], 'pin': pin, 'label': label, 'skipped': skipped}
+    live_ids = [c['room'] for c in out]
+    weekday = {k: v for k, v in weekday.items() if v in live_ids}
+    return {'rooms': out, 'epoch': fr['epoch'], 'pin': pin, 'weekday': weekday, 'label': label, 'skipped': skipped}
 
 
 def _feat_also_row(c):
@@ -528,7 +546,7 @@ def feat_block(rot, ymd):
     rooms = rot['rooms']
     order = [c['room'] for c in rooms]
     by = {c['room']: c for c in rooms}
-    default, _ = feat_pick(order, rot['epoch'], ymd, rot['pin'])
+    default, _ = feat_pick(order, rot['epoch'], ymd, rot['pin'], rot['weekday'])
     cards, sets = [], []
     for c in rooms:
         hid = '' if c['room'] == default else ' hidden'
@@ -550,7 +568,7 @@ def feat_block(rot, ymd):
         sets.append('<div class="hub-also-set" data-feat="%s"%s>%s</div>' % (c['room'], hid, ''.join(_feat_also_row(by[a]) for a in also)))
     j = '\n            '
     return (FEAT_START + '\n'
-            '      <section class="hub-hero" id="hub-hero" data-feat-order="%s" data-feat-epoch="%s" data-feat-tz="US/Mountain" data-feat-pin="%s" data-feat-default="%s">\n'
+            '      <section class="hub-hero" id="hub-hero" data-feat-order="%s" data-feat-epoch="%s" data-feat-tz="US/Mountain" data-feat-pin="%s" data-feat-weekday="%s" data-feat-default="%s">\n'
             '        <div class="hero-split" id="hub-hero-split">\n'
             '          <div class="hero-primary">\n'
             '            %s\n'
@@ -563,7 +581,8 @@ def feat_block(rot, ymd):
             '          </aside>\n'
             '        </div>\n'
             '      </section>\n'
-            '      ' + FEAT_END) % (' '.join(order), rot['epoch'], rot['pin'] or '', default, j.join(cards), j.join(sets))
+            '      ' + FEAT_END) % (' '.join(order), rot['epoch'], rot['pin'] or '',
+                                ' '.join('%s:%s' % (k, rot['weekday'][k]) for k in FEAT_DAYS if k in rot['weekday']), default, j.join(cards), j.join(sets))
 
 
 def write_featured(ymd=None, path=FEAT_TEMPLATE):
@@ -578,7 +597,7 @@ def write_featured(ymd=None, path=FEAT_TEMPLATE):
         open(path, 'w', encoding='utf-8').write(new)
     for rid in rot['skipped']:
         print('featured: %s is allowlisted but not in data/rooms.json (unreachable or switched off at the last build): left out' % rid)
-    print('featured: %d rooms; default for %s is %s%s' % (len(rot['rooms']), ymd, feat_pick([c['room'] for c in rot['rooms']], rot['epoch'], ymd, rot['pin'])[0],
+    print('featured: %d rooms; default for %s is %s%s' % (len(rot['rooms']), ymd, feat_pick([c['room'] for c in rot['rooms']], rot['epoch'], ymd, rot['pin'], rot['weekday'])[0],
                                                           ' (pinned)' if rot['pin'] else ''))
     return 0
 
