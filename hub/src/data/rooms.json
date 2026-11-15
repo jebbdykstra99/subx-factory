@@ -165,6 +165,53 @@
     "tier": "ai",
     "text": "Watching Mass today? Official streams only, link-out:\nVatican Media Live https://www.youtube.com/user/vatican/live\nEWTN Daily Mass https://www.ewtn.com/tv/watch-live/united-states\nNot hosted here. Not a substitute for your parish Mass when you can go.",
     "createdAt": "2026-11-02T20:36:53.505750Z"
+   },
+   "heroImages": {
+    "interval": 7000,
+    "items": [
+     {
+      "src": "/assets/hero/popechat/pc01-basilica-blue-hour-1200.webp",
+      "srcSm": "/assets/hero/popechat/pc01-basilica-blue-hour-600.webp",
+      "fallback": "/assets/hero/popechat/pc01-basilica-blue-hour-1200.jpg",
+      "w": 1200,
+      "h": 800,
+      "focal": "50% 50%",
+      "alt": "Saint Peter's Basilica at blue hour, seen from Saint Peter's Square in Vatican City, with the facade and dome lit against a clear evening sky.",
+      "credit": "Jebulon",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Basilica_Sancti_Petri_blue_hour.jpg",
+      "reviewed": "2026-11-15"
+     },
+     {
+      "src": "/assets/hero/popechat/pc02-basilica-facade-day-1200.webp",
+      "srcSm": "/assets/hero/popechat/pc02-basilica-facade-day-600.webp",
+      "fallback": "/assets/hero/popechat/pc02-basilica-facade-day-1200.jpg",
+      "w": 1200,
+      "h": 800,
+      "focal": "50% 50%",
+      "alt": "The main facade and dome of Saint Peter's Basilica in Vatican City, photographed in daylight from Saint Peter's Square.",
+      "credit": "Alvesgaspar",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Basilica_di_San_Pietro_in_Vaticano_September_2015-1a.jpg",
+      "reviewed": "2026-11-15"
+     },
+     {
+      "src": "/assets/hero/popechat/pc03-peters-square-from-dome-1200.webp",
+      "srcSm": "/assets/hero/popechat/pc03-peters-square-from-dome-600.webp",
+      "fallback": "/assets/hero/popechat/pc03-peters-square-from-dome-1200.jpg",
+      "w": 1200,
+      "h": 800,
+      "focal": "50% 50%",
+      "alt": "Saint Peter's Square and the Via della Conciliazione, seen from the dome of Saint Peter's Basilica in Vatican City.",
+      "credit": "David Iliff",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:St_Peter%27s_Square,_Vatican_City_-_April_2007.jpg",
+      "reviewed": "2026-11-15"
+     }
+    ]
    }
   },
   {

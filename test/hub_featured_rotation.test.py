@@ -14,14 +14,12 @@ import re
 import subprocess
 import sys
 from datetime import date, datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'hub', 'src'))
 import build_highlights as B  # noqa: E402
 
 fails = []
-DEN = ZoneInfo('US/Mountain')
 DASH = re.compile('[\u2013\u2014]')
 NEVER = {'airlineschat', 'amachat', 'atmchat', 'behindtheblackwall', 'boyfriendchat', 'boozechat', 'agentroom', 'grokchat'}
 
@@ -56,6 +54,22 @@ ok(fr.get('timezone') == 'US/Mountain' and re.match(r'^[0-9]{4}-[0-9]{2}-[0-9]{2
 ok(fr.get('label') == 'A {{brand.name}} room · Featured today', 'label is "A {brand} room · Featured today"')
 ok(not DASH.search(json.dumps(fr, ensure_ascii=False)) and not DASH.search(cfg_home.get('_doc', '')), 'no em or en dash in the rotation config or its doc')
 ok('kill switch' in cfg_home.get('_doc', '') and 'featured_rotation' in cfg_home.get('_doc', ''), 'config _doc explains the rotation and the kill-switch limit')
+
+# The pick never needs a tz database (build_highlights.mountain_date is the US rule; hub.js uses Intl, then the same
+# rule). When a zone database is available (system, or the tzdata package that ci.yml installs), cross-check the rule.
+try:
+    from zoneinfo import ZoneInfo
+    _mt = ZoneInfo('US/Mountain')
+except Exception:
+    _mt = None
+if _mt is not None:
+    _t, _bad = datetime(2026, 1, 1, tzinfo=timezone.utc), 0
+    while _t < datetime(2029, 1, 1, tzinfo=timezone.utc):
+        _bad += B.mountain_date(_t) != _t.astimezone(_mt).date()
+        _t += timedelta(minutes=30)
+    ok(_bad == 0, 'US Mountain rule = zoneinfo US/Mountain at every half hour, 2026 to 2028 (%d mismatches)' % _bad)
+else:
+    print('skip zoneinfo US/Mountain cross-check (no zone database; the pick does not need one)')
 
 rot = B.feat_rooms()
 order = [c['room'] for c in rot['rooms']]
@@ -122,10 +136,14 @@ if got is not None:
     want = []
     for pin in (None, 'gaichat'):
         for t in instants:
-            room, also = py_pick(t.astimezone(DEN).date(), pin)
+            room, also = py_pick(B.mountain_date(t), pin)
             want.append(room + '|' + ','.join(also))
     bad = [(instants[k % len(instants)].isoformat(), got[k], want[k]) for k in range(len(want)) if got[k] != want[k]]
     ok(not bad, 'hub.js pick = Python pick by Mountain Time calendar date at %d instants, both DST changes, pin on and off %s' % (len(want), bad[:3]))
+    fb = subprocess.run(['node', '-e', blk + '\nvar ts=%s,r=[];for(var k=0;k<ts.length;k++){r.push(featYmd(new Date(ts[k]),"No/SuchZone").join("-"));}process.stdout.write(JSON.stringify(r));'
+                        % json.dumps([int(t.timestamp() * 1000) for t in instants])], capture_output=True, text=True)
+    fbw = ['%d-%d-%d' % (d.year, d.month, d.day) for d in (B.mountain_date(t) for t in instants)]
+    ok(fb.returncode == 0 and json.loads(fb.stdout) == fbw, 'hub.js fallback without an Intl time zone uses the US Mountain rule and matches at every instant')
     ok(all(g.split('|')[0] in order and not set(g.replace('|', ',').split(',')) & NEVER for g in got), 'node never picks an excluded room')
     mid = [got[len(instants) - 10 + k].split('|')[0] for k in range(10)]
     ok(mid[0] != mid[1] and mid[2] != mid[3] and mid[4] != mid[5] and mid[6] != mid[7] and mid[8] != mid[9],
@@ -144,7 +162,7 @@ shown = [c[1] for c in cards if not c[5]]
 dflt = re.search(r'data-feat-default="([a-z0-9-]+)"', sec)
 ok(len(shown) == 1 and dflt is not None and shown[0] == dflt.group(1), 'exactly one card is shown without JavaScript: the build date default (%s)' % shown)
 if got is not None:
-    sun_ms = [int(datetime(d.year, d.month, d.day, 12, tzinfo=DEN).timestamp() * 1000) for d in sundays]
+    sun_ms = [int(datetime(d.year, d.month, d.day, 19, tzinfo=timezone.utc).timestamp() * 1000) for d in sundays]
     hp = subprocess.run(['node', '-e', blk + '\nvar o=%s,ts=%s,r=[];for(var k=0;k<ts.length;k++){r.push(featPick(o,%s,new Date(ts[k]),"US/Mountain",null,%s).room+"/"+featPick(o,%s,new Date(ts[k]),"US/Mountain","gaichat",%s).room);}process.stdout.write(JSON.stringify(r));'
                         % (json.dumps(order), json.dumps(sun_ms), json.dumps(fr['epoch']), json.dumps(WD), json.dumps(fr['epoch']), json.dumps(WD))], capture_output=True, text=True)
     ok(hp.returncode == 0 and set(json.loads(hp.stdout)) == {'popechat/gaichat'}, 'hub.js: every Sunday is popechat, and a pin beats the Sunday rule')
@@ -180,7 +198,14 @@ for p in (('hub', 'src', 'templates', 'hub.js'), ('hub', 'site', 'hub.js')):
     j = read(*p)
     ok("if (hero && hero.room !== heroId) hero = null;" in j and "if (featPicked && featPicked.room) return featPicked.room;" in j,
        '/'.join(p) + ': photos and highlights follow the shown card only (no fallback room)')
-ok(sorted(r for r in order if src[r].get('heroImages')) == ['gpchat'], 'only gpchat has photos, so the carousel starts only on its day')
+ok(sorted(r for r in order if src[r].get('heroImages')) == ['gpchat', 'popechat'], 'only gpchat and popechat have photos, so a carousel starts only on their days')
+core = js[js.find('/* hx-core:start'):js.find('/* hx-core:end */')]
+pub = {r['room']: r for r in json.loads(read('hub', 'site', 'rooms.json'))['rooms']}
+hv = subprocess.run(['node', '-e', core + '\nvar v=hxValidate(%s);process.stdout.write(JSON.stringify([v.items.map(function(i){return "Photo: "+i.credit+" \\u00b7 "+i.license;}), v.refused.length]));'
+                     % json.dumps(pub['popechat']['heroImages'])], capture_output=True, text=True)
+hvo = json.loads(hv.stdout) if hv.returncode == 0 else None
+ok(hvo == [['Photo: Jebulon \u00b7 CC0', 'Photo: Alvesgaspar \u00b7 CC BY-SA 4.0', 'Photo: David Iliff \u00b7 CC BY-SA 3.0'], 0],
+   'hub.js accepts all 3 popechat photos and their credit lines read "Photo: {credit} \u00b7 {license}" (%s %s)' % (hvo, hv.stderr[:200]))
 
 # ---- CI ----
 ok('python3 test/hub_featured_rotation.test.py' in read('.github', 'workflows', 'ci.yml'), 'ci.yml runs this test')

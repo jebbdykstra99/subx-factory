@@ -34,7 +34,7 @@ Slots come from rooms.json: featuredRooms (in order) get featuredPerRoom posts e
 every other live room gets otherPerRoom (0 = suggestion only), trailing in roomOrder.
 """
 import argparse, hashlib, json, os, re, sys, time, urllib.request, urllib.error
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, 'data')
@@ -445,9 +445,21 @@ def feat_pick(order, epoch, ymd, pin=None, weekday=None):
     return order[i], also
 
 
+def mountain_date(now=None):
+    """US Mountain Time calendar date of a UTC instant, by the US rule (UTC-7; UTC-6 from the second Sunday of March
+    at 09:00 UTC to the first Sunday of November at 08:00 UTC). No tz database needed (CI runners may lack US/Mountain)."""
+    now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    y = now.year
+    def nth_sunday(month, nth):
+        first = datetime(y, month, 1, tzinfo=timezone.utc)
+        return first + timedelta(days=(6 - first.weekday()) % 7 + 7 * (nth - 1))
+    start = nth_sunday(3, 2) + timedelta(hours=9)
+    end = nth_sunday(11, 1) + timedelta(hours=8)
+    return (now - timedelta(hours=6 if start <= now < end else 7)).date()
+
+
 def mountain_today(now=None):
-    from zoneinfo import ZoneInfo
-    return (now or datetime.now(timezone.utc)).astimezone(ZoneInfo('US/Mountain')).date().isoformat()
+    return mountain_date(now).isoformat()
 
 
 def _lum(hexc):

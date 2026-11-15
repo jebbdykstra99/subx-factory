@@ -16,7 +16,10 @@
       for (k = 0; k < parts.length; k++) o[parts[k].type] = parts[k].value;
       if (o.year && o.month && o.day) return [+o.year, +o.month, +o.day];
     } catch (e) {}
-    var d = new Date(now.getTime() - 7 * 3600000);
+    // No Intl time zone: the US rule (UTC-6 from the second Sunday of March 09:00 UTC to the first Sunday of November 08:00 UTC, else UTC-7).
+    var y = now.getUTCFullYear(), m1 = new Date(Date.UTC(y, 2, 1)).getUTCDay(), n1 = new Date(Date.UTC(y, 10, 1)).getUTCDay();
+    var dst = now.getTime() >= Date.UTC(y, 2, 1 + (7 - m1) % 7 + 7, 9) && now.getTime() < Date.UTC(y, 10, 1 + (7 - n1) % 7, 8);
+    var d = new Date(now.getTime() - (dst ? 6 : 7) * 3600000);
     return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()];
   }
   var FEAT_DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];

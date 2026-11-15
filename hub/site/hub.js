@@ -16,7 +16,10 @@
       for (k = 0; k < parts.length; k++) o[parts[k].type] = parts[k].value;
       if (o.year && o.month && o.day) return [+o.year, +o.month, +o.day];
     } catch (e) {}
-    var d = new Date(now.getTime() - 7 * 3600000);
+    // No Intl time zone: the US rule (UTC-6 from the second Sunday of March 09:00 UTC to the first Sunday of November 08:00 UTC, else UTC-7).
+    var y = now.getUTCFullYear(), m1 = new Date(Date.UTC(y, 2, 1)).getUTCDay(), n1 = new Date(Date.UTC(y, 10, 1)).getUTCDay();
+    var dst = now.getTime() >= Date.UTC(y, 2, 1 + (7 - m1) % 7 + 7, 9) && now.getTime() < Date.UTC(y, 10, 1 + (7 - n1) % 7, 8);
+    var d = new Date(now.getTime() - (dst ? 6 : 7) * 3600000);
     return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()];
   }
   var FEAT_DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -606,14 +609,14 @@ function filterSuggestedRail(hideRooms) {
     placePartners(design, feed ? feed.querySelectorAll('.hub-card') : []);
   }
   if (feed) {
-    Promise.all([getJSON('/highlights.json?v=d9dc228224'), getJSON('/rooms.json?v=adb1b429c0')]).then(function (pair) {
+    Promise.all([getJSON('/highlights.json?v=d9dc228224'), getJSON('/rooms.json?v=9434547c8d')]).then(function (pair) {
       paintHome(pair[0], (pair[1] && pair[1].rooms) || []);
     }).catch(function () { feed.innerHTML = '<div class="post-empty">Highlights are unavailable right now. Open a room from the list.</div>'; });
   }
   if (roomsEl) {
     // highlights.json is already in flight on the home page (the feed started it). Elsewhere, use the preview
     // copied onto rooms.json at build time, so this page does not start a second request.
-    var roomsP = getJSON('/rooms.json?v=adb1b429c0');
+    var roomsP = getJSON('/rooms.json?v=9434547c8d');
     var hlP = jsonCache['/highlights.json?v=d9dc228224'];
     var itemsP = hlP ? hlP.then(function (d) { return (d && d.items) || []; }, function () { return []; }) : Promise.resolve([]);
     Promise.all([roomsP, itemsP]).then(function (pair) {
@@ -684,7 +687,7 @@ function filterSuggestedRail(hideRooms) {
   if (postBtn && postPick) {
     postBtn.addEventListener('click', function () { openDlg(postPick); });
     if (postList) {
-      getJSON('/rooms.json?v=adb1b429c0').then(function (d) {
+      getJSON('/rooms.json?v=9434547c8d').then(function (d) {
         postList.innerHTML = ((d && d.rooms) || []).filter(function (r) { return domainOk(r.domain); }).map(function (r) {
           return '<a class="hub-pick-room" href="' + esc(roomHref(r.domain, 'compose')) + '" rel="noopener"><strong>' + esc(r.name) + '</strong><span>' + esc(r.domain) + '</span></a>';
         }).join('') || '<div class="post-empty">No rooms listed.</div>';
@@ -907,7 +910,7 @@ function filterSuggestedRail(hideRooms) {
       hubSave(); renderHub('following'); paintBadge();
       var again = document.querySelector('[data-follow-room="' + room + '"]'); if (again) again.focus();
     });
-    Promise.all([getJSON('/rooms.json?v=adb1b429c0'), getJSON('/highlights.json?v=d9dc228224')]).then(function (d) {
+    Promise.all([getJSON('/rooms.json?v=9434547c8d'), getJSON('/highlights.json?v=d9dc228224')]).then(function (d) {
       hubRooms = ((d[0] && d[0].rooms) || []).filter(function (r) { return r && /^[a-z0-9-]{1,40}$/.test(r.room || '') && domainOk(r.domain); });
       hubDomains = {}; hubNotifs = {};
       hubRooms.forEach(function (r) { hubDomains[String(r.domain).toLowerCase()] = true; hubNotifs[r.room] = r.notifs === true; });
@@ -1068,7 +1071,7 @@ function filterSuggestedRail(hideRooms) {
       }, true);
     }
 
-    getJSON('/rooms.json?v=adb1b429c0').then(function (d) {
+    getJSON('/rooms.json?v=9434547c8d').then(function (d) {
       searchRooms = ((d && d.rooms) || []).filter(function (r) {
         return r && /^[a-z0-9-]{1,40}$/.test(r.room || '') && domainOk(r.domain);
       });

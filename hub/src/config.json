@@ -255,6 +255,54 @@
     {
       "from": "hub/site/assets/hero/gpchat/gp10-zandvoort-1955-fangio-mercedes-600.webp",
       "to": "assets/hero/gpchat/gp10-zandvoort-1955-fangio-mercedes-600.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/popechat/pc01-basilica-blue-hour-1200.jpg",
+      "to": "assets/hero/popechat/pc01-basilica-blue-hour-1200.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/popechat/pc01-basilica-blue-hour-1200.webp",
+      "to": "assets/hero/popechat/pc01-basilica-blue-hour-1200.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/popechat/pc01-basilica-blue-hour-600.jpg",
+      "to": "assets/hero/popechat/pc01-basilica-blue-hour-600.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/popechat/pc01-basilica-blue-hour-600.webp",
+      "to": "assets/hero/popechat/pc01-basilica-blue-hour-600.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/popechat/pc02-basilica-facade-day-1200.jpg",
+      "to": "assets/hero/popechat/pc02-basilica-facade-day-1200.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/popechat/pc02-basilica-facade-day-1200.webp",
+      "to": "assets/hero/popechat/pc02-basilica-facade-day-1200.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/popechat/pc02-basilica-facade-day-600.jpg",
+      "to": "assets/hero/popechat/pc02-basilica-facade-day-600.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/popechat/pc02-basilica-facade-day-600.webp",
+      "to": "assets/hero/popechat/pc02-basilica-facade-day-600.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/popechat/pc03-peters-square-from-dome-1200.jpg",
+      "to": "assets/hero/popechat/pc03-peters-square-from-dome-1200.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/popechat/pc03-peters-square-from-dome-1200.webp",
+      "to": "assets/hero/popechat/pc03-peters-square-from-dome-1200.webp"
+    },
+    {
+      "from": "hub/site/assets/hero/popechat/pc03-peters-square-from-dome-600.jpg",
+      "to": "assets/hero/popechat/pc03-peters-square-from-dome-600.jpg"
+    },
+    {
+      "from": "hub/site/assets/hero/popechat/pc03-peters-square-from-dome-600.webp",
+      "to": "assets/hero/popechat/pc03-peters-square-from-dome-600.webp"
     }
   ],
   "data": [
