@@ -33,6 +33,10 @@ jobs:
         run: python3 test/shell_pin.test.py
       - name: Hub (subx.it) renders from brand/brand.json; rename test; strict CSP; shell_drift OK
         run: python3 tools/brand_render.py --check && python3 test/hub_brand.test.py && python3 test/hub_social.test.py
+      - name: tzdata for the featured rotation cross-check (zoneinfo US/Mountain)
+        run: python3 -m pip install --no-cache-dir tzdata==2025.2
+      - name: Hub featured room rotation (allowlist, Mountain Time date pick in node over full cycles and DST, Also featured, pin)
+        run: python3 test/hub_featured_rotation.test.py
       - name: Stories module (shell v1.2.7 default-on + text-only gate + hub hand-off; stories.json schema)
         run: python3 test/stories_module.test.py
       - name: Hub WHOMARK final-v4.1 (config, asset MD5s, titles, label rule, legend, banned names)

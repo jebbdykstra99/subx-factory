@@ -708,9 +708,8 @@ ok('@media (max-width: 999px)' in _home
    'phone Also featured stack sits under the CTA with a horizontal --border-strong hairline')
 _hub_js = read(os.path.join(SITE, 'hub.js'))
 ok('function resolveAlsoRooms' in _hub_js and 'function watchSuggestedRail' in _hub_js
-   and 'boyfriendchat' in _hub_js and 'behindtheblackwall' in _hub_js
-   and 'utcDayOfYear' in _hub_js,
-   'hub.js picks a rotating Also featured pair and drops those rooms from the Suggested rooms rail')
+   and 'function featPick' in _hub_js and 'featPicked.also' in _hub_js,
+   'hub.js shows the rotation\'s Also featured pair (next two rooms, test/hub_featured_rotation.test.py) and drops those rooms from the Suggested rooms rail')
 ok('–' not in _home[ _home.find('hub-also'): _home.find('hub-also')+800 ]
    and '—' not in _home.split('Also featured')[1][:200] if 'Also featured' in _home else True,
    'Also featured copy has no em or en dash')

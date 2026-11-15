@@ -77,27 +77,32 @@ items = (gp or {}).get('items', [])
 ok(len(items) == 9, 'gpchat heroImages: exactly the 9 unflagged photos (%d)' % len(items))
 ok((gp or {}).get('interval') == 7000, 'gpchat heroImages: 7 second interval')
 ok(not any(h in json.dumps(gp) for h in HELD), 'gpchat heroImages: photos 5, 11 and 12 stay out pending Portia')
-for n, it in enumerate(items):
-    tag = 'gpchat item %d' % (n + 1)
-    ok(all(isinstance(it.get(k), str) and it[k].strip() for k in REQ), tag + ': src, alt, credit, license, licenseUrl, sourceUrl all set')
-    ok(bool(LIC.match(it.get('license', ''))) and not re.search(r'\b(NC|ND)\b', it.get('license', '')), tag + ': allowed license (%s)' % it.get('license'))
-    ok(it.get('licenseUrl', '').startswith('https://creativecommons.org/'), tag + ': license links to creativecommons.org')
-    ok(it.get('sourceUrl', '').startswith('https://commons.wikimedia.org/wiki/File:'), tag + ': credit links to the Commons file page')
-    ok(len(it.get('alt', '')) >= 40, tag + ': real alt text')
-    ok(re.match(r'^[0-9]{1,3}% [0-9]{1,3}%$', it.get('focal', '')) is not None, tag + ': focal point set')
-    ok(it.get('w') == 1200 and it.get('h') == 800, tag + ': width and height set (1200x800)')
-    for key, size, budget in (('src', (1200, 800), 100 * 1024), ('srcSm', (600, 400), 35 * 1024), ('fallback', (1200, 800), 170 * 1024)):
-        u = it.get(key, '')
-        ok(u.startswith('/assets/hero/gpchat/') and '..' not in u, tag + ': %s is self-hosted under /assets/hero/gpchat/' % key)
-        f = os.path.join(ROOT, 'hub', 'site', u.lstrip('/'))
-        ok(os.path.isfile(f), tag + ': %s exists in hub/site' % key)
-        if os.path.isfile(f):
-            ok(img_size(f) == size, tag + ': %s is %dx%d' % (key, size[0], size[1]))
-            ok(os.path.getsize(f) <= budget, tag + ': %s within %d KB' % (key, budget // 1024))
-        if key == 'src':
-            jpg = u.replace('-1200.webp', '-600.jpg')
-            ok(os.path.isfile(os.path.join(ROOT, 'hub', 'site', jpg.lstrip('/'))), tag + ': 600px JPEG exists')
-    ok(not DASH.search(json.dumps(it, ensure_ascii=False)), tag + ': no em or en dash')
+def check_items(room, items):
+    for n, it in enumerate(items):
+        tag = room + ' item %d' % (n + 1)
+        ok(all(isinstance(it.get(k), str) and it[k].strip() for k in REQ), tag + ': src, alt, credit, license, licenseUrl, sourceUrl all set')
+        ok(bool(LIC.match(it.get('license', ''))) and not re.search(r'\b(NC|ND)\b', it.get('license', '')), tag + ': allowed license (%s)' % it.get('license'))
+        ok(it.get('licenseUrl', '').startswith('https://creativecommons.org/'), tag + ': license links to creativecommons.org')
+        ok(it.get('sourceUrl', '').startswith('https://commons.wikimedia.org/wiki/File:'), tag + ': credit links to the Commons file page')
+        ok(len(it.get('alt', '')) >= 40, tag + ': real alt text')
+        ok(re.match(r'^[0-9]{1,3}% [0-9]{1,3}%$', it.get('focal', '')) is not None, tag + ': focal point set')
+        ok(it.get('w') == 1200 and it.get('h') == 800, tag + ': width and height set (1200x800)')
+        for key, size, budget in (('src', (1200, 800), 100 * 1024), ('srcSm', (600, 400), 35 * 1024), ('fallback', (1200, 800), 170 * 1024)):
+            u = it.get(key, '')
+            ok(u.startswith('/assets/hero/%s/' % room) and '..' not in u, tag + ': %s is self-hosted under /assets/hero/%s/' % (key, room))
+            f = os.path.join(ROOT, 'hub', 'site', u.lstrip('/'))
+            ok(os.path.isfile(f), tag + ': %s exists in hub/site' % key)
+            if os.path.isfile(f):
+                ok(img_size(f) == size, tag + ': %s is %dx%d' % (key, size[0], size[1]))
+                ok(os.path.getsize(f) <= budget, tag + ': %s within %d KB' % (key, budget // 1024))
+            if key == 'src':
+                jpg = u.replace('-1200.webp', '-600.jpg')
+                ok(os.path.isfile(os.path.join(ROOT, 'hub', 'site', jpg.lstrip('/'))), tag + ': 600px JPEG exists')
+        ok(not DASH.search(json.dumps(it, ensure_ascii=False)), tag + ': no em or en dash')
+
+
+
+check_items('gpchat', items)
 
 hero_dir = os.path.join(ROOT, 'hub', 'site', 'assets', 'hero', 'gpchat')
 files = sorted(os.listdir(hero_dir)) if os.path.isdir(hero_dir) else []
@@ -109,7 +114,22 @@ for room, r in by_room.items():
         continue
     srcs = [it.get(k, '') for it in hi.get('items', []) for k in ('src', 'srcSm', 'fallback') if it.get(k)]
     ok(all(s.startswith('/assets/hero/%s/' % room) for s in srcs), '%s: heroImages use only its own /assets/hero/%s/ photos' % (room, room))
-ok(sorted(k for k, r in by_room.items() if r.get('heroImages')) == ['gpchat'], 'only gpchat has photos today; every other room keeps the fallback')
+ok(sorted(k for k, r in by_room.items() if r.get('heroImages')) == ['gpchat', 'popechat'], 'only gpchat and popechat have photos today; every other room keeps the fallback')
+
+# popechat (2026-11-15): three Vatican photos as a carousel, pc01 Jebulon CC0 first, then pc02 Alvesgaspar, then pc03 David Iliff
+pc = by_room.get('popechat', {}).get('heroImages') or {}
+pc_items = pc.get('items', [])
+ok(pc.get('interval') == 7000 and [it.get('credit') for it in pc_items] == ['Jebulon', 'Alvesgaspar', 'David Iliff']
+   and [it.get('license') for it in pc_items] == ['CC0', 'CC BY-SA 4.0', 'CC BY-SA 3.0'],
+   'popechat heroImages: 3 photos in order (Jebulon CC0, Alvesgaspar CC BY-SA 4.0, David Iliff CC BY-SA 3.0), 7 second interval')
+check_items('popechat', pc_items)
+pc_dir = os.path.join(ROOT, 'hub', 'site', 'assets', 'hero', 'popechat')
+pc_files = sorted(os.listdir(pc_dir)) if os.path.isdir(pc_dir) else []
+ok(len(pc_files) == 12 and all(f.startswith(('pc01-', 'pc02-', 'pc03-')) for f in pc_files), 'hub/site/assets/hero/popechat: the 12 photo files')
+_vend = {v['to'] for v in json.loads(read('hub', 'src', 'config.json'))['vendor']}
+ok(all('assets/hero/popechat/' + f in _vend for f in pc_files), 'config.json vendors every popechat photo file')
+_pub = {r['room']: r for r in json.loads(read('hub', 'site', 'rooms.json'))['rooms']}
+ok(_pub.get('popechat', {}).get('heroImages') == pc and _pub.get('gpchat', {}).get('heroImages') == gp, 'hub/site/rooms.json carries each room\'s own photos, unchanged')
 
 addon = read('factory', 'factory-hero.js')
 core = block(addon, '/* hx-core:start', '/* hx-core:end */')
