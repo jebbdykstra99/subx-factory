@@ -202,7 +202,7 @@
       },
       {
         "file": "hub.js",
-        "sha256": "34a569457f2fe8efba6086d98633bbff05de7e5755e71a4c2ba05f5a64bce947",
+        "sha256": "414b70729c3cb4ee8281d0b41fb441477584d4ea01eac9d32646e8bd93f22ce3",
         "reason": "hub: renders highlights.json + rooms.json, and the header Sign in / Join button that opens the shell sign-in (no writes of its own)",
         "noShellOk": true
       },

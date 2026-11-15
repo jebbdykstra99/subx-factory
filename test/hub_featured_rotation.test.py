@@ -207,6 +207,21 @@ hvo = json.loads(hv.stdout) if hv.returncode == 0 else None
 ok(hvo == [['Photo: Jebulon \u00b7 CC0', 'Photo: Alvesgaspar \u00b7 CC BY-SA 4.0', 'Photo: David Iliff \u00b7 CC BY-SA 3.0'], 0],
    'hub.js accepts all 3 popechat photos and their credit lines read "Photo: {credit} \u00b7 {license}" (%s %s)' % (hvo, hv.stderr[:200]))
 
+# ---- adapted-photo note on the credit line (2026-11-15): the two BY-SA photos are crops ----
+pc_items = pub['popechat']['heroImages']['items']
+lines = ['Photo: %s \u00b7 %s%s' % (it['credit'], it['license'], (' \u00b7 ' + it['modified']) if it.get('modified') else '') for it in pc_items]
+ok(lines == ['Photo: Jebulon \u00b7 CC0', 'Photo: Alvesgaspar \u00b7 CC BY-SA 4.0 \u00b7 cropped', 'Photo: David Iliff \u00b7 CC BY-SA 3.0 \u00b7 cropped'],
+   'credit lines: both CC BY-SA photos end in "cropped", Jebulon CC0 has no suffix (%s)' % lines)
+ok([it['licenseUrl'] for it in pc_items] == ['https://creativecommons.org/publicdomain/zero/1.0/', 'https://creativecommons.org/licenses/by-sa/4.0/', 'https://creativecommons.org/licenses/by-sa/3.0/']
+   and all(it['sourceUrl'].startswith('https://commons.wikimedia.org/wiki/File:') for it in pc_items), 'popechat license links go to each deed; credits link to the Commons file page')
+for p in (('hub', 'src', 'templates', 'hub.js'), ('hub', 'site', 'hub.js')):
+    j = read(*p)
+    fnm = j[j.find('function hxModified('):j.find('function hxModified(') + 1200]
+    ok("hxModified(fig, room.heroImages.items);" in j and "' \\u00b7 ' + m" in fnm and "'hx-mod'" in fnm and 'insertBefore(note, lic.nextSibling)' in fnm,
+       '/'.join(p) + ': the "modified" note is drawn right after the license link, following the active slide')
+ok(not re.search('\u00a9|all rights reserved', json.dumps(pub['popechat']['heroImages'], ensure_ascii=False), re.I), 'no copyright claim or all rights reserved on the popechat photos')
+ok(not re.search(r'endors|official|approved by|holy see|on behalf of', ' '.join(it['alt'] for it in pc_items), re.I), 'popechat alt text names places only, no endorsement wording')
+
 # ---- CI ----
 ok('python3 test/hub_featured_rotation.test.py' in read('.github', 'workflows', 'ci.yml'), 'ci.yml runs this test')
 

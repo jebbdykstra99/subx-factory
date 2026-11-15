@@ -385,7 +385,30 @@
       cfg: room.heroImages, host: split, before: split.firstChild, cls: 'hx-hub',
       label: String(room.name || room.room) + ' photos', sizes: '(min-width:1000px) 520px, 100vw'
     });
+    if (fig) hxModified(fig, room.heroImages.items);
     if (fig) heroEl.classList.add('hx-on');
+  }
+  // License note for adapted photos (2026-11-15): an item's optional "modified" field (for example "cropped") shows
+  // after the license, so the line reads "Photo: {credit} \u00b7 {license} \u00b7 cropped". hx-core stays as is
+  // (it is shared with factory/factory-hero.js); this follows the active slide.
+  function hxModified(fig, srcItems) {
+    var bySrc = {}, i, it;
+    for (i = 0; i < (srcItems || []).length; i++) {
+      it = srcItems[i];
+      if (it && typeof it.modified === 'string' && /^[a-z ,]{1,40}$/.test(it.modified)) bySrc[it.src] = it.modified;
+    }
+    var lic = fig.querySelector('.hx-lic');
+    if (!lic || !lic.parentNode) return;
+    var note = document.createElement('span');
+    note.className = 'hx-mod';
+    lic.parentNode.insertBefore(note, lic.nextSibling);
+    function sync() {
+      var s = fig.querySelector('.hx-slide.is-active');
+      var m = s && s.hxItem ? bySrc[s.hxItem.src] : '';
+      note.textContent = m ? ' \u00b7 ' + m : '';
+    }
+    sync();
+    if (window.MutationObserver) new MutationObserver(sync).observe(lic, { childList: true, characterData: true, subtree: true });
   }
   var feed = document.getElementById('hub-feed'), roomsEl = document.getElementById('hub-rooms');
   function homeDesign() {

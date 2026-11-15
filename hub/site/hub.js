@@ -385,7 +385,30 @@
       cfg: room.heroImages, host: split, before: split.firstChild, cls: 'hx-hub',
       label: String(room.name || room.room) + ' photos', sizes: '(min-width:1000px) 520px, 100vw'
     });
+    if (fig) hxModified(fig, room.heroImages.items);
     if (fig) heroEl.classList.add('hx-on');
+  }
+  // License note for adapted photos (2026-11-15): an item's optional "modified" field (for example "cropped") shows
+  // after the license, so the line reads "Photo: {credit} \u00b7 {license} \u00b7 cropped". hx-core stays as is
+  // (it is shared with factory/factory-hero.js); this follows the active slide.
+  function hxModified(fig, srcItems) {
+    var bySrc = {}, i, it;
+    for (i = 0; i < (srcItems || []).length; i++) {
+      it = srcItems[i];
+      if (it && typeof it.modified === 'string' && /^[a-z ,]{1,40}$/.test(it.modified)) bySrc[it.src] = it.modified;
+    }
+    var lic = fig.querySelector('.hx-lic');
+    if (!lic || !lic.parentNode) return;
+    var note = document.createElement('span');
+    note.className = 'hx-mod';
+    lic.parentNode.insertBefore(note, lic.nextSibling);
+    function sync() {
+      var s = fig.querySelector('.hx-slide.is-active');
+      var m = s && s.hxItem ? bySrc[s.hxItem.src] : '';
+      note.textContent = m ? ' \u00b7 ' + m : '';
+    }
+    sync();
+    if (window.MutationObserver) new MutationObserver(sync).observe(lic, { childList: true, characterData: true, subtree: true });
   }
   var feed = document.getElementById('hub-feed'), roomsEl = document.getElementById('hub-rooms');
   function homeDesign() {
@@ -609,14 +632,14 @@ function filterSuggestedRail(hideRooms) {
     placePartners(design, feed ? feed.querySelectorAll('.hub-card') : []);
   }
   if (feed) {
-    Promise.all([getJSON('/highlights.json?v=d9dc228224'), getJSON('/rooms.json?v=9434547c8d')]).then(function (pair) {
+    Promise.all([getJSON('/highlights.json?v=d9dc228224'), getJSON('/rooms.json?v=bcd4c30d39')]).then(function (pair) {
       paintHome(pair[0], (pair[1] && pair[1].rooms) || []);
     }).catch(function () { feed.innerHTML = '<div class="post-empty">Highlights are unavailable right now. Open a room from the list.</div>'; });
   }
   if (roomsEl) {
     // highlights.json is already in flight on the home page (the feed started it). Elsewhere, use the preview
     // copied onto rooms.json at build time, so this page does not start a second request.
-    var roomsP = getJSON('/rooms.json?v=9434547c8d');
+    var roomsP = getJSON('/rooms.json?v=bcd4c30d39');
     var hlP = jsonCache['/highlights.json?v=d9dc228224'];
     var itemsP = hlP ? hlP.then(function (d) { return (d && d.items) || []; }, function () { return []; }) : Promise.resolve([]);
     Promise.all([roomsP, itemsP]).then(function (pair) {
@@ -687,7 +710,7 @@ function filterSuggestedRail(hideRooms) {
   if (postBtn && postPick) {
     postBtn.addEventListener('click', function () { openDlg(postPick); });
     if (postList) {
-      getJSON('/rooms.json?v=9434547c8d').then(function (d) {
+      getJSON('/rooms.json?v=bcd4c30d39').then(function (d) {
         postList.innerHTML = ((d && d.rooms) || []).filter(function (r) { return domainOk(r.domain); }).map(function (r) {
           return '<a class="hub-pick-room" href="' + esc(roomHref(r.domain, 'compose')) + '" rel="noopener"><strong>' + esc(r.name) + '</strong><span>' + esc(r.domain) + '</span></a>';
         }).join('') || '<div class="post-empty">No rooms listed.</div>';
@@ -910,7 +933,7 @@ function filterSuggestedRail(hideRooms) {
       hubSave(); renderHub('following'); paintBadge();
       var again = document.querySelector('[data-follow-room="' + room + '"]'); if (again) again.focus();
     });
-    Promise.all([getJSON('/rooms.json?v=9434547c8d'), getJSON('/highlights.json?v=d9dc228224')]).then(function (d) {
+    Promise.all([getJSON('/rooms.json?v=bcd4c30d39'), getJSON('/highlights.json?v=d9dc228224')]).then(function (d) {
       hubRooms = ((d[0] && d[0].rooms) || []).filter(function (r) { return r && /^[a-z0-9-]{1,40}$/.test(r.room || '') && domainOk(r.domain); });
       hubDomains = {}; hubNotifs = {};
       hubRooms.forEach(function (r) { hubDomains[String(r.domain).toLowerCase()] = true; hubNotifs[r.room] = r.notifs === true; });
@@ -1071,7 +1094,7 @@ function filterSuggestedRail(hideRooms) {
       }, true);
     }
 
-    getJSON('/rooms.json?v=9434547c8d').then(function (d) {
+    getJSON('/rooms.json?v=bcd4c30d39').then(function (d) {
       searchRooms = ((d && d.rooms) || []).filter(function (r) {
         return r && /^[a-z0-9-]{1,40}$/.test(r.room || '') && domainOk(r.domain);
       });
