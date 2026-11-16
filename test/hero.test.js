@@ -150,6 +150,24 @@ for (const name of ['none', 'empty']) {
 }
 
 {
+  const { p } = await open('nine');
+  const expected = [
+    'Photo: Mark McArdle \u00b7 CC BY-SA 2.0',
+    'Photo: Eustace Bagge \u00b7 CC BY-SA 4.0',
+    'Photo: Chris Peeters \u00b7 CC0',
+    'Photo: In Vitrio \u00b7 CC BY-SA 4.0 \u00b7 cropped',
+    'Photo: Lothar Spurzem \u00b7 CC BY-SA 2.0 de \u00b7 cropped',
+    'Photo: Paul Perreijn \u00b7 CC BY 2.0 \u00b7 cropped'
+  ];
+  for (let n = 0; n < expected.length; n++) {
+    if (n) { await p.click('.hx-next'); await sleep(200); }
+    const c = await p.evaluate(() => document.querySelector('.hx-credit').textContent);
+    ok(c === expected[n], 'cropped note: photo ' + (n + 1) + ' credit is ' + expected[n]);
+  }
+  await p.close();
+}
+
+{
   const { p } = await open('fast');
   const fade = await p.evaluate(() => getComputedStyle(document.querySelector('.hx-slide')).transitionDuration);
   await sleep(4700);

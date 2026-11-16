@@ -187,6 +187,28 @@
     (document.head || document.documentElement).appendChild(st);
   }
   /* hx-core:end */
+  // License note for adapted photos (2026-11-15): an item's optional "modified" field (for example "cropped") shows
+  // after the license, so the line reads "Photo: {credit} \u00b7 {license} \u00b7 cropped". hx-core stays as is
+  // (it is shared with factory/factory-hero.js); this follows the active slide.
+  function hxModified(fig, srcItems) {
+    var bySrc = {}, i, it;
+    for (i = 0; i < (srcItems || []).length; i++) {
+      it = srcItems[i];
+      if (it && typeof it.modified === 'string' && /^[a-z ,]{1,40}$/.test(it.modified)) bySrc[it.src] = it.modified;
+    }
+    var lic = fig.querySelector('.hx-lic');
+    if (!lic || !lic.parentNode) return;
+    var note = document.createElement('span');
+    note.className = 'hx-mod';
+    lic.parentNode.insertBefore(note, lic.nextSibling);
+    function sync() {
+      var s = fig.querySelector('.hx-slide.is-active');
+      var m = s && s.hxItem ? bySrc[s.hxItem.src] : '';
+      note.textContent = m ? ' \u00b7 ' + m : '';
+    }
+    sync();
+    if (window.MutationObserver) new MutationObserver(sync).observe(lic, { childList: true, characterData: true, subtree: true });
+  }
   var HX_CSS_ROOM =
     '.hx-room{display:block;aspect-ratio:3 / 1;max-height:232px;width:auto;margin:12px 16px 14px;border-radius:16px;border:1px solid var(--border,#2c2c32);isolation:isolate}' +
     '@media (max-width:999px){.hx-room{aspect-ratio:16 / 9;max-height:none;margin:0 0 12px;border-radius:0;border-width:0 0 1px}}';
@@ -201,10 +223,11 @@
       if (!site || !site.heroImages) return;
       if (!hxValidate(site.heroImages).items.length) { hxMount({ cfg: site.heroImages }); return; }
       hxCss(HX_CSS_ROOM);
-      hxMount({
+      var fig = hxMount({
         cfg: site.heroImages, host: page, before: page.querySelector(':scope > .thoughts-tabs') || page.firstChild, cls: 'hx-room',
         label: String(site.name || site.siteId || 'Room') + ' photos', sizes: '(min-width:1000px) 760px, 100vw'
       });
+      if (fig) hxModified(fig, site.heroImages.items);
     }).catch(function () {});
   }
   window.SubxHero = { validate: hxValidate, mount: hxMount, css: hxCss, licenseOk: hxLicenseOk };
