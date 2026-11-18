@@ -122,8 +122,8 @@ button, input, select, textarea { font-family: inherit; }
 .brand-icon {
   display: block; width: 52px; height: 52px; margin: 0 auto 0.55rem;
   padding: 0; border: 0; background-color: var(--subx-cat-color);
-  -webkit-mask-image: url("/assets/brand/cat-mask.png?v=45acca35be");
-  mask-image: url("/assets/brand/cat-mask.png?v=45acca35be");
+  -webkit-mask-image: url("/assets/brand/cat-mask.png?v=53f864bd7a");
+  mask-image: url("/assets/brand/cat-mask.png?v=53f864bd7a");
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
   -webkit-mask-position: center;

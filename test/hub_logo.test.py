@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hub cat mark: color comes from brand.json, and the files are the approved lower-nose rasters.
+"""Hub cat mark: color comes from brand.json, and the files are the approved study E01 soft almond rasters.
 
 The mask master and the square sizes are copied, not redrawn. A color change is a brand.json edit.
 Offline. Temp dirs only.
@@ -16,15 +16,15 @@ BRAND = os.path.join(ROOT, 'brand', 'brand.json')
 SITE = os.path.join(ROOT, 'hub', 'site')
 fails = []
 
-# Approved lower-nose proposed-black files. Not the earlier seven-colour export.
+# Approved study E01 soft almond black files. Not the earlier seven-colour export.
 EXPECT = {
-    'brand/assets/cat-mask.png': '45acca35be1357ea672f34fed35994e20446d6b62deb3de32444ca559a4ac661',
-    'brand/assets/cat-16.png': '81a2abfdde74be24ddc449d00021f41bf4c4bffb39c2a89cd34b7cb029a86762',
-    'brand/assets/cat-24.png': 'c8cc77a5e517bcb9e7bd9ee5e90a4928d1b01281810267de5d461c977714581c',
-    'brand/assets/cat-32.png': '1105a6aa15b1f7f593d6a6ba97017b1ddfcadcd2ab5ade0e484dff40080f1ba2',
-    'brand/assets/cat-48.png': '2e7a6ea55aa8aff2c5164c4b18dca1f9c30cc69e23ee6ee3c5208263cc0583ef',
-    'brand/assets/cat-128.png': '3dd8be7994ccfd961e082af8309b376cb606ab933a78608864d2a4c37cd8e0b5',
-    'brand/assets/cat-256.png': 'f4b692783efc10a35f41f67d4c46ac7ea50b0a3b8eac252df90ab26d35624c64',
+    'brand/assets/cat-mask.png': '53f864bd7ae717ce35e901f3ed4cd98a5f8e04df8a15ff9a5c5cb02e1c7abd32',
+    'brand/assets/cat-16.png': '1e5653b0e62515a4f1dd3fbafc4dc0e89c338c6cac6b35895a74b9f0c34af811',
+    'brand/assets/cat-24.png': '7ce7637f31a4b1c2e7236a926c2d2ec8a69720ea964f8298e02820bdcd37fbd6',
+    'brand/assets/cat-32.png': '7754c5231266d9ad5a4ec5bdc94ba48c9e944e532f5d1c839eeaf7f12f0c072a',
+    'brand/assets/cat-48.png': '7a5f4607f7aa0db15bc5279429bc3ae4f840902fb6aff4305acac46aa9378db0',
+    'brand/assets/cat-128.png': 'c604c8dac09954970152f9bdbde7b6c1280362940685f1aee11c0f079acc8db6',
+    'brand/assets/cat-256.png': '7888ab1b45a9f621284b670036a2a2646264a3d693af8fe72ec9bf78cb230899',
 }
 
 
@@ -54,7 +54,7 @@ ok(not any(n.startswith(('current-', 'proposed-')) or 'white' in n for n in name
 
 for rel, digest in EXPECT.items():
     data = open(os.path.join(ROOT, rel), 'rb').read()
-    ok(hashlib.sha256(data).hexdigest() == digest, '%s is the approved lower-nose file' % rel)
+    ok(hashlib.sha256(data).hexdigest() == digest, '%s is the approved study E01 soft almond file' % rel)
 
 pairs = logo_mask.plan(brand)
 ok(pairs[0][0] == logo['mask'] and pairs[0][2] is None, 'plan copies the mask master first, with no forced square size')
