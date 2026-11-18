@@ -751,11 +751,12 @@ html[data-hub-theme="dark"] body.hub-home .hub-search-sheet {
 }
 
 /* Desktop X-style rail search (option 3). The pill sits in a non-scrolling
-   bar at the top of the right rail. Room Brief, Suggested rooms, and the
-   rail footer scroll underneath. Results open in place under the field.
-   There is no page scrim on desktop. The phone field under the tagline
-   is unchanged. At 901-999px, when the rail is hidden, the existing
-   center-column field stays in place so search is not lost. */
+   bar at the top of the right rail. Results open in place under the field
+   and push Room Brief, Suggested rooms, and the rail footer down. There
+   is no page scrim on desktop, and the results do not overlay the rail.
+   The phone field under the tagline is unchanged. At 901-999px, when the
+   rail is hidden, the existing center-column field stays in place so
+   search is not lost. */
 body.hub-home .hub-rail-search { display: none; }
 body.hub-home .hub-search-results-label {
   font: 700 11px/1 var(--ui);
@@ -833,28 +834,33 @@ html[data-hub-theme="dark"] body.hub-home .hub-search-empty-title {
   }
   html body.hub-home .hub-rail-search .hub-search-rail-popover {
     display: none;
-    position: fixed;
-    z-index: 800;
-    top: 64px;
-    right: 8px;
+    position: static;
+    z-index: auto;
+    top: auto;
+    right: auto;
     left: auto;
-    width: calc(var(--right-w) - 16px);
+    width: 100%;
     max-width: none;
+    margin-top: 8px;
     background: #ffffff;
     border: 1px solid var(--border-strong);
     border-radius: 20px;
-    box-shadow: 0 2px 0 rgba(15, 20, 25, 0.04), 0 8px 20px rgba(15, 20, 25, 0.10);
+    box-shadow: none;
     padding: 6px 4px 10px;
-    max-height: min(60vh, 440px);
+    max-height: min(45vh, 360px);
     overflow: auto;
     pointer-events: auto;
   }
   html[data-hub-theme="dark"] body.hub-home .hub-rail-search .hub-search-rail-popover {
     background: #000000;
-    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.20), 0 8px 20px rgba(0, 0, 0, 0.45);
+    box-shadow: none;
   }
   html[data-hub-search="open"] body.hub-home .hub-rail-search .hub-search-rail-popover {
     display: block;
+  }
+  html[data-hub-search="open"] body.hub-home .hub-rail-search .hub-search-results {
+    max-height: none;
+    padding-top: 0;
   }
 }
 

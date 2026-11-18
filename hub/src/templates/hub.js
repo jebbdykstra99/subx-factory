@@ -1086,6 +1086,18 @@ function filterSuggestedRail(hideRooms) {
         var el = document.getElementById(id);
         if (!el) return;
         el.innerHTML = html;
+        var listbox = el.querySelector('.hub-search-list');
+        if (!listbox && !hits.length) {
+          /* Keep a listbox node so aria-controls on the combobox stays valid
+             when the empty state is showing. */
+          var emptyBox = document.createElement('div');
+          emptyBox.className = 'hub-search-list';
+          emptyBox.setAttribute('role', 'listbox');
+          emptyBox.setAttribute('aria-label', 'Rooms');
+          el.appendChild(emptyBox);
+          listbox = emptyBox;
+        }
+        if (listbox) listbox.id = id.replace('hub-search-results', 'hub-search-list');
         var list = el.querySelectorAll('.hub-search-hit');
         for (var i = 0; i < list.length; i++) {
           list[i].id = id + '-opt-' + i;
@@ -1094,23 +1106,10 @@ function filterSuggestedRail(hideRooms) {
       });
       clearActive();
     }
-    function placeRailPopover() {
-      if (!railPop || !isRail()) return;
-      var bar = document.getElementById('hub-rail-search');
-      var field = bar && bar.querySelector('.hub-search-field');
-      var box = field || bar;
-      if (!box) return;
-      var r = box.getBoundingClientRect();
-      railPop.style.top = Math.round(r.bottom + 6) + 'px';
-      railPop.style.left = Math.round(r.left) + 'px';
-      railPop.style.right = 'auto';
-      railPop.style.width = Math.round(r.width) + 'px';
-    }
     function openSearch(from) {
       if (from) lastOpener = from;
       root.setAttribute('data-hub-search', 'open');
       setExpanded(true);
-      placeRailPopover();
       var el = visibleInput();
       if (el) {
         el.focus();
@@ -1215,10 +1214,7 @@ function filterSuggestedRail(hideRooms) {
       }, { passive: true });
     }
     window.addEventListener('resize', function () {
-      if (isOpen()) {
-        setExpanded(true);
-        placeRailPopover();
-      }
+      if (isOpen()) setExpanded(true);
     });
 
     getJSON('{{asset:/rooms.json}}').then(function (d) {
