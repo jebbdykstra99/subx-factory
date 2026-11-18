@@ -949,20 +949,28 @@ function filterSuggestedRail(hideRooms) {
     });
     showHub();
   }
-  // Search rooms field on the hero (option 2). Click or focus opens an
-  // overlay over the hero; Esc, Done, or the scrim closes it. Results
-  // come from rooms.json and filter as you type.
+  // Search rooms. From 1000px up, a persistent pill at the top of the
+  // right rail opens results in place under the field, with no page scrim.
+  // On a phone the under-tagline field and sheet are unchanged. At
+  // 901-999px, when the rail is hidden, the center-column field stays.
+  // Results come from rooms.json and filter as you type. Press / to
+  // focus the field unless the user is already typing in another field.
+  // Esc closes the results and clears the query.
   (function initHubSearch() {
     var root = document.documentElement;
     var pop = document.getElementById('hub-search-popover');
     var sheet = document.getElementById('hub-search-sheet');
-    if (!pop && !sheet) return;
+    var railPop = document.getElementById('hub-search-rail-popover');
+    var railInput = document.getElementById('hub-search-input-rail');
+    if (!pop && !sheet && !railInput) return;
 
     var searchRooms = [];
     var lastOpener = null;
+    var activeIdx = -1;
+    var resultIds = ['hub-search-results', 'hub-search-results-sheet', 'hub-search-results-rail'];
     var triggers = Array.prototype.slice.call(document.querySelectorAll('[data-hub-search-open]'));
     var closers = Array.prototype.slice.call(document.querySelectorAll('[data-hub-search-close]'));
-    var inputs = ['hub-search-input', 'hub-search-input-sheet'].map(function (id) {
+    var inputs = ['hub-search-input', 'hub-search-input-sheet', 'hub-search-input-rail'].map(function (id) {
       return document.getElementById(id);
     }).filter(Boolean);
 
@@ -972,24 +980,39 @@ function filterSuggestedRail(hideRooms) {
     function isPhone() {
       return window.matchMedia && window.matchMedia('(max-width: 900px)').matches;
     }
+    function isRail() {
+      return window.matchMedia && window.matchMedia('(min-width: 1000px)').matches;
+    }
     function visibleInput() {
-      var preferred = isPhone() ? 'hub-search-input-sheet' : 'hub-search-input';
+      var preferred = isPhone() ? 'hub-search-input-sheet' : (isRail() ? 'hub-search-input-rail' : 'hub-search-input');
       var el = document.getElementById(preferred);
       if (el) return el;
       return inputs[0] || null;
+    }
+    function visibleResultsId() {
+      return isPhone() ? 'hub-search-results-sheet' : (isRail() ? 'hub-search-results-rail' : 'hub-search-results');
     }
     function visibleTrigger() {
       for (var i = 0; i < triggers.length; i++) {
         if (triggers[i].offsetParent !== null) return triggers[i];
       }
-      return document.getElementById('sidebar-search-btn');
+      return null;
+    }
+    function typingInField(t) {
+      if (!t) return false;
+      var tag = t.tagName || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+      if (t.isContentEditable) return true;
+      return false;
     }
     function setExpanded(open) {
       triggers.forEach(function (t) {
         t.setAttribute('aria-expanded', open ? 'true' : 'false');
       });
-      if (pop) pop.setAttribute('aria-hidden', (!open || isPhone()) ? 'true' : 'false');
+      if (railInput) railInput.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (pop) pop.setAttribute('aria-hidden', (!open || isPhone() || isRail()) ? 'true' : 'false');
       if (sheet) sheet.setAttribute('aria-hidden', (!open || !isPhone()) ? 'true' : 'false');
+      if (railPop) railPop.setAttribute('aria-hidden', (!open || !isRail()) ? 'true' : 'false');
     }
     function currentQuery() {
       var el = visibleInput();
@@ -1006,16 +1029,49 @@ function filterSuggestedRail(hideRooms) {
     function roomBlob(r) {
       return ((r.name || '') + '\n' + (r.room || '') + '\n' + (r.domain || '') + '\n' + (r.tagline || '')).toLowerCase();
     }
+    function clearActive() {
+      activeIdx = -1;
+      inputs.forEach(function (el) { el.removeAttribute('aria-activedescendant'); });
+    }
+    function setActive(idx) {
+      var box = document.getElementById(visibleResultsId());
+      var hits = box ? box.querySelectorAll('.hub-search-hit') : [];
+      if (!hits.length) { clearActive(); return; }
+      if (idx < 0) idx = hits.length - 1;
+      if (idx >= hits.length) idx = 0;
+      activeIdx = idx;
+      resultIds.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var list = el.querySelectorAll('.hub-search-hit');
+        for (var i = 0; i < list.length; i++) {
+          var on = i === activeIdx;
+          list[i].classList.toggle('is-active', on);
+          list[i].setAttribute('aria-selected', on ? 'true' : 'false');
+        }
+      });
+      var current = hits[activeIdx];
+      var inp = visibleInput();
+      if (current && inp) inp.setAttribute('aria-activedescendant', current.id);
+      if (current && typeof current.scrollIntoView === 'function') {
+        current.scrollIntoView({ block: 'nearest' });
+      }
+    }
     function renderResults(q) {
       q = String(q || '').trim().toLowerCase();
       var hits = searchRooms.filter(function (r) {
         return !q || roomBlob(r).indexOf(q) !== -1;
       });
       var html;
+      var hint = '<p class="hub-search-hint">Rooms only. Esc closes.</p>';
       if (!hits.length) {
-        html = '<p class="hub-search-empty" role="status">No rooms match that search.</p>';
+        html = '<div class="hub-search-empty" role="status">' +
+          '<div class="hub-search-empty-title">No rooms match that name</div>' +
+          '<div class="hub-search-empty-body">Try a room name, a tagline, or a web address. Search covers rooms only, not posts.</div>' +
+          '</div>' + hint;
       } else {
-        html = '<div class="hub-search-list" role="listbox" aria-label="Rooms">';
+        html = '<div class="hub-search-results-label">Rooms</div>';
+        html += '<div class="hub-search-list" role="listbox" aria-label="Rooms">';
         hits.forEach(function (r) {
           var url = safeUrl('https://' + r.domain + '/');
           if (!url) return;
@@ -1024,17 +1080,37 @@ function filterSuggestedRail(hideRooms) {
             (r.tagline ? '<span class="hub-search-hit-tag">' + esc(r.tagline) + '</span>' : '') +
             '<span class="hub-search-hit-meta">' + esc(r.domain) + '</span></a>';
         });
-        html += '</div>';
+        html += '</div>' + hint;
       }
-      ['hub-search-results', 'hub-search-results-sheet'].forEach(function (id) {
+      resultIds.forEach(function (id) {
         var el = document.getElementById(id);
-        if (el) el.innerHTML = html;
+        if (!el) return;
+        el.innerHTML = html;
+        var list = el.querySelectorAll('.hub-search-hit');
+        for (var i = 0; i < list.length; i++) {
+          list[i].id = id + '-opt-' + i;
+          list[i].setAttribute('aria-selected', 'false');
+        }
       });
+      clearActive();
+    }
+    function placeRailPopover() {
+      if (!railPop || !isRail()) return;
+      var bar = document.getElementById('hub-rail-search');
+      var field = bar && bar.querySelector('.hub-search-field');
+      var box = field || bar;
+      if (!box) return;
+      var r = box.getBoundingClientRect();
+      railPop.style.top = Math.round(r.bottom + 6) + 'px';
+      railPop.style.left = Math.round(r.left) + 'px';
+      railPop.style.right = 'auto';
+      railPop.style.width = Math.round(r.width) + 'px';
     }
     function openSearch(from) {
       if (from) lastOpener = from;
       root.setAttribute('data-hub-search', 'open');
       setExpanded(true);
+      placeRailPopover();
       var el = visibleInput();
       if (el) {
         el.focus();
@@ -1045,9 +1121,25 @@ function filterSuggestedRail(hideRooms) {
         }
       }
     }
-    function closeSearch() {
+    function closeSearch(opts) {
+      opts = opts || {};
+      if (opts.clear) {
+        inputs.forEach(function (el) { el.value = ''; });
+        renderResults('');
+      }
       root.setAttribute('data-hub-search', 'closed');
       setExpanded(false);
+      clearActive();
+      if (opts.blur) {
+        var el = visibleInput();
+        if (el && typeof el.blur === 'function') el.blur();
+        lastOpener = null;
+        return;
+      }
+      if (isRail()) {
+        lastOpener = null;
+        return;
+      }
       var back = lastOpener && lastOpener.offsetParent !== null ? lastOpener : visibleTrigger();
       lastOpener = null;
       if (back && typeof back.focus === 'function') back.focus();
@@ -1064,7 +1156,27 @@ function filterSuggestedRail(hideRooms) {
     });
     inputs.forEach(function (el) {
       el.addEventListener('focus', function () { openSearch(lastOpener); });
-      el.addEventListener('input', function () { setQuery(el.value, false); });
+      el.addEventListener('input', function () {
+        if (!isOpen()) openSearch(lastOpener);
+        setQuery(el.value, false);
+      });
+      el.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') return;
+        var box = document.getElementById(visibleResultsId());
+        var list = box ? box.querySelectorAll('.hub-search-hit') : [];
+        if (e.key === 'Enter') {
+          if (activeIdx >= 0 && list[activeIdx]) {
+            e.preventDefault();
+            window.location.href = list[activeIdx].href;
+          }
+          return;
+        }
+        if (!list.length) return;
+        e.preventDefault();
+        if (!isOpen()) openSearch(lastOpener);
+        if (e.key === 'ArrowDown') setActive(activeIdx + 1);
+        else setActive(activeIdx < 0 ? list.length - 1 : activeIdx - 1);
+      });
     });
     closers.forEach(function (t) {
       t.addEventListener('click', function (e) {
@@ -1081,18 +1193,33 @@ function filterSuggestedRail(hideRooms) {
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && isOpen()) {
         e.preventDefault();
-        closeSearch();
+        closeSearch({ clear: true, blur: true });
+        return;
+      }
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (typingInField(e.target)) return;
+        e.preventDefault();
+        openSearch(visibleTrigger() || visibleInput());
       }
     });
+    document.addEventListener('mousedown', function (e) {
+      if (!isOpen() || !isRail()) return;
+      var rail = document.getElementById('hub-rail-search');
+      if (rail && !rail.contains(e.target)) closeSearch();
+    });
 
-    var mag = document.getElementById('sidebar-search-btn');
-    if (mag) {
-      mag.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        openSearch(mag);
-      }, true);
+    var railScroll = document.getElementById('hub-rail-scroll');
+    if (railScroll) {
+      railScroll.addEventListener('scroll', function () {
+        root.setAttribute('data-hub-rail-scrolled', railScroll.scrollTop > 0 ? '1' : '0');
+      }, { passive: true });
     }
+    window.addEventListener('resize', function () {
+      if (isOpen()) {
+        setExpanded(true);
+        placeRailPopover();
+      }
+    });
 
     getJSON('/rooms.json?v=bcd4c30d39').then(function (d) {
       searchRooms = ((d && d.rooms) || []).filter(function (r) {
