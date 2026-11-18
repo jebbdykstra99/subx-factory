@@ -1207,6 +1207,15 @@ function filterSuggestedRail(hideRooms) {
       if (rail && !rail.contains(e.target)) closeSearch();
     });
 
+    var mag = document.getElementById('sidebar-search-btn');
+    if (mag) {
+      mag.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        openSearch(mag);
+      }, true);
+    }
+
     var railScroll = document.getElementById('hub-rail-scroll');
     if (railScroll) {
       railScroll.addEventListener('scroll', function () {

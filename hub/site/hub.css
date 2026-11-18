@@ -13,6 +13,7 @@
 
 /* One logged-out Sign in: the header pill. The shell's drawer button stays in the DOM for the same auth flow. */
 .sidebar-auth-btn[hidden] { display: none !important; }
+.sidebar-search-btn[hidden] { display: none !important; }
 .sidebar-auth:not(:has(.sidebar-auth-user)) { display: none; }
 
 /* Empty nests are a second noun. Hide the shell's empty Nests + block; real nest links still show. */
