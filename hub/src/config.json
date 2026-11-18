@@ -358,9 +358,10 @@
   },
   "topics": {
     "seed": "topics/seed_wave1.json",
+    "extraSeeds": ["topics/seed_wave3_wed.json"],
     "open": false,
     "showDoorways": false,
     "hubNoindex": false,
-    "_doc": "Topic pages from the seed (HOLD rows never render). open=false: hidden topics show the not-live-yet state. showDoorways=false: no 'Also reachable at' line. hubNoindex=false (go-live 2026-11-04): hub pages are index,follow unless their pages entry sets robots; every topic page keeps the hide-until-active rule (only status active is indexable or in the sitemap). Set hubNoindex=true to put every page back under noindex,nofollow with an empty sitemap."
+    "_doc": "Topic pages from the seed (HOLD rows never render). extraSeeds lists more seed files rendered the same way. open=false: hidden topics show the not-live-yet state. showDoorways=false: no 'Also reachable at' line. hubNoindex=false (go-live 2026-11-04): hub pages are index,follow unless their pages entry sets robots; every topic page keeps the hide-until-active rule (only status active is indexable or in the sitemap). Set hubNoindex=true to put every page back under noindex,nofollow with an empty sitemap."
   }
 }

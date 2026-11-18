@@ -1,0 +1,15 @@
+{
+  "notes": "Declared topic forks only. A row here is a record. It does not render a page, a route, or a swap UI. The international-writers project-swap fork is opt-in, ships no files, and is not declared on the topic row.",
+  "forks": [
+    {
+      "topic": "international-writers",
+      "kind": "project-swap",
+      "optIn": true,
+      "files": "none",
+      "owner": "Vesta",
+      "goBy": "Jebb",
+      "go": "2026-11-17",
+      "ui": false
+    }
+  ]
+}

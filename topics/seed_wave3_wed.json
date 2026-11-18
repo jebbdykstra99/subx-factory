@@ -1,0 +1,86 @@
+{
+  "collection": "topics",
+  "wave": 3,
+  "source": {
+    "decision": "Wednesday wave-3 topic rooms (2026-11-18): five hidden topics, no doorways",
+    "rows": 5
+  },
+  "notes": "Hidden rows. legalProfile standard-18 from topics/wave3_profiles.json. Empty doorwayDomains. Zero stats. No approval record. Not open. Pets does not alias /t/dogs/ or /t/cute-animals/.",
+  "topics": [
+    {
+      "slug": "international-writers",
+      "title": "International Writers",
+      "description": "Writers worldwide: work, craft, translation, and the practice of writing across languages and countries.",
+      "status": "hidden",
+      "createdAt": "2026-11-18T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "watches",
+      "title": "Watches",
+      "description": "Wristwatches and pocket watches: movements, history, care, and the pieces people actually wear.",
+      "status": "hidden",
+      "createdAt": "2026-11-18T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "pets",
+      "title": "Pets",
+      "description": "Dogs, cats, and other home pets: daily care, training, gear, and stories. No medical advice, no ESA letters, and no lost-pet personal info.",
+      "status": "hidden",
+      "createdAt": "2026-11-18T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "camping",
+      "title": "Camping",
+      "description": "Camping trips and camp life: sites, gear, camp cooking, and nights outside, from car camping to the backcountry.",
+      "status": "hidden",
+      "createdAt": "2026-11-18T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    },
+    {
+      "slug": "volleyball",
+      "title": "Volleyball",
+      "description": "Indoor volleyball, college men's and women's play, and professional play in Europe, Russia and Asia.",
+      "status": "hidden",
+      "createdAt": "2026-11-18T07:00:00Z",
+      "activatedAt": null,
+      "posts14d": 0,
+      "distinctPosters14d": 0,
+      "posts30d": 0,
+      "lastCountedPostAt": null,
+      "doorwayDomains": [],
+      "stewardOnly": false,
+      "legalProfile": "standard-18"
+    }
+  ]
+}

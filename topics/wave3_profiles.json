@@ -1,0 +1,10 @@
+{
+  "notes": "Per-topic legal profile for the wave-3 seed (topics/seed_wave3_wed.json). Every wave-3 topic is standard-18. No HOLD row: grief stays the only HOLD, in wave 1. Input to tools/topics_seed.py.",
+  "legalProfile": {
+    "international-writers": "standard-18",
+    "watches": "standard-18",
+    "pets": "standard-18",
+    "camping": "standard-18",
+    "volleyball": "standard-18"
+  }
+}

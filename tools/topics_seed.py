@@ -25,6 +25,13 @@ Wave-2 released seed (topics/seed_wave2_released.json): doorways Juno released f
 Same row invariants, no gov flag, profiles from topics/wave2_profiles.json. carnival-celebrations and crunk-music
 carry approvalPrereq "trademark-check": tools/topic_status.approved() returns false while it is present, so the
 topic can never go active until a one-line Trademark Agent check clears and the field is removed in a reviewed commit.
+
+Wave-3 seed (topics/seed_wave3_wed.json): five hidden topics (international-writers, watches, pets, camping,
+volleyball), standard-18, empty doorwayDomains, zero stats, no approval record. Rendered because hub/src/config.json
+topics.extraSeeds names the file, in addition to topics.seed. Not folded into all_topics_seed() (no doorways, so the
+spin-up domain plan is unchanged). Pets does not alias /t/dogs/ or /t/cute-animals/. The international-writers
+project-swap fork is declared only in topics/forks-manifest.json: opt-in, files none, owner Vesta, Jebb go 2026-11-17,
+no swap UI.
 """
 import argparse, csv, hashlib, json, os, re, sys
 
@@ -41,6 +48,11 @@ APPROVED = os.path.join(ROOT, 'topics', 'approved_waves.json')
 APPROVED_SCHEMA = os.path.join(ROOT, 'topics', 'approved_waves.schema.json')
 PROFILES = os.path.join(ROOT, 'topics', 'wave1_profiles.json')
 PROFILES2 = os.path.join(ROOT, 'topics', 'wave2_profiles.json')
+WAVE3_SEED = os.path.join(ROOT, 'topics', 'seed_wave3_wed.json')
+PROFILES3 = os.path.join(ROOT, 'topics', 'wave3_profiles.json')
+FORKS = os.path.join(ROOT, 'topics', 'forks-manifest.json')
+WAVE3_SLUGS = ('international-writers', 'watches', 'pets', 'camping', 'volleyball')
+WAVE3_CREATED = '2026-11-18T07:00:00Z'  # 2026-11-18 00:00 MT: fixed so the wave-3 seed is reproducible
 CREATED_AT = '2026-11-03T07:00:00Z'  # 2026-11-03 00:00 MT: fixed so the seed is reproducible
 APPLY_ENV = 'SUBX_TOPICS_APPLY_GO'
 
@@ -206,8 +218,108 @@ def check_released(seed3, seed1=None, seed2=None, brand=None):
     return e
 
 
+def wave3_profile(slug):
+    """Legal profile for a wave-3 topic: topics/wave3_profiles.json, else standard-18."""
+    prof = load(PROFILES3)['legalProfile'] if os.path.exists(PROFILES3) else {}
+    return prof.get(slug, 'standard-18')
+
+
+def check_wave3(seed, seed1=None, seed_agency=None, seed_released=None, brand=None):
+    """Wave-3 seed: same row rules as wave 2 (schema, hidden, zero stats, no approval), profiles from
+    wave3_profiles.json, empty doorwayDomains, and no slug shared with wave 1 or wave 2."""
+    if not os.path.exists(PROFILES3):
+        return ['topics/wave3_profiles.json is missing']
+    seed1 = seed1 if seed1 is not None else load(SEED)
+    seed_agency = seed_agency if seed_agency is not None else (load(AGENCY_SEED) if os.path.exists(AGENCY_SEED) else {'topics': []})
+    seed_released = seed_released if seed_released is not None else (load(RELEASED_SEED) if os.path.exists(RELEASED_SEED) else {'topics': []})
+    sch = load(SCHEMA)
+    words = topic_slug.reserved(brand)
+    e = []
+    if seed.get('collection') != 'topics' or seed.get('wave') != 3:
+        e.append('wave-3 seed must be collection "topics", wave 3')
+    prev = list(seed1.get('topics', [])) + list(seed_agency.get('topics', [])) + list(seed_released.get('topics', []))
+    s0 = {t['slug'] for t in prev}
+    seen = set()
+    for t in seed.get('topics', []):
+        w = 'wave-3 topic %s' % t.get('slug')
+        e += ['%s: %s' % (w, x) for x in topic_schema.validate(t, sch)]
+        e += ['%s: %s' % (w, x) for x in topic_slug.errors(t.get('slug'), words=words)]
+        if t.get('slug') in seen or t.get('slug') in s0:
+            e.append('%s: duplicate slug (or already seeded in wave 1 or 2)' % w)
+        seen.add(t.get('slug'))
+        if t.get('slug') in ('dogs', 'cute-animals'):
+            e.append('%s: wave 3 does not alias /t/dogs/ or /t/cute-animals/' % w)
+        if t.get('doorwayDomains') != []:
+            e.append('%s: a wave-3 topic has empty doorwayDomains' % w)
+        if t.get('status') != 'hidden' or t.get('stewardOnly') is not False:
+            e.append('%s: a wave-3 seed row starts hidden with stewardOnly false' % w)
+        if any(t.get(k) for k in ('posts14d', 'distinctPosters14d', 'posts30d')) or t.get('activatedAt') or t.get('lastCountedPostAt'):
+            e.append('%s: a seed row must start with zero stats' % w)
+        if any(t.get(k) is not None for k in ('approvedWave', 'approvedBy', 'approvedAt')):
+            e.append('%s: a seed row must not carry an approval record' % w)
+        if 'govNonAffiliation' in t:
+            e.append('%s: a wave-3 topic is not an agency topic (no govNonAffiliation)' % w)
+        if 'approvalPrereq' in t:
+            e.append('%s: a wave-3 topic carries no approvalPrereq' % w)
+        if t.get('legalProfile') != wave3_profile(t.get('slug')):
+            e.append('%s: legalProfile must be %s (topics/wave3_profiles.json)' % (w, wave3_profile(t.get('slug'))))
+        if t.get('createdAt') != WAVE3_CREATED:
+            e.append('%s: createdAt must be %s' % (w, WAVE3_CREATED))
+        if re.search('[\u2013\u2014]', (t.get('title') or '') + (t.get('description') or '')):
+            e.append('%s: no dashes in title or description' % w)
+    if [t.get('slug') for t in seed.get('topics', [])] != list(WAVE3_SLUGS):
+        e.append('wave-3 topics must be %s, in that order' % ', '.join(WAVE3_SLUGS))
+    if seed.get('source', {}).get('rows') != len(seed.get('topics', [])):
+        e.append('wave-3 seed row count does not match source rows')
+    listed = load(PROFILES3).get('legalProfile')
+    want_prof = {s: 'standard-18' for s in WAVE3_SLUGS}
+    if listed != want_prof:
+        e.append('wave3_profiles.json must map %s to standard-18 and nothing else' % ', '.join(WAVE3_SLUGS))
+    if load(PROFILES3).get('hold'):
+        e.append('wave 3 has no HOLD list (grief stays the only HOLD, in wave 1)')
+    return e
+
+
+def check_forks(manifest=None):
+    """topics/forks-manifest.json: the international-writers project-swap fork only.
+    Opt-in, files none, owner Vesta, Jebb go 2026-11-17, no swap UI."""
+    if manifest is None:
+        if not os.path.exists(FORKS):
+            return ['topics/forks-manifest.json is missing']
+        manifest = load(FORKS)
+    e = []
+    forks = manifest.get('forks') if isinstance(manifest, dict) else None
+    if not isinstance(forks, list) or len(forks) != 1 or not isinstance(forks[0], dict):
+        e.append('forks-manifest.json must declare exactly one fork')
+        return e
+    f = forks[0]
+    want = {
+        'topic': 'international-writers',
+        'kind': 'project-swap',
+        'optIn': True,
+        'files': 'none',
+        'owner': 'Vesta',
+        'goBy': 'Jebb',
+        'go': '2026-11-17',
+        'ui': False,
+    }
+    if set(f) != set(want):
+        e.append('forks-manifest.json fork fields must be %s' % ', '.join(want))
+    for k, v in want.items():
+        if f.get(k) != v:
+            e.append('forks-manifest.json %s must be %r' % (k, v))
+    if f.get('topic') in ('dogs', 'cute-animals'):
+        e.append('forks-manifest.json does not alias /t/dogs/ or /t/cute-animals/')
+    if f.get('files') != 'none':
+        e.append('forks-manifest.json files must be none (no swap files)')
+    if f.get('ui') is not False:
+        e.append('forks-manifest.json ui must be false (no swap UI)')
+    return e
+
+
 def all_topics_seed():
-    """Wave 1 plus the wave-2 agency and released rows (if the files exist), as one seed dict for lookups."""
+    """Wave 1 plus the wave-2 agency and released rows (if the files exist), as one seed dict for lookups.
+    Wave 3 is not included: it has no doorways and is not part of the spin-up domain plan."""
     s = load(SEED)
     for p in (AGENCY_SEED, RELEASED_SEED):
         if os.path.exists(p):
@@ -315,6 +427,19 @@ def main(argv=None):
         errs += r3
         if not r3:
             print('released seed OK: %d topics %s, trademark-check gate on %s' % (len(s3['topics']), summary(s3), ', '.join(TM_GATED)))
+    if os.path.exists(WAVE3_SEED):
+        s4 = load(WAVE3_SEED)
+        r4 = check_wave3(s4, seed, load(AGENCY_SEED) if os.path.exists(AGENCY_SEED) else None,
+                         load(RELEASED_SEED) if os.path.exists(RELEASED_SEED) else None)
+        errs += r4
+        if not r4:
+            print('wave-3 seed OK: %d topics %s' % (len(s4['topics']), summary(s4)))
+    else:
+        errs.append('wave-3 seed is missing: topics/seed_wave3_wed.json')
+    r5 = check_forks()
+    errs += r5
+    if not r5:
+        print('forks manifest OK: international-writers project-swap, files none, no swap UI')
     if errs:
         print('\n'.join('FAIL ' + x for x in errs), file=sys.stderr)
         return 1
