@@ -84,7 +84,11 @@ for v in cfg['vendor']:
 pages = [f for f in files(SITE) if f.endswith('.html')]
 topic_index = brand['topicPathPrefix'].strip('/') + '/index.html'
 SEED = json.load(open(os.path.join(ROOT, 'topics', 'seed_wave1.json')))
-LIVE_TOPICS = [t for t in SEED['topics'] if t['status'] != 'hold']
+_extra_rows = []
+for _rel in cfg['topics'].get('extraSeeds') or []:
+    _extra_rows.extend(json.load(open(os.path.join(ROOT, _rel), encoding='utf-8'))['topics'])
+LIVE_TOPICS = [t for t in SEED['topics'] + _extra_rows if t['status'] != 'hold']
+WAVE3_SLUGS = ['international-writers', 'watches', 'pets', 'camping', 'volleyball']
 TOPIC_PAGES = [brand['topicPathPrefix'].strip('/') + '/' + t['slug'] + '/index.html' for t in LIVE_TOPICS]
 # go-live 2026-11-04: the public hub pages are indexed; 404, the topic index and every non-active topic stay noindex
 PUBLIC_PAGES = ['index.html', 'rooms.html', 'about.html', 'terms.html', 'privacy.html', 'guidelines.html', 'report.html']
@@ -362,7 +366,12 @@ ok(used == tiers, 'legend uses only real whomark tiers (%s of %s)' % (sorted(use
 # topics held for the topic-layer PR
 tdir_ = os.path.join(SITE, brand['topicPathPrefix'].strip('/'))
 ok(files(tdir_) == sorted(['index.html'] + [t['slug'] + '/index.html' for t in LIVE_TOPICS]), 'topic folder = index + one page per non-HOLD seed topic')
-ok(len(SEED['topics']) == 52 and len(LIVE_TOPICS) == 51 and [t['slug'] for t in SEED['topics'] if t['status'] == 'hold'] == ['grief'], 'seed: 52 topics, 51 rendered, grief is the only HOLD')
+ok(cfg['topics'].get('extraSeeds') == ['topics/seed_wave3_wed.json'] and cfg['topics'].get('open') is False,
+   'config: topics.extraSeeds is the wave-3 seed and topics.open stays false')
+ok(len(SEED['topics']) == 52 and len(_extra_rows) == 5 and len(LIVE_TOPICS) == 56
+   and [t['slug'] for t in SEED['topics'] + _extra_rows if t['status'] == 'hold'] == ['grief'],
+   'wave 1 plus wave-3 extraSeeds: 56 rendered, grief is the only HOLD')
+ok([t['slug'] for t in _extra_rows] == WAVE3_SLUGS, 'wave-3 extraSeeds are international-writers, watches, pets, camping, volleyball')
 ok(not os.path.exists(os.path.join(tdir_, 'grief')), 'HOLD topic grief is not rendered')
 ok(all(t['status'] == 'hidden' for t in LIVE_TOPICS), 'every rendered topic is hidden at go-live')
 ok(cfg['topics']['hubNoindex'] is False, 'config.json topics.hubNoindex is false (hub-wide noindex lifted)')
@@ -388,7 +397,15 @@ locs = re.findall(r'<loc>([^<]*)</loc>', sm)
 want_locs = sorted('https://%s/%s' % (brand['primaryDomain'], '' if p == 'index.html' else p) for p in PUBLIC_PAGES)
 ok('<urlset' in sm and sorted(locs) == want_locs, 'sitemap.xml lists exactly the 7 public hub pages (%s)' % locs)
 ok(not [u for u in locs if '/partners' in u], 'sitemap.xml omits the noindex partner preview pages')
-ok(not [u for u in locs if brand['topicPathPrefix'] in u] and not [u for u in locs if '404' in u], 'sitemap.xml lists no topic page, no topic index and no 404 while no topic is active')
+ok(not [u for u in locs if brand['topicPathPrefix'] in u] and not [u for u in locs if '404' in u], 'sitemap.xml lists 0 topics, no topic index and no 404 while no topic is active')
+ok(all((brand['topicPathPrefix'] + s + '/') not in sm for s in WAVE3_SLUGS), 'sitemap lists 0 wave-3 topics')
+_pets = read(os.path.join(SITE, 't', 'pets', 'index.html'))
+ok(('https://%s/t/pets/' % brand['primaryDomain']) in _pets and ('https://%s/t/dogs/' % brand['primaryDomain']) not in _pets and 'cute-animals' not in _pets,
+   'pets page does not alias /t/dogs/ or /t/cute-animals/')
+for _s in WAVE3_SLUGS:
+    _pg = brand['topicPathPrefix'].strip('/') + '/' + _s + '/index.html'
+    ok(_pg in site['shell']['noShell'] and '<meta name="robots" content="noindex,nofollow">' in read(os.path.join(SITE, _pg)),
+       '%s: new wave-3 page is noindex and listed in shell.noShell' % _pg)
 ok(all('<meta name="robots" content="noindex,nofollow">' in read(os.path.join(SITE, f)) for f in NOINDEX_PAGES), 'hide-until-active: 404, topic index and every hidden topic stay noindex,nofollow')
 ok(all('<meta name="robots" content="index,follow">' in read(os.path.join(SITE, f)) for f in PUBLIC_PAGES), 'public hub pages are index,follow')
 ok(not any('preview-banner' in read(os.path.join(SITE, f)) for f in files(SITE) if f.endswith(TEXT) and f != SHELL_REL) and not os.path.exists(os.path.join(SRC, 'partials', 'banner.html')),
@@ -411,6 +428,9 @@ ok(all(len([g for g in groups if b in ua(g)]) == 1 for b in TRAIN + ANSWER), 'ro
 ok(re.search(r'^Sitemap: https://%s/sitemap\.xml$' % re.escape(brand['primaryDomain']), rt, re.M) is not None, 'robots.txt names the sitemap on the primary domain')
 ll = read(os.path.join(SITE, 'llms.txt'))
 ok('robots.txt disallows all crawling' not in ll and 'pages are marked noindex' not in ll and 'noindex until they are active' in ll, 'llms.txt describes the go-live crawl policy')
+_planned = ['international-writers', 'watches', 'pets', 'camping', 'volleyball', 'gardening', 'home-cooking', 'photography', 'board-games', 'books']
+ok(all((brand['topicPathPrefix'] + s + '/') in ll for s in _planned) and 'not open yet' in ll,
+   'llms.txt Direction names the ten planned topic paths as not open yet')
 pol = [l for l in ll.splitlines() if l.startswith('- robots.txt allows')]
 ok(len(pol) == 1 and all(b in pol[0].split('disallows')[0] for b in ANSWER) and all(b in pol[0].split('disallows')[1] for b in TRAIN),
    'llms.txt crawler policy matches robots.txt (answer agents allowed, training crawlers disallowed)')

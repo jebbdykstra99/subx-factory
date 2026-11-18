@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Topic layer: slug rules + reserved words, the activity rule (tools/topic_status.py), the wave-1 seed and schema,
-the hybrid domain config, and the --apply refusal. Python stdlib only."""
+the wave-3 seed, profiles and forks manifest, the hybrid domain config, and the --apply refusal. Python stdlib only."""
 import json, os, re, subprocess, sys
 from datetime import datetime, timedelta, timezone
 
@@ -300,9 +300,71 @@ ok(topics_seed.check(bad), 'seed check refuses grief out of HOLD')
 txt = json.dumps(seed).lower()
 ok(not re.search(r'jebb|\bdenver,?\s*(?:co|colorado)\s+802\d\d|\d+\s+\w[\w. ]*\b(?:st|street|ave|avenue|blvd)\b[^\n]{0,60}denver|\b310[-. ]|peekai|vokadots|dmca-1084331|[\u2013\u2014]', txt), 'seed: no private names, contacts or dashes')
 
+# ---- wave 3 (Wednesday 2026-11-18): extra seed, profiles, forks manifest; slugs unique vs wave 1 and 2 ----
+w3 = json.load(open(topics_seed.WAVE3_SEED))
+ok(not topics_seed.check_wave3(w3), 'wave-3 seed passes its check: %s' % topics_seed.check_wave3(w3)[:2])
+ok(w3.get('collection') == 'topics' and w3.get('wave') == 3 and w3.get('source', {}).get('rows') == 5, 'wave-3 seed is collection topics, wave 3, 5 rows')
+ok([t['slug'] for t in w3['topics']] == list(topics_seed.WAVE3_SLUGS), 'wave-3 slugs: international-writers, watches, pets, camping, volleyball')
+DESC3 = {
+    'international-writers': 'Writers worldwide: work, craft, translation, and the practice of writing across languages and countries.',
+    'watches': 'Wristwatches and pocket watches: movements, history, care, and the pieces people actually wear.',
+    'pets': 'Dogs, cats, and other home pets: daily care, training, gear, and stories. No medical advice, no ESA letters, and no lost-pet personal info.',
+    'camping': 'Camping trips and camp life: sites, gear, camp cooking, and nights outside, from car camping to the backcountry.',
+    'volleyball': "Indoor volleyball, college men's and women's play, and professional play in Europe, Russia and Asia.",
+}
+ok(all(t['status'] == 'hidden' and t['stewardOnly'] is False and t['legalProfile'] == 'standard-18' and t['doorwayDomains'] == []
+       and t['createdAt'] == topics_seed.WAVE3_CREATED and t['activatedAt'] is None and t['lastCountedPostAt'] is None
+       and t['posts14d'] == t['distinctPosters14d'] == t['posts30d'] == 0 and t['title']
+       and t['description'] == DESC3[t['slug']] and not any(k in t for k in TS.APPROVAL_FIELDS)
+       and 'govNonAffiliation' not in t and 'approvalPrereq' not in t for t in w3['topics']),
+   'wave-3 rows: hidden, standard-18, empty doorways, zero stats, no approval, agreed descriptions')
+ok('swap' not in DESC3['international-writers'].lower(), 'international-writers description has no swap copy (the fork is only in the manifest)')
+w1slugs = {t['slug'] for t in seed['topics']}
+w2slugs = ({t['slug'] for t in json.load(open(topics_seed.AGENCY_SEED))['topics']}
+           | {t['slug'] for t in json.load(open(topics_seed.RELEASED_SEED))['topics']})
+w3slugs = [t['slug'] for t in w3['topics']]
+ok(len(w3slugs) == len(set(w3slugs)) == 5 and not (set(w3slugs) & w1slugs) and not (set(w3slugs) & w2slugs),
+   'wave-3 slugs are unique against wave 1 and wave 2')
+ok('dogs' not in w3slugs and 'cute-animals' not in w3slugs and 'dogs' in w1slugs and 'cute-animals' in w1slugs,
+   'wave 3 does not alias /t/dogs/ or /t/cute-animals/')
+prof3 = json.load(open(topics_seed.PROFILES3))
+ok(prof3.get('legalProfile') == {s: 'standard-18' for s in w3slugs} and not prof3.get('hold'),
+   'wave3_profiles.json: the five slugs are standard-18, no HOLD')
+ok(not re.search(r'jebb|denver|\b310[-. ]|peekai|vokadots|dmca-1|[\u2013\u2014]', json.dumps(w3, ensure_ascii=False).lower()),
+   'wave-3 seed: no private names, contacts or dashes')
+forks = json.load(open(topics_seed.FORKS))
+ok(not topics_seed.check_forks(forks), 'forks manifest passes: %s' % topics_seed.check_forks(forks)[:2])
+ok(forks.get('forks') == [{'topic': 'international-writers', 'kind': 'project-swap', 'optIn': True, 'files': 'none',
+                           'owner': 'Vesta', 'goBy': 'Jebb', 'go': '2026-11-17', 'ui': False}],
+   'international-writers project-swap is opt-in, files none, owner Vesta, Jebb go 2026-11-17, no swap UI')
+b = json.loads(json.dumps(w3)); b['topics'][0]['slug'] = 'dogs'
+ok(topics_seed.check_wave3(b), 'wave-3 check refuses aliasing /t/dogs/')
+b = json.loads(json.dumps(w3)); b['topics'][0]['slug'] = 'books'
+ok(topics_seed.check_wave3(b), 'wave-3 check refuses a wave-1 slug')
+b = json.loads(json.dumps(w3)); b['topics'][0]['slug'] = 'prayer'
+ok(topics_seed.check_wave3(b), 'wave-3 check refuses a wave-2 slug')
+b = json.loads(json.dumps(w3)); b['topics'][2]['doorwayDomains'] = ['petschat.com']
+ok(topics_seed.check_wave3(b), 'wave-3 check refuses a doorway')
+b = json.loads(json.dumps(w3)); b['topics'][0]['legalProfile'] = 'sensitive-18'
+ok(any('standard-18' in x for x in topics_seed.check_wave3(b)), 'wave-3 check refuses a non-standard profile')
+b = json.loads(json.dumps(w3)); b['topics'][0].update(APPR)
+ok(topics_seed.check_wave3(b), 'wave-3 check refuses an approval record')
+b = json.loads(json.dumps(w3)); b['topics'][0]['title'] = 'A \u2014 B'
+ok(topics_seed.check_wave3(b), 'wave-3 check refuses a dash')
+b = json.loads(json.dumps(w3)); b['topics'][0]['posts14d'] = 1
+ok(topics_seed.check_wave3(b), 'wave-3 check refuses non-zero stats')
+bf = json.loads(json.dumps(forks)); bf['forks'][0]['ui'] = True
+ok(topics_seed.check_forks(bf), 'forks check refuses a swap UI')
+bf = json.loads(json.dumps(forks)); bf['forks'][0]['files'] = ['swap.js']
+ok(topics_seed.check_forks(bf), 'forks check refuses files other than none')
+bf = json.loads(json.dumps(forks)); bf['forks'][0]['topic'] = 'dogs'
+ok(topics_seed.check_forks(bf), 'forks check refuses an alias of /t/dogs/')
+
 def run(args, env=None):
     e = dict(os.environ); e.pop(topics_seed.APPLY_ENV, None); e.update(env or {})
     return subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'topics_seed.py')] + args, capture_output=True, text=True, env=e)
+r = run(['--check'])
+ok(r.returncode == 0 and 'wave-3 seed OK' in r.stdout and 'forks manifest OK' in r.stdout, 'topics_seed.py --check validates the wave-3 seed and forks manifest')
 r = run([])
 ok(r.returncode == 0 and 'DRY RUN' in r.stdout and 'nothing written' in r.stdout, 'topics_seed.py defaults to a dry run')
 r = run(['--apply'])

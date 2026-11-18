@@ -24,8 +24,9 @@ repo. Their upstream text was authored under UPSTREAM below; when brand.json dif
 strings for the brand.json values, so with today's brand the copies stay byte-identical to the shared files.
 
 The template "topics.html" renders to <topicPathPrefix>index.html, so the topic index follows a path rename.
-Topic pages: every row of the seed named by config.json "topics.seed" (topics/seed_wave1.json) except HOLD rows renders
-hub/src/topic-template.html to <topicPathPrefix><slug>/index.html (listed in shell.noShell). <!--if:NAME--> blocks in
+Topic pages: every non-HOLD row of the seed named by config.json "topics.seed" (topics/seed_wave1.json), and of each
+file in "topics.extraSeeds" (topics/seed_wave3_wed.json), renders hub/src/topic-template.html to
+<topicPathPrefix><slug>/index.html (listed in shell.noShell). <!--if:NAME--> blocks in
 that template are kept or dropped per topic (status, profile, optional copy) and the markers never reach the output.
 A topic row with govNonAffiliation true (topics/seed_wave2_agency.json) shows brand.nonAffiliationGov under the title
 (if:gov) and as a line inside the footer.
@@ -689,19 +690,36 @@ class Renderer:
         return '%s/%s/index.html' % (self.topic_dir, slug)
 
     def topics(self):
+        """Non-HOLD rows from topics.seed, then each topics.extraSeeds file, in that order."""
         tc = self.topic_cfg()
-        if not tc['seed']:
+        rels = []
+        if tc.get('seed'):
+            rels.append(tc['seed'])
+        extra = tc.get('extraSeeds') or []
+        if not isinstance(extra, list) or any(not isinstance(x, str) or not x.strip() for x in extra):
+            raise RenderError('topics.extraSeeds must be a list of seed paths')
+        rels.extend(extra)
+        if not rels:
             return []
-        seed = json.load(open(os.path.join(ROOT, tc['seed']), encoding='utf-8'))
         words = topic_slug.reserved(self.ctx['brand'])
         out, seen = [], set()
-        for t in seed['topics']:
-            e = topic_slug.errors(t['slug'], words=words)
-            if e or t['slug'] in seen:
-                raise RenderError('seed topic %s refused: %s' % (t['slug'], '; '.join(e) or 'duplicate'))
-            seen.add(t['slug'])
-            if topic_status.rendered(t['status']):
-                out.append(t)
+        for rel in rels:
+            path = os.path.join(ROOT, rel)
+            try:
+                seed = json.load(open(path, encoding='utf-8'))
+            except (OSError, ValueError) as ex:
+                raise RenderError('topics seed %s: %s' % (rel, ex))
+            rows = seed.get('topics')
+            if not isinstance(rows, list):
+                raise RenderError('topics seed %s has no topics list' % rel)
+            for t in rows:
+                slug = t.get('slug') if isinstance(t, dict) else None
+                e = topic_slug.errors(slug, words=words)
+                if e or slug in seen:
+                    raise RenderError('seed topic %s refused: %s' % (slug, '; '.join(e) or 'duplicate'))
+                seen.add(slug)
+                if topic_status.rendered(t.get('status')):
+                    out.append(t)
         return out
 
     def sitemap(self, topics):

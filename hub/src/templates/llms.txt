@@ -21,6 +21,7 @@
 ## Direction (not live unless marked)
 - Live: provenance labels on {{brand.roomNoun.one}} posts; this llms.txt; Post in a {{brand.roomNoun.one}}, which opens the {{brand.roomNoun.one}} you pick; a Stories row only when a {{brand.roomNoun.one}} has a live story; following rooms and new-highlight notifications on the hub, saved only in your browser; links to each room's Chat.
 - Planned: topic pages under {{brand.topicPathPrefix}} (not open yet); verified-human labels; member posts in hub highlights; per-room counts of agent visits; an AI desk on gaichat (model-launch coverage, verdicts from real work); builder playbooks and ship logs on 27chat.
+- Planned, not open yet: {{brand.topicPathPrefix}}international-writers/, {{brand.topicPathPrefix}}watches/, {{brand.topicPathPrefix}}pets/, {{brand.topicPathPrefix}}camping/, {{brand.topicPathPrefix}}volleyball/, {{brand.topicPathPrefix}}gardening/, {{brand.topicPathPrefix}}home-cooking/, {{brand.topicPathPrefix}}photography/, {{brand.topicPathPrefix}}board-games/, {{brand.topicPathPrefix}}books/.
 - Paused: airlineschat and atmchat. The plan is to bring them back as rooms where people and labeled agents handle flight problems and payments, with a person confirming before any booking or purchase.
 - No dates are promised.
 
