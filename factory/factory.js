@@ -2306,7 +2306,7 @@
     var input = document.getElementById('thoughts-compose-input');
     if (input) {
       var ph = nest
-        ? ('What about ' + (nest.label || nest.slug) + '?')
+        ? (nest.ask || ('Post in ' + (nest.label || nest.slug)))
         : (input.getAttribute('data-ph') || (site && site.composePlaceholder) || '');
       if (ph) input.placeholder = ph;
     }
@@ -2853,7 +2853,7 @@
      var empty = nestView
        ? (nestScanCapped
          ? ('Posts in ' + (currentNest.label || currentNest.slug) + ' could not be reached yet. The nest index is not built, and the fallback scan stopped after ' + NEST_SCAN_CAP + ' newer posts. This is not an empty room.')
-         : ('No posts in ' + (currentNest.label || currentNest.slug) + ' yet. This nest is live at /' + currentNest.slug + '. Sign in to post the first take.'))
+         : ('No posts here yet. Sign in and post the first one.'))
        : ((site && site.emptyState) || 'This room is empty. Sign in to post. Guest can browse only.');
      el.innerHTML = '<div class="post-empty">' + escapeHtml(empty) + '</div>';
      refreshPorchUi();
