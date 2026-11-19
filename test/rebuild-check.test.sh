@@ -12,7 +12,7 @@ gen="$tmp/gen"
 com="$tmp/com"
 work="$tmp/work"
 mkdir -p "$gen" "$com" "$work"
-files=(factory.js factory-gp.js factory-rail.js factory-reports.js)
+files=(factory.js factory-gp.js factory-rail.js factory-reports.js factory-stories.js)
 
 reset_pair() {
   local f
@@ -61,7 +61,7 @@ assert_fail() {
   done
 }
 
-echo "1. all four files match"
+echo "1. all compared files match"
 assert_pass
 
 echo "2. a non-last file differs (factory-gp.js); the last file still matches"

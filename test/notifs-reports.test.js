@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert';
 const src = fs.readFileSync(new URL('../factory/factory.js', import.meta.url), 'utf8');
+const storiesSrc = fs.readFileSync(new URL('../factory/factory-stories.js', import.meta.url), 'utf8');
 function fnSrc(name) {
   const i = src.indexOf('  function ' + name + '(');
   assert.ok(i > 0, name + ' missing');
@@ -71,7 +72,7 @@ assert.ok(!/writeReplyNotif\(parentId, text\);/.test(src), 'old reply-only call 
 assert.ok(!/notifsOn\(\)[^\n]*!parentId/.test(src), 'reply notif no longer gated on features.notifs');
 assert.ok(src.includes("sendNotif(post.authorUid, 'like', postId, '', 'like_' + postId + '_' + uid)"), 'like call site');
 assert.ok(src.includes("if (!on) sendNotif(target, 'follow', '', '', 'follow_' + me);"), 'follow call site');
-const reportAdds = src.split("collection('reports').add({").slice(1).map((s) => s.slice(0, s.indexOf('})')));
+const reportAdds = (src + '\n' + storiesSrc).split("collection('reports').add({").slice(1).map((s) => s.slice(0, s.indexOf('})')));
 assert.strictEqual(reportAdds.length, 2);
 reportAdds.forEach((b) => assert.ok(b.includes("status: 'open'"), 'report status open'));
 assert.ok(!src.includes("composeErr('Reported. Thanks.')"), 'report outcome is a toast');

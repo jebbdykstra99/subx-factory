@@ -1,0 +1,49 @@
+{
+  "version": "v1.2.11",
+  "immutable": true,
+  "note": "Byte-identical copy of factory/ at FACTORY_RELEASE v1.2.11. Room v1.2.11 factory.js (sha256 f18d07e4, 254966 B) is the base. Stories (48 functions) load lazily from same-origin factory-stories.js only when stories are on. factory-featured.js is the room file (sha256 6a7b0944, no innerHTML). factory-signin.js and factory-reports.js are unchanged from v1.2.10. Core 224213 B, budget 226000 B. Never edit files in this folder; a change is a new shell/vX.Y.Z/ folder.",
+  "sourceCommit": "c4ac76df707ad57ee01d14c8eb9be0e173903fb9",
+  "sourcePath": "factory/",
+  "url": {
+    "pinned": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@<MERGE_SHA>/shell/v1.2.11/<file>",
+    "preMerge": "https://cdn.jsdelivr.net/gh/jebbdykstra99/subx-factory@c4ac76df707ad57ee01d14c8eb9be0e173903fb9/factory/<file>",
+    "rule": "Pin by full 40-char commit SHA only. Never @main, @latest, a branch, or a semver range."
+  },
+  "files": {
+    "factory.js": {
+      "bytes": 224250,
+      "sha256": "b7b02a20040e32696e72eb9aa10e6b2ccf8c70477ef6779d21ce0abdfe4619b7",
+      "integrity": "sha384-iIRQQD9u1OOul5K/i1QNFPBDPptpNCF0A/p+My1LDDxgnx73QaEViKReOsOeqI6S"
+    },
+    "factory-signin.js": {
+      "bytes": 24583,
+      "sha256": "51ce100803d5cc7270fbfa488841cb75594b8c0bf092ee41c28460c1d4105958",
+      "integrity": "sha384-U4s0I3cIKL7r0yrCLGMN+KYERSvUqUJNkksYj81mVGwpXvhnp4HRN/sGOtymhZpO"
+    },
+    "factory-stories.js": {
+      "bytes": 35549,
+      "sha256": "acfd124d2e58ab30a915134058f1405692a0379f38163668b10dbe20fd1540a7",
+      "integrity": "sha384-YrSsBq0F3SwRlJ3DtNUGHI3HkDQIQoQmTl3gH4SeNtzt9Xqvix6pOhFK2HotTjm4"
+    },
+    "factory-featured.js": {
+      "bytes": 9407,
+      "sha256": "6a7b0944ad5ddffee073b0818d711fe88dc3761d310d3c3efb67d82759bda306",
+      "integrity": "sha384-fSeJQY4l/H0gc/UOcazdchdtIbkOgap8AlQofMfcGkqKbM2yxDLKoxrXbsh5kFIp"
+    },
+    "factory-gp.js": {
+      "bytes": 34935,
+      "sha256": "33c158f1490800b3efe641ac526516b9a89f7fbd2ef0d29e5a8643c07f4bc6fc",
+      "integrity": "sha384-kO2n9LhE8x3TZ3I0K0ZE9MKXyKSCzmbcgY4XR5iRMMd4V8tKaMX8B8C+U2hI/RXU"
+    },
+    "factory-rail.js": {
+      "bytes": 10236,
+      "sha256": "d09eb22983863f58528ed9caf1065704bfa240a65423e487e151c4a1d9c44558",
+      "integrity": "sha384-3NSXOIbFdaiShisixV4m6/m8ueT8914/APLhG3mkIVkuNMK3UAJ9v6spz8hL3+H5"
+    },
+    "factory-reports.js": {
+      "bytes": 9370,
+      "sha256": "d692374f0cc12dfd357c0ae096222e75ae5394bcb911802bf4cbe99bf3cfdf8c",
+      "integrity": "sha384-O256iZRKPwoViXkwL8DAjhgVUplTVzKaNLJQX+/6Hc6Ymkz/lYw01HTDt9PkVW9V"
+    }
+  }
+}
