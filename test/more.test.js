@@ -563,6 +563,107 @@ function start(text, opts) {
   ok('line count follows the viewport');
 }
 
+{
+  const imageLine = 'Image: River terrace, CC BY-SA 4.0 https://creativecommons.org/licenses/by-sa/4.0/';
+  const photoByLine = 'Photo by Ada Lovelace, CC BY 4.0 https://creativecommons.org/licenses/by/4.0/';
+  const text = [
+    'Lead line.',
+    '',
+    imageLine,
+    photoByLine,
+    'Image: no license on this line',
+    'Photo by someone with no license',
+    'Hidden body stays tucked.'
+  ].join('\n');
+  const { post, doc } = start(text);
+  const rest = post.querySelector('.subx-more-rest');
+  const shown = post.querySelectorAll('.subx-more-trust, .subx-more-credit').map((n) => n.textContent).join('\n');
+  assert.ok(hiddenOf(rest));
+  assert.ok(shown.indexOf(imageLine) !== -1, 'Image: CC BY stays visible');
+  assert.ok(shown.indexOf(photoByLine) !== -1, 'Photo by CC BY stays visible');
+  assert.ok(rest.textContent.indexOf('Image: no license') !== -1, 'Image: without CC BY stays hidden');
+  assert.ok(rest.textContent.indexOf('Photo by someone with no license') !== -1, 'Photo by without CC BY stays hidden');
+  assert.ok(rest.textContent.indexOf('CC BY') === -1);
+  const btn = post.querySelector('.subx-more-btn');
+  assert.equal(btn.textContent, 'More');
+  assert.equal(btn.getAttribute('aria-expanded'), 'false');
+  assert.ok(btn.getAttribute('aria-controls'));
+  const css = doc.getElementById('subx-more-style').textContent;
+  const rule = css.split('\n').find((line) => line.indexOf('.subx-more-trust,.subx-more-note,.subx-more-credit') === 0);
+  assert.ok(rule, 'trust rule exists');
+  assert.ok(rule.indexOf('white-space:normal') !== -1, 'trust lines wrap');
+  assert.ok(rule.indexOf('nowrap') === -1 && rule.indexOf('text-overflow') === -1, 'no ellipsis on trust lines');
+  ok('Image: and Photo by credits stay visible');
+}
+
+{
+  const { createRequire } = await import('node:module');
+  const http = await import('node:http');
+  const puppeteer = createRequire(path.join(root, 'package.json'))('puppeteer-core');
+  const credit = 'Image: A long river terrace above the town, CC BY-SA 4.0 https://creativecommons.org/licenses/by-sa/4.0/deed.en photographed for the room record so the credit must wrap';
+  const disclaimer = 'Wildlife education over ownership. Not a pet store. This room disclaimer stays in full on a phone, including while the post is collapsed.';
+  const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/1.4 sans-serif;width:390px} .post-text{white-space:pre-wrap}</style></head><body>' +
+    '<p data-room-disclaimer>' + disclaimer + '</p>' +
+    '<div id="thoughts-feed"><article class="post" data-post-id="wrap-1"><div class="post-body">' +
+    '<p class="post-text">Lead.\n\n' + credit + '\nHidden tail.</p>' +
+    '<div class="post-actions"><button type="button">Report</button></div>' +
+    '</div></article></div><script src="/factory-more.js"></script></body></html>';
+  const server = http.createServer((req, res) => {
+    if (req.url.indexOf('factory-more.js') !== -1) {
+      res.writeHead(200, { 'content-type': 'text/javascript' });
+      res.end(fs.readFileSync(srcPath));
+      return;
+    }
+    res.writeHead(200, { 'content-type': 'text/html' });
+    res.end(html);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const port = server.address().port;
+  const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
+  const page = await browser.newPage();
+  await page.setViewport({ width: 390, height: 800 });
+  await page.goto('http://127.0.0.1:' + port + '/', { waitUntil: 'networkidle0' });
+  const info = await page.evaluate((fullCredit, fullNote) => {
+    const el = document.querySelector('.subx-more-credit, .subx-more-trust');
+    const note = document.querySelector('.subx-more-note');
+    const rest = document.querySelector('.subx-more-rest');
+    const btn = document.querySelector('.subx-more-btn');
+    const cs = getComputedStyle(el);
+    const ns = note ? getComputedStyle(note) : null;
+    return {
+      text: el.textContent,
+      whiteSpace: cs.whiteSpace,
+      overflow: cs.textOverflow,
+      height: el.getBoundingClientRect().height,
+      noteText: note && note.textContent,
+      noteSpace: ns && ns.whiteSpace,
+      noteHeight: note ? note.getBoundingClientRect().height : 0,
+      hidden: rest.hidden,
+      restHasCredit: rest.textContent.indexOf('CC BY') !== -1,
+      label: btn.textContent,
+      expanded: btn.getAttribute('aria-expanded'),
+      controls: btn.getAttribute('aria-controls'),
+      fullCredit,
+      fullNote
+    };
+  }, credit, disclaimer);
+  await browser.close();
+  server.close();
+  assert.equal(info.whiteSpace, 'normal');
+  assert.notEqual(info.overflow, 'ellipsis');
+  assert.ok(info.text.indexOf(credit) !== -1, 'full CC BY-SA credit is in the page');
+  assert.ok(info.height > 24, 'credit wraps to more than one line at 390px (' + info.height + ')');
+  assert.equal(info.noteSpace, 'normal');
+  assert.ok(info.noteText.indexOf(disclaimer) !== -1);
+  assert.ok(info.noteHeight > 24, 'disclaimer wraps at 390px (' + info.noteHeight + ')');
+  assert.equal(info.hidden, true);
+  assert.equal(info.restHasCredit, false);
+  assert.equal(info.label, 'More');
+  assert.equal(info.expanded, 'false');
+  assert.ok(info.controls);
+  ok('390px wrap');
+}
+
 const rel = JSON.parse(fs.readFileSync(path.join(root, 'FACTORY_RELEASE.json'), 'utf8'));
 const raw = fs.readFileSync(srcPath);
 const hash = crypto.createHash('sha256').update(raw).digest('hex');

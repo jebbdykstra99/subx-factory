@@ -15,7 +15,7 @@
     '.subx-more-thumb{aspect-ratio:16/9;max-height:200px;overflow:hidden;cursor:pointer}',
     '.subx-more-thumb img{width:100%;height:100%;max-height:200px;object-fit:cover;display:block}',
     '@media (min-width:768px){.subx-more-thumb,.subx-more-thumb img{max-height:260px}}',
-    '.subx-more-trust,.subx-more-note,.subx-more-credit{display:block;font-size:12px;line-height:1.35;color:var(--text-muted,var(--text-light,#5c6c73));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0 0}',
+    '.subx-more-trust,.subx-more-note,.subx-more-credit{display:block;font-size:12px;line-height:1.35;color:var(--text-muted,var(--text-light,#5c6c73));white-space:normal;overflow-wrap:anywhere;margin:2px 0 0}',
     '.subx-more-bar{display:flex;align-items:center;gap:8px;margin-top:2px}',
     '.subx-more-bar[hidden],.subx-more-note[hidden],.subx-more-trust[hidden],.subx-more-credit[hidden]{display:none}',
     '.subx-more-btn{appearance:none;-webkit-appearance:none;background:transparent;border:0;padding:0 8px;margin:0;color:var(--accent,#1d9bf0);font:inherit;font-weight:700;min-height:44px;min-width:44px;cursor:pointer;border-radius:8px}',
@@ -157,8 +157,11 @@
   function classify(line) {
     var s = String(line || '').replace(/^\s+|\s+$/g, '');
     if (!s) return 'empty';
-    if (s.indexOf('CC BY') !== -1 || s.indexOf('BY-SA') !== -1) return 'credit';
-    if (s.indexOf('Photo:') === 0 && s.indexOf('CC BY') !== -1) return 'credit';
+    var ccBy = s.indexOf('CC BY') !== -1;
+    var bySa = s.indexOf('BY-SA') !== -1;
+    // Photo:, Image:, and Photo by are credits when the line also carries CC BY.
+    var named = /^(Photo:|Image:|Photo by)(\s|$)/.test(s);
+    if (ccBy || bySa || (named && ccBy)) return 'credit';
     if (s.indexOf('CC0') !== -1 || /public domain/i.test(s) || /(^|[^A-Za-z])PD([^A-Za-z]|$)/.test(s)) return 'pd';
     if (disclaimer && s === disclaimer) return 'disclaimer';
     if (/^Disclaimer:/i.test(s)) return 'disclaimer';
