@@ -40,7 +40,21 @@
    "tagline": "All things Hawaii. Local, not brochure.",
    "status": "live",
    "highlights": true,
-   "suggest": true
+   "suggest": true,
+   "featCard": {
+    "id": "hi02-haleakala-dawn",
+    "src": "/assets/feat/808chat/hi02-haleakala-dawn-1600.jpg",
+    "w": 1600,
+    "h": 1064,
+    "focal": "45% 35%",
+    "alt": "Early morning light across the crater of Haleakalā on Maui, with red cinder slopes in the foreground and clouds on the horizon.",
+    "credit": "ImagePerson",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dawn_on_Haleakala_Volcano,_Hawaii.jpg",
+    "modified": "cropped",
+    "creditsHref": "/credits.html#hi02-haleakala-dawn"
+   }
   },
   {
    "room": "airlineschat",

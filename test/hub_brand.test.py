@@ -91,13 +91,13 @@ LIVE_TOPICS = [t for t in SEED['topics'] + _extra_rows if t['status'] != 'hold']
 WAVE3_SLUGS = ['international-writers', 'watches', 'pets', 'camping', 'volleyball']
 TOPIC_PAGES = [brand['topicPathPrefix'].strip('/') + '/' + t['slug'] + '/index.html' for t in LIVE_TOPICS]
 # go-live 2026-11-04: the public hub pages are indexed; 404, the topic index and every non-active topic stay noindex
-PUBLIC_PAGES = ['index.html', 'rooms.html', 'about.html', 'terms.html', 'privacy.html', 'guidelines.html', 'report.html']
+PUBLIC_PAGES = ['index.html', 'rooms.html', 'about.html', 'credits.html', 'terms.html', 'privacy.html', 'guidelines.html', 'report.html']
 NOINDEX_PAGES = ['404.html', topic_index] + TOPIC_PAGES
 _arts = json.load(open(os.path.join(ROOT, 'rooms', 'dogacademy-partner', 'articles.json'), encoding='utf-8'))['articles']
 _art_pages = ['partners/dogacademy/articles/%s.html' % a['slug'] for a in _arts]
 _partner_pages = ['partners.html', 'partners/dogacademy/index.html', 'partners/usserviceanimals/index.html'] + _art_pages
-ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', '404.html'] + _partner_pages + TOPIC_PAGES),
-   'hub pages: home, rooms, about, topic index, partners, both partner rooms, articles, 4 legal, 404 + %d topic pages (%d pages)' % (len(TOPIC_PAGES), len(pages)))
+ok(sorted(pages) == sorted(['index.html', 'rooms.html', 'about.html', 'credits.html', topic_index, 'terms.html', 'privacy.html', 'guidelines.html', 'report.html', '404.html'] + _partner_pages + TOPIC_PAGES),
+   'hub pages: home, rooms, about, credits, topic index, partners, both partner rooms, articles, 4 legal, 404 + %d topic pages (%d pages)' % (len(TOPIC_PAGES), len(pages)))
 site = json.load(open(os.path.join(SITE, 'site.json')))
 sh = site['shell']
 no_shell = set(x.lstrip('/') for x in sh.get('noShell', []))
@@ -214,6 +214,16 @@ ok('Small rooms for big interests.' in idx and 'class="hub-tagline"' in idx and 
    'home: tagline on its own line, cat and wordmark on the page')
 ok('id="hub-feed"' in idx and 'id="hub-rooms"' in idx, 'home: highlights feed + rooms tab containers')
 ok('href="%s"' % brand['topicPathPrefix'] in read(os.path.join(SITE, 'about.html')), 'about: links the topic index stub')
+credits = read(os.path.join(SITE, 'credits.html'))
+ok('Cropped version by %s, available under CC BY-SA 4.0.' % brand['legalEntity'] in re.sub(r'<[^>]+>', '', credits.replace('\n',' ')).replace('  ',' ') or
+   ('Cropped version by %s, available under' % brand['legalEntity'] in credits and 'https://creativecommons.org/licenses/by-sa/4.0/' in credits),
+   'credits.html includes the cropped-version line with the legal entity and CC BY-SA 4.0')
+ok('Haleakalā' in credits and 'id="hi02-haleakala-dawn"' in credits
+   and 'https://commons.wikimedia.org/wiki/File:Dawn_on_Haleakala_Volcano,_Hawaii.jpg' in credits
+   and 'https://creativecommons.org/licenses/by-sa/4.0/' in credits,
+   'credits.html names Haleakalā and links the Commons file and the license')
+ok('href="/credits.html"' in read(os.path.join(SITE, 'about.html')), 'about.html links the photo credits page')
+
 ok('id="hub-rooms"' in read(os.path.join(SITE, 'rooms.html')) and '/hub.js?v=' in read(os.path.join(SITE, 'rooms.html')), 'rooms.html: directory container + hub.js')
 hl = json.load(open(os.path.join(SITE, 'highlights.json')))
 rooms = json.load(open(os.path.join(SITE, 'rooms.json')))
@@ -395,7 +405,7 @@ for t in LIVE_TOPICS:
 sm = read(os.path.join(SITE, 'sitemap.xml'))
 locs = re.findall(r'<loc>([^<]*)</loc>', sm)
 want_locs = sorted('https://%s/%s' % (brand['primaryDomain'], '' if p == 'index.html' else p) for p in PUBLIC_PAGES)
-ok('<urlset' in sm and sorted(locs) == want_locs, 'sitemap.xml lists exactly the 7 public hub pages (%s)' % locs)
+ok('<urlset' in sm and sorted(locs) == want_locs, 'sitemap.xml lists exactly the 8 public hub pages (%s)' % locs)
 ok(not [u for u in locs if '/partners' in u], 'sitemap.xml omits the noindex partner preview pages')
 ok(not [u for u in locs if brand['topicPathPrefix'] in u] and not [u for u in locs if '404' in u], 'sitemap.xml lists 0 topics, no topic index and no 404 while no topic is active')
 ok(all((brand['topicPathPrefix'] + s + '/') not in sm for s in WAVE3_SLUGS), 'sitemap lists 0 wave-3 topics')

@@ -303,6 +303,10 @@
     {
       "from": "hub/site/assets/hero/popechat/pc03-peters-square-from-dome-600.webp",
       "to": "assets/hero/popechat/pc03-peters-square-from-dome-600.webp"
+    },
+    {
+      "from": "hub/site/assets/feat/808chat/hi02-haleakala-dawn-1600.jpg",
+      "to": "assets/feat/808chat/hi02-haleakala-dawn-1600.jpg"
     }
   ],
   "data": [
@@ -322,6 +326,10 @@
     "about.html": {
       "title": "About, {{brand.name}}",
       "description": "About {{brand.name}}: who runs it, how posts are labeled, rules, reports and takedowns."
+    },
+    "credits.html": {
+      "title": "Featured photo credits, {{brand.name}}",
+      "description": "Photograph credits for featured-room cards on the {{brand.name}} hub."
     },
     "topics.html": {
       "title": "{{brand.topicNoun.Many}} (coming soon), {{brand.name}}",
