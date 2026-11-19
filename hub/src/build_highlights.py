@@ -491,6 +491,43 @@ def _h(s):
             .replace('"', '&quot;').replace('{', '&#123;').replace('}', '&#125;'))
 
 
+# Type-card still (not heroImages / .hx-hub). Required fields plus a credits-page anchor.
+_FEAT_CARD_KEYS = ('id', 'src', 'alt', 'credit', 'license', 'licenseUrl', 'sourceUrl', 'focal', 'creditsHref')
+_HTTPS_RE = re.compile(r'^https://[a-z0-9.-]+\.[a-z]{2,}/[^\s\'"<>\\]*$', re.I)
+_FOCAL_RE = re.compile(r'^[0-9]{1,3}% [0-9]{1,3}%$')
+_SRC_RE = re.compile(r'^/assets/[A-Za-z0-9_./-]+\.(?:webp|jpe?g|png|avif)$', re.I)
+
+
+def _feat_card(raw):
+    """Validate a featCard object. Returns (card, None) or (None, reason)."""
+    if not isinstance(raw, dict):
+        return None, 'must be an object'
+    for k in _FEAT_CARD_KEYS:
+        if not isinstance(raw.get(k), str) or not raw[k].strip():
+            return None, 'missing %s' % k
+    src = raw['src'].strip()
+    if not _SRC_RE.match(src) or '..' in src or '//' in src:
+        return None, 'src must be a self-hosted /assets/ image path'
+    if not (_HTTPS_RE.match(raw['licenseUrl'].strip()) and _HTTPS_RE.match(raw['sourceUrl'].strip())):
+        return None, 'credit links must be https'
+    href = raw['creditsHref'].strip()
+    if not href.startswith('/credits.html#') or '..' in href or '//' in href:
+        return None, 'creditsHref must be a /credits.html# anchor'
+    if not _FOCAL_RE.match(raw['focal'].strip()):
+        return None, 'focal must be like 45% 35%'
+    try:
+        w, h = int(raw['w']), int(raw['h'])
+    except (TypeError, ValueError, KeyError):
+        return None, 'w and h must be integers'
+    if not (1 <= w <= 4000 and 1 <= h <= 4000):
+        return None, 'w and h out of range'
+    out = {k: raw[k].strip() for k in _FEAT_CARD_KEYS}
+    out['w'], out['h'] = w, h
+    if isinstance(raw.get('modified'), str) and raw['modified'].strip():
+        out['modified'] = raw['modified'].strip()
+    return out, None
+
+
 def feat_rooms(cfg_home=None):
     """The effective rotation: allowlisted rooms that are live and listed, with their card data. Raises on a bad allowlist."""
     if cfg_home is None:
@@ -531,6 +568,15 @@ def feat_rooms(cfg_home=None):
         card = {'room': rid, 'name': d.get('name') or s.get('name') or rid, 'domain': d['domain'],
                 'tagline': d.get('tagline') or '', 'brief': brief, 'accent': d.get('accent') or '',
                 'photos': bool(s.get('heroImages'))}
+        if s.get('featCard'):
+            fc, why = _feat_card(s.get('featCard'))
+            if why:
+                errs.append('%s: featCard %s' % (rid, why))
+            else:
+                card['featCard'] = fc
+                for k in ('alt', 'credit', 'license', 'modified'):
+                    if DASH_RE.search(str(fc.get(k) or '')):
+                        errs.append('%s: featCard %s has an em or en dash' % (rid, k))
         for k in ('name', 'tagline', 'brief'):
             if DASH_RE.search(card[k]):
                 errs.append('%s: %s has an em or en dash' % (rid, k))
@@ -562,19 +608,47 @@ def feat_block(rot, ymd):
     cards, sets = [], []
     for c in rooms:
         hid = '' if c['room'] == default else ' hidden'
+        fc = c.get('featCard')
         if c['photos']:
             head = '<div class="hub-feat" data-feat="%s"%s>' % (c['room'], hid)
             body = ''
+            media = ''
+            credit = ''
+            foot_open = ''
+            foot_close = ''
         else:
-            head = ('<div class="hub-feat is-type" data-feat="%s" style="--feat-a:%s;--feat-b:%s"%s>'
-                    % (c['room'], c['stops'][0], c['stops'][1], hid))
+            typ = ' is-photos' if fc else ''
+            head = ('<div class="hub-feat is-type%s" data-feat="%s" style="--feat-a:%s;--feat-b:%s"%s>'
+                    % (typ, c['room'], c['stops'][0], c['stops'][1], hid))
             body = ('\n              <p class="hub-feat-brief"><span class="hub-feat-brief-k">Room Brief</span> %s</p>' % _h(c['brief'])) if c['brief'] else ''
-        cards.append(head +
+            if fc:
+                media = (
+                    '\n              <div class="feat-media">'
+                    '\n                <img src="%s" width="%s" height="%s" alt="%s" decoding="async" style="object-position:%s">'
+                    '\n              </div>'
+                    '\n              <div class="feat-scrim"></div>'
+                    % (_h(fc['src']), fc['w'], fc['h'], _h(fc['alt']), _h(fc['focal']))
+                )
+                cropped = _h(fc.get('modified') or 'cropped')
+                credit = (
+                    '\n              <div class="feat-credit">Photo: <a href="%s" rel="noopener">%s</a> \u00b7 '
+                    '<a class="feat-lic" href="%s" rel="noopener">%s</a> \u00b7 <a href="%s">%s</a></div>'
+                    % (_h(fc['sourceUrl']), _h(fc['credit']), _h(fc['licenseUrl']), _h(fc['license']),
+                       _h(fc['creditsHref']), cropped)
+                )
+                foot_open = '\n              <div class="feat-foot">'
+                foot_close = '\n              </div>'
+            else:
+                media = ''
+                credit = ''
+                foot_open = ''
+                foot_close = ''
+        cards.append(head + media + foot_open +
                      '\n              <div class="hub-hero-eyebrow">%s</div>' % rot['label'].replace('<', '&lt;') +
                      '\n              <h1 class="hub-hero-name">%s</h1>' % _h(c['name']) +
                      ('\n              <p class="hub-hero-tag">%s</p>' % _h(c['tagline']) if c['tagline'] else '') + body +
                      '\n              <div class="hub-cta-row"><a class="hub-cta hub-feat-open" href="https://%s/" rel="noopener">Open %s</a></div>'
-                     % (_h(c['domain']), _h(c['name'])) +
+                     % (_h(c['domain']), _h(c['name'])) + credit + foot_close +
                      '\n            </div>')
         _, also = feat_pick(order, rot['epoch'], ymd, c['room'])
         sets.append('<div class="hub-also-set" data-feat="%s"%s>%s</div>' % (c['room'], hid, ''.join(_feat_also_row(by[a]) for a in also)))

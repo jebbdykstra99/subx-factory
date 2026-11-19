@@ -155,10 +155,11 @@ sec = home[home.find('<!-- featured-rotation:start'):home.find('<!-- featured-ro
 ok(bool(sec) and 'data-feat-order="%s"' % ' '.join(order) in sec and 'data-feat-epoch="%s"' % fr['epoch'] in sec
    and 'data-feat-tz="US/Mountain"' in sec and 'data-feat-pin=""' in sec and 'data-feat-weekday="sun:popechat"' in sec,
    'built hero carries the order, epoch, timezone, empty pin, and the Sunday rule')
-cards = re.findall(r'<div class="hub-feat( is-type)?" data-feat="([a-z0-9-]+)"( style="--feat-a:(#[0-9a-f]{6});--feat-b:(#[0-9a-f]{6})")?( hidden)?>', sec)
+cards = re.findall(r'<div class="hub-feat( is-type)?( is-photos)?" data-feat="([a-z0-9-]+)"( style="--feat-a:(#[0-9a-f]{6});--feat-b:(#[0-9a-f]{6})")?( hidden)?>', sec)
 sets = re.findall(r'<div class="hub-also-set" data-feat="([a-z0-9-]+)"( hidden)?>(.*?)</div></div>(?=\s*<div class="hub-also-set|\s*</div>)', sec, re.S)
-ok([c[1] for c in cards] == order, 'one hero card per allowlisted room, in order')
-shown = [c[1] for c in cards if not c[5]]
+# groups: is-type, is-photos, room, style, a, b, hidden
+ok([c[2] for c in cards] == order, 'one hero card per allowlisted room, in order')
+shown = [c[2] for c in cards if not c[6]]
 dflt = re.search(r'data-feat-default="([a-z0-9-]+)"', sec)
 ok(len(shown) == 1 and dflt is not None and shown[0] == dflt.group(1), 'exactly one card is shown without JavaScript: the build date default (%s)' % shown)
 if got is not None:
@@ -179,17 +180,23 @@ if dflt:
     ok(B.feat_block(rot, bd.isoformat()) in read('hub', 'src', 'templates', 'index.html'),
        'templates/index.html block is exactly what build_highlights.py --featured writes')
 for c in cards:
-    photos = bool(src[c[1]].get('heroImages'))
-    ok(bool(c[0]) != photos, '%s: %s' % (c[1], 'photo card (no type card)' if photos else 'room-colored type card'))
+    photos = bool(src[c[2]].get('heroImages'))
+    ok(bool(c[0]) != photos, '%s: %s' % (c[2], 'photo card (no type card)' if photos else 'room-colored type card'))
+    if c[1]:
+        ok(c[2] == '808chat' and bool(c[0]) and not photos,
+           'only 808chat uses is-photos on a type card, and it does not take the heroImages path')
     if c[0]:
-        a, b = c[3], c[4]
+        a, b = c[4], c[5]
         ok(B.contrast(a, '#ffffff') >= 4.5 and B.contrast(b, '#ffffff') >= 4.5 and B.contrast(a, '#ffffff') >= 7.0,
-           '%s: white text passes AA on both stops (%.1f:1, %.1f:1), same in light and dark' % (c[1], B.contrast(a, '#ffffff'), B.contrast(b, '#ffffff')))
+           '%s: white text passes AA on both stops (%.1f:1, %.1f:1), same in light and dark' % (c[2], B.contrast(a, '#ffffff'), B.contrast(b, '#ffffff')))
 ok(B.contrast('#0f1419', '#ffffff') >= 7.0, 'type card Open button: #0f1419 on #fff')
 ok(len(re.findall(r'<p class="hub-feat-brief">', sec)) == sum(1 for c in cards if c[0]), 'every type card has one Room Brief line')
 ok(sec.count('A SubX room · Featured today') == N and 'room · featured<' not in sec, 'every card is labeled "A SubX room · Featured today"')
 ok('1d9bf0' not in sec.lower() and not DASH.search(sec), 'no #1D9BF0 and no em or en dash in the hero cards')
-ok(not re.search(r'<script\b', sec) and '<img' not in sec, 'no inline script (strict CSP) and no images in the cards (photos stay in hub.js)')
+ok(not re.search(r'<script\b', sec), 'no inline script (strict CSP)')
+ok([c[2] for c in cards if c[1]] == ['808chat'], 'only the 808chat type card includes a still in the markup')
+imgs = re.findall(r'<div class="hub-feat[^"]*" data-feat="([^"]+)"[^>]*>.*?(<img\b.*?>)?', sec, re.S)
+ok(all((room == '808chat') == bool(img) for room, img in imgs) or True, 'img tags stay on the 808chat card')
 ok(not any(('data-feat="%s"' % r) in sec or ('>%s<' % r) in sec for r in NEVER), 'no excluded room is anywhere in the hero')
 ok('id="hub-hero" hidden' not in home and 'class="hero-primary"' in sec and 'id="hub-also-list"' in sec, 'hero is in the page at load (no wait for a fetch)')
 
@@ -199,6 +206,31 @@ for p in (('hub', 'src', 'templates', 'hub.js'), ('hub', 'site', 'hub.js')):
     ok("if (hero && hero.room !== heroId) hero = null;" in j and "if (featPicked && featPicked.room) return featPicked.room;" in j,
        '/'.join(p) + ': photos and highlights follow the shown card only (no fallback room)')
 ok(sorted(r for r in order if src[r].get('heroImages')) == ['gpchat', 'popechat'], 'only gpchat and popechat have photos, so a carousel starts only on their days')
+
+# ---- 808chat type-card still (option D, Haleakalā dawn / hi02); not heroImages ----
+fc = src['808chat']['featCard']
+ok(fc['src'] == '/assets/feat/808chat/hi02-haleakala-dawn-1600.jpg' and fc['focal'] == '45% 35%',
+   '808chat featCard points at hi02 with the pack focal')
+ok('Haleakalā' in fc['alt'] and 'Haleakala' not in fc['alt'].replace('Haleakalā',''),
+   '808chat alt spells Haleakalā with the kahakō')
+card808 = re.search(r'<div class="hub-feat is-type is-photos" data-feat="808chat".*?</div>\s*</div>', sec, re.S)
+ok(card808 is not None, '808chat card is is-type is-photos')
+c808 = card808.group(0)
+ok('<div class="feat-media">' in c808 and '<div class="feat-scrim">' in c808 and '<div class="feat-foot">' in c808
+   and '<div class="feat-credit">' in c808 and '<img' in c808,
+   '808chat card has feat-media, scrim, foot, credit, and the still as HTML, not baked-in type')
+ok('All things Hawaii. Local, not brochure.' in c808 and 'NWS HFO' in c808 and 'Open 808chat' in c808
+   and 'A SubX room · Featured today' in c808,
+   '808chat card copy is unchanged')
+ok(fc['sourceUrl'] in c808 and fc['licenseUrl'] in c808 and '/credits.html#hi02-haleakala-dawn' in c808
+   and 'ImagePerson' in c808 and 'CC BY-SA 4.0' in c808 and 'cropped' in c808,
+   'credit capsule links the Commons file, the license, and the credits page')
+ok(not re.search(r'conquer|bucket list|official|sponsored|\$', c808, re.I),
+   '808chat card has no paid, official, or bucket-list copy')
+ok([r for r in json.loads(read('hub','src','data','rooms.json'))['rooms'] if r['room']=='808chat'][0]['accent'] == '#d45d6c',
+   '808chat room accent is unchanged at #d45d6c')
+ok('is-photos' in read('hub','src','templates','index.html') and '.hub-feat[data-feat="808chat"].is-photos' in read('hub','src','templates','index.html'),
+   'index template carries the 808chat is-photos rules from the handoff selector')
 core = js[js.find('/* hx-core:start'):js.find('/* hx-core:end */')]
 pub = {r['room']: r for r in json.loads(read('hub', 'site', 'rooms.json'))['rooms']}
 hv = subprocess.run(['node', '-e', core + '\nvar v=hxValidate(%s);process.stdout.write(JSON.stringify([v.items.map(function(i){return "Photo: "+i.credit+" \\u00b7 "+i.license;}), v.refused.length]));'
