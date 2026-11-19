@@ -1,8 +1,8 @@
 {
-  "version": "v1.2.10",
+  "version": "v1.2.11",
   "factory.js": {
-    "sha256": "92f1f39d16a17beb25e189e277fd66c118cbb9959db6de430db98d974e0e9915",
-    "bytes": 254995
+    "sha256": "f18d07e4db5aaa2722f284aba542eb6b41a48699ae2bad0c54bbec5e558a29d0",
+    "bytes": 254966
   },
   "sources": {
     "template": "build/sources/template_factory_660144d1886e.js (T0 pin, nest-feed query edited in place)",
@@ -10,7 +10,7 @@
     "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)",
     "split": "build/split.mjs (opt-in files out of the folded single-file build: gp, rail, reports)"
   },
-  "built": "2026-11-12 (MT) cursor/signin-popup-redirect-2026-11-12: blocked Google popup falls back to signInWithRedirect (v1.2.9 design); a blocked notice replaces the normal button block instead of sitting next to it; 18+ gate unchanged. Phone cat (prior): top bar reserves space for the 44px cat (tune --cat, default 7.05rem) and a light #fff backing with #111 ink; desktop cat color is var(--nav-text,#fff)",
+  "built": "2026-11-14 (MT) cursor/featured-articles-pilot-2026-11-14: lazy factory-featured.js add-on (Jebb 7:36 and 7:38 AM MT asks; 10-file go 7:39 AM MT; v1.2.11 and rooms.json go 7:58 AM MT). Pins new steward articles at the top of For You for site.json featured.featuredDays with a Featured label, adds an Our articles card next to the Porch, X-style Show more after the first paragraph in feed views (a ?p= permalink shows the full post), and post images get alt text, a fixed 16:9 box and https only. Core hooks: addon() loader shared with factory-signin.js, PLUGIN.feat after renderFeed and paintRail, https check in renderPostMedia; rail CSS now uses addCss. Prior: 2026-11-12 (MT) cursor/signin-popup-redirect-2026-11-12: blocked Google popup falls back to signInWithRedirect (v1.2.9 design); a blocked notice replaces the normal button block instead of sitting next to it; 18+ gate unchanged. Phone cat (prior): top bar reserves space for the 44px cat (tune --cat, default 7.05rem) and a light #fff backing with #111 ink; desktop cat color is var(--nav-text,#fff)",
   "optIn": {
     "factory-gp.js": {
       "sha256": "33c158f1490800b3efe641ac526516b9a89f7fbd2ef0d29e5a8643c07f4bc6fc",
@@ -36,6 +36,11 @@
       "sha256": "51ce100803d5cc7270fbfa488841cb75594b8c0bf092ee41c28460c1d4105958",
       "bytes": 24583,
       "loadWhen": "lazy, prefetched at factory boot so a Google tap can call signInWithPopup in the same gesture; a blocked popup (or a silent iOS / in-app failure) falls back to signInWithRedirect; also handles redirect result, email, register, email-already-in-use, forgot password, the join-sheet layout, and the in-app-browser Open in your browser note"
+    },
+    "factory-featured.js": {
+      "sha256": "6a7b0944ad5ddffee073b0818d711fe88dc3761d310d3c3efb67d82759bda306",
+      "bytes": 9407,
+      "loadWhen": "lazy, only when site.json has a featured block (featuredDays, maxPinned, articleMinChars, label, handles); cobrachat pilot first"
     }
   },
   "coreBudgetBytes": 255000
