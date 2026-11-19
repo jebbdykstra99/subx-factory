@@ -38,8 +38,8 @@
       "loadWhen": "lazy, prefetched at factory boot so a Google tap can call signInWithPopup in the same gesture; a blocked popup (or a silent iOS / in-app failure) falls back to signInWithRedirect; also handles redirect result, email, register, email-already-in-use, forgot password, the join-sheet layout, and the in-app-browser Open in your browser note"
     },
     "factory-more.js": {
-      "sha256": "cb7392cc31441dea865bf108e049d5f384ea04ae209219b6d6aa6ce80b4bb12d",
-      "bytes": 18761
+      "sha256": "253bf7ed5bba2dfaccabd704b44b5d46dc8c0d9981dd2ac4c8910353f813dabc",
+      "bytes": 19031
     }
   },
   "coreBudgetBytes": 255000

@@ -386,8 +386,12 @@ function start(text, opts) {
   const css = doc.getElementById('subx-more-style').textContent;
   assert.ok(css.indexOf('-webkit-line-clamp:4') !== -1 && css.indexOf('line-clamp:4') !== -1, '4 lines under 768');
   assert.ok(/@media \(min-width:768px\)\{[^}]*-webkit-line-clamp:3/.test(css), '3 lines at 768 and up');
-  assert.ok(css.indexOf('linear-gradient') !== -1, 'soft fade on the last line');
-  assert.ok(post.querySelector('.subx-more-btn'), 'long lead gets More');
+  const mask = 'linear-gradient(to bottom,#000 calc(100% - 1.5em),transparent)';
+  assert.ok(css.indexOf('.subx-more-clamp.is-over{-webkit-mask-image:' + mask + ';mask-image:' + mask + '}') !== -1, 'mask fade only while over the limit');
+  const supportsAt = css.indexOf('@supports not (mask-image: linear-gradient(#000,#000))');
+  assert.ok(supportsAt !== -1 && css.indexOf('::after') > supportsAt, 'gradient is only the mask fallback');
+  assert.equal(css.indexOf('::after'), css.lastIndexOf('::after'));
+  assert.ok(post.querySelector('.subx-more-btn'), 'long lead gets Show more');
   ok('clamp');
 }
 
@@ -404,7 +408,7 @@ function start(text, opts) {
   const btn = post.querySelector('.subx-more-btn');
   assert.equal(btn.type, 'button');
   assert.equal(btn.getAttribute('aria-expanded'), 'false');
-  assert.equal(btn.textContent, 'More');
+  assert.equal(btn.textContent, 'Show more');
   assert.ok(btn.getAttribute('aria-controls'));
   assert.equal(post.querySelector('#' + btn.getAttribute('aria-controls')).hidden, true);
   const css = r.document.getElementById('subx-more-style').textContent;
@@ -413,14 +417,14 @@ function start(text, opts) {
   assert.ok(css.indexOf('var(--accent,#1d9bf0)') !== -1 && css.indexOf(':focus-visible') !== -1, 'accent and focus ring');
   btn.click();
   assert.equal(btn.getAttribute('aria-expanded'), 'true');
-  assert.equal(btn.textContent, 'Less');
+  assert.equal(btn.textContent, 'Show less');
   assert.equal(post.querySelector('.subx-more-rest').hidden, false);
   assert.equal(r.document.activeElement, btn, 'focus stays on the button');
   assert.deepEqual(r.sandbox._scrolled[0], [0, 130], 'scroll keeps the button in place');
   assert.equal(r.sandbox.fetches, 0, 'expand does not fetch');
   btn.click();
   assert.equal(btn.getAttribute('aria-expanded'), 'false');
-  assert.equal(btn.textContent, 'More');
+  assert.equal(btn.textContent, 'Show more');
   assert.equal(post.querySelector('.subx-more-rest').hidden, true);
   ok('aria-expanded toggle');
 }
@@ -585,7 +589,7 @@ function start(text, opts) {
   assert.ok(rest.textContent.indexOf('Photo by someone with no license') !== -1, 'Photo by without CC BY stays hidden');
   assert.ok(rest.textContent.indexOf('CC BY') === -1);
   const btn = post.querySelector('.subx-more-btn');
-  assert.equal(btn.textContent, 'More');
+  assert.equal(btn.textContent, 'Show more');
   assert.equal(btn.getAttribute('aria-expanded'), 'false');
   assert.ok(btn.getAttribute('aria-controls'));
   const css = doc.getElementById('subx-more-style').textContent;
@@ -658,7 +662,7 @@ function start(text, opts) {
   assert.ok(info.noteHeight > 24, 'disclaimer wraps at 390px (' + info.noteHeight + ')');
   assert.equal(info.hidden, true);
   assert.equal(info.restHasCredit, false);
-  assert.equal(info.label, 'More');
+  assert.equal(info.label, 'Show more');
   assert.equal(info.expanded, 'false');
   assert.ok(info.controls);
   ok('390px wrap');

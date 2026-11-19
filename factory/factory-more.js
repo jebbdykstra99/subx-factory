@@ -1,4 +1,4 @@
-/* SubX factory-more.js. Feed posts collapse to a few lines with More / Less.
+/* SubX factory-more.js. Feed posts collapse to a few lines with Show more / Show less.
  * Same file in every room. Text is split with splitText, createTextNode, and textContent only.
  * A single post URL (?p= or /p/) is left alone. Clamp classes are added only from this script,
  * so with no JS the full post stays visible. Expanding does not fetch again.
@@ -10,7 +10,8 @@
 
   var CSS = [
     '.subx-more-clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;line-clamp:4;overflow:hidden;position:relative;white-space:pre-wrap}',
-    '.subx-more-clamp.is-over::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1.5em;background:linear-gradient(to bottom,rgba(0,0,0,0),var(--bg,#fff));pointer-events:none}',
+    '.subx-more-clamp.is-over{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 1.5em),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 1.5em),transparent)}',
+    '@supports not (mask-image: linear-gradient(#000,#000)){.subx-more-clamp.is-over::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1.5em;background:linear-gradient(to bottom,rgba(0,0,0,0),var(--bg,#fff));pointer-events:none}}',
     '@media (min-width:768px){.subx-more-clamp{-webkit-line-clamp:3;line-clamp:3}}',
     '.subx-more-thumb{aspect-ratio:16/9;max-height:200px;overflow:hidden;cursor:pointer}',
     '.subx-more-thumb img{width:100%;height:100%;max-height:200px;object-fit:cover;display:block}',
@@ -328,7 +329,7 @@
         }
       }
       st.btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      st.btn.textContent = open ? 'Less' : 'More';
+      st.btn.textContent = open ? 'Show less' : 'Show more';
     });
   }
 
@@ -340,7 +341,7 @@
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'subx-more-btn';
-    btn.textContent = 'More';
+    btn.textContent = 'Show more';
     btn.setAttribute('aria-expanded', 'false');
     var controls = st.rest || st.image || st.lead;
     if (controls) {
