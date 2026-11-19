@@ -13,6 +13,7 @@
 
 /* One logged-out Sign in: the header pill. The shell's drawer button stays in the DOM for the same auth flow. */
 .sidebar-auth-btn[hidden] { display: none !important; }
+.sidebar-search-btn[hidden] { display: none !important; }
 .sidebar-auth:not(:has(.sidebar-auth-user)) { display: none; }
 
 /* Empty nests are a second noun. Hide the shell's empty Nests + block; real nest links still show. */
@@ -416,10 +417,11 @@ body.partner-room-home .right-panel-body .news-item { background: transparent; }
   .hub-top-actions .hub-cta { flex: 1 1 auto; text-align: center; }
 }
 
-/* Search rooms field on the hero (option 2). Icon and field text are
-   #0F1419 on #FFFFFF in light and #EFF3F4 on #000000 in dark.
-   Placeholder and muted copy use --text-muted. Focus rings use
-   --text-muted, not the hub accent. */
+/* Search rooms. Phone and mid-width (901-999px) keep the option 2 field.
+   From 1000px up, a filled pill sits at the top of the right rail.
+   Icon and field text are #0F1419 on the field fill in light and
+   #EFF3F4 on #000000 in dark. Placeholder and muted copy use
+   --text-muted. Focus rings use --text-muted, not the hub accent. */
 body.hub-home .hub-search-sr {
   position: absolute;
   width: 1px;
@@ -747,4 +749,124 @@ html[data-hub-theme="dark"] body.hub-home .hub-search-scrim {
 html[data-hub-theme="dark"] body.hub-home .hub-search-popover,
 html[data-hub-theme="dark"] body.hub-home .hub-search-sheet {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+/* Desktop X-style rail search (option 3). The pill sits in a non-scrolling
+   bar at the top of the right rail. Results open in place under the field
+   and push Room Brief, Suggested rooms, and the rail footer down. There
+   is no page scrim on desktop, and the results do not overlay the rail.
+   The phone field under the tagline is unchanged. At 901-999px, when the
+   rail is hidden, the existing center-column field stays in place so
+   search is not lost. */
+body.hub-home .hub-rail-search { display: none; }
+body.hub-home .hub-search-results-label {
+  font: 700 11px/1 var(--ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 12px 6px;
+}
+body.hub-home .hub-search-empty { padding: 20px 12px 16px; }
+body.hub-home .hub-search-empty-title {
+  font-weight: 800;
+  font-size: 15px;
+  color: #0F1419;
+  margin-bottom: 6px;
+}
+body.hub-home .hub-search-empty-body {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+body.hub-home .hub-search-hit.is-active {
+  background: var(--surface);
+}
+html[data-hub-theme="dark"] body.hub-home .hub-search-empty-title {
+  color: #EFF3F4;
+}
+
+@media (min-width: 1000px) {
+  body.hub-home[data-home-design="hero-room"] .right-panel {
+    overflow: hidden;
+  }
+  body.hub-home .hub-rail-search {
+    display: block;
+    position: relative;
+    z-index: 420;
+    flex-shrink: 0;
+    padding: 12px 1.15rem 10px;
+    background: var(--bg);
+    border-bottom: 1px solid transparent;
+  }
+  html[data-hub-rail-scrolled="1"] body.hub-home .hub-rail-search,
+  html[data-hub-search="open"] body.hub-home .hub-rail-search {
+    border-bottom-color: var(--border);
+  }
+  body.hub-home .hub-rail-search .hub-search-field {
+    width: 100%;
+    background: #eff3f4;
+    border-color: transparent;
+  }
+  html[data-hub-theme="dark"] body.hub-home .hub-rail-search .hub-search-field {
+    background: #000000;
+    border-color: #536471;
+  }
+  body.hub-home .hub-rail-search .hub-search-field:focus-within {
+    background: var(--bg);
+    border-color: var(--text-muted);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-muted) 25%, transparent);
+  }
+  body.hub-home .hub-rail-scroll {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    position: relative;
+    z-index: 1;
+  }
+  body.hub-home .hub-rail-scroll .right-panel-body {
+    overflow: visible;
+  }
+  html body.hub-home .hub-search-closed-center,
+  html body.hub-home .hub-search-anchor {
+    display: none !important;
+  }
+  html[data-hub-search="open"] body.hub-home .hub-search-scrim {
+    display: none !important;
+  }
+  html body.hub-home .hub-rail-search .hub-search-rail-popover {
+    display: none;
+    position: static;
+    z-index: auto;
+    top: auto;
+    right: auto;
+    left: auto;
+    width: 100%;
+    max-width: none;
+    margin-top: 8px;
+    background: #ffffff;
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    box-shadow: none;
+    padding: 6px 4px 10px;
+    max-height: min(45vh, 360px);
+    overflow: auto;
+    pointer-events: auto;
+  }
+  html[data-hub-theme="dark"] body.hub-home .hub-rail-search .hub-search-rail-popover {
+    background: #000000;
+    box-shadow: none;
+  }
+  html[data-hub-search="open"] body.hub-home .hub-rail-search .hub-search-rail-popover {
+    display: block;
+  }
+  html[data-hub-search="open"] body.hub-home .hub-rail-search .hub-search-results {
+    max-height: none;
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 999px) {
+  body.hub-home .hub-rail-search {
+    display: none !important;
+  }
 }

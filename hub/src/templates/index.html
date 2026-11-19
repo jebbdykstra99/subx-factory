@@ -355,7 +355,7 @@
 <aside class="sidebar" id="sidebar">
 
   <div class="sidebar-brand">
-    <button class="sidebar-search-btn" id="sidebar-search-btn" title="Search" aria-label="Search">
+    <button class="sidebar-search-btn" id="sidebar-search-btn" title="Search" aria-label="Search" hidden aria-hidden="true" tabindex="-1">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     </button>
     <a href="https://{{brand.primaryDomain}}/" class="brand-mark" data-social="home" aria-label="{{brand.name}} home">
@@ -787,6 +787,18 @@
 
 <!-- ── Right rail ───────────────────────────────────── -->
 <aside class="right-panel" id="right-panel">
+  <div class="hub-rail-search" id="hub-rail-search">
+    <div class="hub-search-field" role="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <label class="hub-search-sr" for="hub-search-input-rail">Search rooms</label>
+      <input id="hub-search-input-rail" class="hub-search-input" type="search" placeholder="Search rooms" value="" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="hub-search-list-rail" aria-haspopup="listbox">
+      <button type="button" class="hub-search-clear" data-hub-search-clear aria-label="Clear search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="hub-search-popover hub-search-rail-popover" id="hub-search-rail-popover" aria-hidden="true">
+      <div class="hub-search-results" id="hub-search-results-rail"></div>
+    </div>
+  </div>
+  <div class="hub-rail-scroll" id="hub-rail-scroll">
   <div class="right-panel-header">
     <div class="right-panel-brief-kicker">Room Brief</div>
     <div class="right-panel-brief-title">What {{brand.name}} is</div>
@@ -808,6 +820,7 @@
       <a href="/guidelines.html">Guidelines</a>
     </nav>
     <p>Each room has its own rules. Paused rooms are not listed.</p>
+  </div>
   </div>
 </aside>
 
