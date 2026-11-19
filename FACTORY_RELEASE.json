@@ -28,8 +28,8 @@
       "loadWhen": "site.json features.reportLoop true (A9 report loop; airlineschat/amachat first once unkilled)"
     },
     "factory-hero.js": {
-      "sha256": "650b080ea432fb748e6b31025c3fae3aa1bb9bd9180ffc8875a04fbec8af1d17",
-      "bytes": 14343,
+      "sha256": "dce2fff1cd394688ac6ed334651dfe80f7dc3aa39804f0f3384a7b58dece44f1",
+      "bytes": 15540,
       "loadWhen": "site.json heroImages with at least one fully credited, allowed item (gpchat only today); load it after factory.js. Rotating hero photo at the top of the center column; without photos it adds nothing"
     },
     "factory-signin.js": {

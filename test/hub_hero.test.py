@@ -103,6 +103,8 @@ def check_items(room, items):
 
 
 check_items('gpchat', items)
+ok([it.get('modified') for it in items] == [None, None, None, 'cropped', 'cropped', 'cropped', None, None, None],
+   'gpchat heroImages: In Vitrio, Spurzem and Perreijn note cropped; McArdle, Bagge and the rest do not')
 
 hero_dir = os.path.join(ROOT, 'hub', 'site', 'assets', 'hero', 'gpchat')
 files = sorted(os.listdir(hero_dir)) if os.path.isdir(hero_dir) else []
