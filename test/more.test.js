@@ -284,6 +284,7 @@ function makeRealm(opts) {
 
   const sandbox = {
     console: console,
+    URL: URL,
     document: document,
     MutationObserver: MutationObserver,
     CSSStyleSheet: CSSStyleSheet,
@@ -331,7 +332,7 @@ function article(doc, id, text, extra) {
   body.appendChild(h(doc, 'p', { class: 'post-text' }, text));
   if (extra && extra.image) {
     const imgWrap = h(doc, 'div', { class: 'post-image' });
-    imgWrap.appendChild(h(doc, 'img', { src: '/photo.jpg', alt: '' }));
+    imgWrap.appendChild(h(doc, 'img', { src: '/photo.jpg', alt: '', 'data-focal': extra.focal || '' }));
     body.appendChild(imgWrap);
   }
   const actions = h(doc, 'div', { class: 'post-actions' });
@@ -359,7 +360,7 @@ function start(text, opts) {
   opts = opts || {};
   const r = makeRealm(opts);
   if (opts.disclaimer) r.body.appendChild(h(r.document, 'p', { 'data-room-disclaimer': '' }, opts.disclaimer));
-  const post = article(r.document, opts.id || 'p1', text, { image: opts.image });
+  const post = article(r.document, opts.id || 'p1', text, { image: opts.image, focal: opts.focal || '' });
   const feed = h(r.document, 'div', { id: opts.feedId || 'thoughts-feed' });
   feed.appendChild(post);
   r.body.appendChild(feed);
@@ -482,7 +483,9 @@ function start(text, opts) {
   assert.ok(!pill.closest || true);
   const rest = post.querySelector('.subx-more-rest');
   assert.ok(hiddenOf(rest));
-  assert.ok(rest.textContent.indexOf('CC0') !== -1, 'PD/CC0 stays hidden');
+  assert.ok(rest.textContent.indexOf('CC0') === -1, 'a CC0 license URL is a labeled credit, not hidden text');
+  const cc0 = post.querySelectorAll('a .subx-more-lic');
+  assert.ok([...cc0].some((n) => n.textContent === 'CC0 1.0'), 'CC0 label comes from the URL');
   assert.ok(rest.textContent.indexOf('field notes') !== -1);
   assert.ok(rest.textContent.indexOf('CC BY') === -1, 'CC BY is not hidden');
   const credit = post.querySelector('.subx-more-credit');
@@ -504,21 +507,15 @@ function start(text, opts) {
   post.querySelectorAll('.subx-more-trust').forEach((n) => assert.equal(hiddenOf(n), false));
   const disc = doc.querySelector('[data-room-disclaimer]');
   assert.equal(hiddenOf(disc), false, 'room disclaimer element stays');
-  const note = post.querySelector('.subx-more-note');
-  assert.ok(note && !hiddenOf(note), 'disclaimer copy sits above More');
-  assert.ok(note.textContent.indexOf('Not a pet. Wildlife education only.') !== -1);
-  const bar = post.querySelector('.subx-more-bar');
-  const kids = note.parentNode.childNodes;
-  assert.ok(kids.indexOf(note) < kids.indexOf(bar), 'disclaimer is above the More bar');
+  assert.equal(post.querySelector('.subx-more-note'), null, 'disclaimer already in the card is not copied again');
   assert.equal(credit.parentNode, post.querySelector('.post-body'));
-  assert.notEqual(credit.parentNode, post.querySelector('.post-image'), 'credit sits under the thumb, outside the clip');
-  const img = post.querySelector('.post-image');
-  assert.ok(img.classList.contains('subx-more-thumb'));
+  assert.notEqual(credit.parentNode, post.querySelector('.post-image'), 'credit sits under the image, outside the clip');
+  const img = post.querySelector('.post-image img');
+  assert.equal(img.getAttribute('src'), '/photo.jpg');
   const css = doc.getElementById('subx-more-style').textContent;
-  assert.ok(css.indexOf('aspect-ratio:16/9') !== -1 && css.indexOf('max-height:200px') !== -1 && css.indexOf('max-height:260px') !== -1);
-  img.querySelector('img').click();
+  assert.ok(css.indexOf('.subx-more-collapsed.is-over .post-image img') !== -1 && css.indexOf('max-height:200px') !== -1 && css.indexOf('max-height:260px') !== -1, 'media cap is a static rule');
+  img.click();
   assert.equal(post.querySelector('.subx-more-btn').getAttribute('aria-expanded'), 'true', 'tap on the image expands');
-  assert.ok(!img.classList.contains('subx-more-thumb'));
   ok('credit, disclaimer, WHOMARK, pill, and Report stay visible');
 }
 
@@ -583,8 +580,10 @@ function start(text, opts) {
   const rest = post.querySelector('.subx-more-rest');
   const shown = post.querySelectorAll('.subx-more-trust, .subx-more-credit').map((n) => n.textContent).join('\n');
   assert.ok(hiddenOf(rest));
-  assert.ok(shown.indexOf(imageLine) !== -1, 'Image: CC BY stays visible');
-  assert.ok(shown.indexOf(photoByLine) !== -1, 'Photo by CC BY stays visible');
+  assert.ok(shown.indexOf('River terrace') !== -1, 'Image: CC BY stays visible');
+  assert.ok(shown.indexOf('Photo by Ada Lovelace') !== -1, 'Photo by CC BY stays visible');
+  const labels = post.querySelectorAll('a .subx-more-lic').map((n) => n.textContent);
+  assert.ok(labels.indexOf('CC BY-SA 4.0') !== -1 && labels.indexOf('CC BY 4.0') !== -1, 'mapped license labels');
   assert.ok(rest.textContent.indexOf('Image: no license') !== -1, 'Image: without CC BY stays hidden');
   assert.ok(rest.textContent.indexOf('Photo by someone with no license') !== -1, 'Photo by without CC BY stays hidden');
   assert.ok(rest.textContent.indexOf('CC BY') === -1);
@@ -655,7 +654,9 @@ function start(text, opts) {
   server.close();
   assert.equal(info.whiteSpace, 'normal');
   assert.notEqual(info.overflow, 'ellipsis');
-  assert.ok(info.text.indexOf(credit) !== -1, 'full CC BY-SA credit is in the page');
+  assert.ok(info.text.indexOf('long river terrace') !== -1, 'credit author text stays');
+  assert.ok(info.text.indexOf('CC BY-SA 4.0') !== -1, 'mapped license label stays');
+  assert.ok(info.text.indexOf('https://') === -1, 'the license URL is not the visible text');
   assert.ok(info.height > 24, 'credit wraps to more than one line at 390px (' + info.height + ')');
   assert.equal(info.noteSpace, 'normal');
   assert.ok(info.noteText.indexOf(disclaimer) !== -1);
@@ -666,6 +667,72 @@ function start(text, opts) {
   assert.equal(info.expanded, 'false');
   assert.ok(info.controls);
   ok('390px wrap');
+}
+
+{
+  const disclaimer = 'Not a pet. Wildlife education only.';
+  const lead = ['One.', 'Two.', 'Three.', 'Four.', 'Five.', 'Six.'].join('\n');
+  const text = [
+    lead,
+    '',
+    disclaimer,
+    '  ' + disclaimer.toUpperCase() + '  ',
+    'Sponsored by Example',
+    'Sponsored   by   Example',
+    'Photo: Ada, CC BY 9.9 https://evil.example/licenses/by-sa/4.0/',
+    'Photo: Ada, CC BY 4.0 javascript:alert(1)',
+    'Photo: Real Author https://creativecommons.org/licenses/by-nc-nd/3.0/',
+    'Photo: Lying label CC BY 9.9 https://creativecommons.org/licenses/by-nd/2.0/deed.en',
+    'Image: Old plate https://creativecommons.org/publicdomain/zero/1.0/'
+  ].join('\n');
+  const { post, doc } = start(text, { image: true, disclaimer: disclaimer, id: 'dedupe-1', focal: '30% 70%' });
+  const img = post.querySelector('.post-image img');
+  const before = img.getAttribute('src');
+  function shown(sel) { return post.querySelectorAll(sel).map((n) => n.textContent); }
+  function countPhrase(phrase) {
+    const want = phrase.replace(/\s+/g, ' ').trim().toLowerCase();
+    const text = post.textContent.replace(/\s+/g, ' ').toLowerCase();
+    let n = 0, i = 0;
+    while ((i = text.indexOf(want, i)) !== -1) { n += 1; i += want.length; }
+    return n;
+  }
+  assert.equal(countPhrase(disclaimer), 1, 'disclaimer appears once in the card');
+  assert.equal(doc.querySelector('[data-room-disclaimer]').textContent, disclaimer, 'room header disclaimer stays');
+  assert.equal(post.querySelector('.post-steward-pill').textContent, 'AI steward');
+  assert.equal(post.querySelector('.wm').textContent, 'WHOMARK');
+  assert.equal(post.querySelector('.post-actions button').textContent, 'Report');
+  assert.equal(shown('.subx-more-trust').filter((t) => /sponsored by example/i.test(t)).length, 1, 'sponsored label once');
+  post.querySelectorAll('.subx-more-credit, .subx-more-trust').forEach((el) => {
+    if (/evil\.example|javascript:/.test(el.textContent)) {
+      assert.equal(el.querySelector('a'), null, 'non-CC and javascript stay plain text');
+    }
+  });
+  const real = [...post.querySelectorAll('a')].find((a) => a.getAttribute('href') === 'https://creativecommons.org/licenses/by-nc-nd/3.0/');
+  assert.ok(real, 'known CC license is linked');
+  assert.equal(real.querySelector('.subx-more-lic').textContent, 'CC BY-NC-ND 3.0');
+  assert.equal(real.getAttribute('rel'), 'noopener noreferrer');
+  assert.equal(real.getAttribute('target'), '_blank');
+  const lie = [...post.querySelectorAll('a .subx-more-lic')].find((n) => n.textContent === 'CC BY-ND 2.0');
+  assert.ok(lie, 'label comes from the URL, not the post text');
+  assert.ok(lie.parentNode.parentNode.textContent.indexOf('CC BY 9.9') !== -1, 'lying license words stay in the prose');
+  const hrefs = post.querySelectorAll('a').map((a) => a.getAttribute('href'));
+  assert.ok(!hrefs.some((h) => /javascript:/i.test(h) || /evil\.example/i.test(h) || /creativecommons\.org\.evil/i.test(h)));
+  assert.equal(post.querySelector('.subx-more-note'), null);
+  const css = doc.getElementById('subx-more-style').textContent;
+  assert.ok(css.indexOf('.subx-more-collapsed.is-over .post-image img') !== -1);
+  assert.ok(css.indexOf('max-height:200px') !== -1 && css.indexOf('max-height:260px') !== -1);
+  assert.ok(post.classList.contains('subx-more-collapsed') && post.classList.contains('is-over'), 'cap classes while collapsed');
+  assert.equal(img.getAttribute('src'), before);
+  assert.equal(img.getAttribute('data-focal'), '30% 70%');
+  const btn = post.querySelector('.subx-more-btn');
+  btn.click();
+  assert.equal(btn.textContent, 'Show less');
+  assert.ok(!post.classList.contains('subx-more-collapsed') && !post.classList.contains('is-over'), 'cap lifts on Show more');
+  assert.equal(img.getAttribute('data-focal'), '30% 70%');
+  btn.click();
+  assert.equal(btn.textContent, 'Show more');
+  assert.ok(post.classList.contains('subx-more-collapsed') && post.classList.contains('is-over'), 'cap returns on Show less');
+  ok('dedupe, media cap, and CC label');
 }
 
 const rel = JSON.parse(fs.readFileSync(path.join(root, 'FACTORY_RELEASE.json'), 'utf8'));
