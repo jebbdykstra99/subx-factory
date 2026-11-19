@@ -22,7 +22,7 @@
 # Needs node_modules (npm install) for split.mjs.
 set -euo pipefail
 
-OUT=(factory.js factory-gp.js factory-rail.js factory-reports.js)
+OUT=(factory.js factory-gp.js factory-rail.js factory-reports.js factory-stories.js)
 DIFFS=()
 
 collect_diffs() {
@@ -137,7 +137,7 @@ main() {
   # already gone by then; with set -u that failed the script even when the
   # copy itself succeeded.
   T=$(mktemp -d)
-  trap 'rm -rf "${T:-}" template.js base_gpchat_7553762.js gpchat_pr31.js merged_raw.js merged.js factory.js factory-gp.js factory-rail.js factory-reports.js' EXIT
+  trap 'rm -rf "${T:-}" template.js base_gpchat_7553762.js gpchat_pr31.js merged_raw.js merged.js factory.js factory-gp.js factory-rail.js factory-reports.js factory-stories.js' EXIT
   git clone -q https://github.com/jebbdykstra99/gpchat "$T/gp"
   git -C "$T/gp" fetch -q origin "$GP_PR31" 2>/dev/null || git -C "$T/gp" fetch -q origin 'refs/pull/31/head'
   git -C "$T/gp" show 7553762:factory.js > base_gpchat_7553762.js
@@ -341,6 +341,10 @@ head, mid, tail = t[:nf_s], t[nf_s:nf_e], t[nf_e:]
 t = re.sub(r'\n\n', '\n', head) + mid + re.sub(r'\n\n', '\n', tail)
 p.write_text(t)
 APPLY_CAT
+  # Room v1.2.11 base (sha256 f18d07e4): addon(), lazy factory-featured.js, https-only post images.
+  python3 apply_v1211.py
+  # Stories cluster leaves the core for a lazy same-origin factory-stories.js.
+  node split.mjs --stories
   local f
   for f in "${OUT[@]}"; do node --check "$f"; done
   if [ "$mode" = check ]; then

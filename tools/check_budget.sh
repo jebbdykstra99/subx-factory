@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Core factory.js byte budget (lean audit 2026-10-22). Fails above the budget.
 #   tools/check_budget.sh [path/to/factory.js] [budget_bytes]
-# Defaults: factory/factory.js, 255000 B (255 KB). Opt-in files (factory-gp.js, factory-rail.js, factory-reports.js, factory-signin.js) are reported, not budgeted.
-# v1.2.9 sign-in fix keeps the 255000 cap by loading Google popup and redirect from factory-signin.js.
+# Defaults: factory/factory.js, 226000 B. Opt-in and lazy files (factory-*.js) are reported, not budgeted.
+# v1.2.11 stories split keeps the core under 226000 B by loading factory-stories.js only when stories are on.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 F=${1:-factory/factory.js}
-BUDGET=${2:-${CORE_BUDGET_BYTES:-255000}}
+BUDGET=${2:-${CORE_BUDGET_BYTES:-226000}}
 B=$(wc -c < "$F" | tr -d ' ')
 for o in "$(dirname "$F")"/factory-*.js; do [ -f "$o" ] && echo "opt-in $(basename "$o"): $(wc -c < "$o" | tr -d ' ') B"; done
 if [ "$B" -gt "$BUDGET" ]; then

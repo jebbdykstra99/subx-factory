@@ -1,16 +1,17 @@
 {
-  "version": "v1.2.10",
+  "version": "v1.2.11",
   "factory.js": {
-    "sha256": "92f1f39d16a17beb25e189e277fd66c118cbb9959db6de430db98d974e0e9915",
-    "bytes": 254995
+    "sha256": "b7b02a20040e32696e72eb9aa10e6b2ccf8c70477ef6779d21ce0abdfe4619b7",
+    "bytes": 224250
   },
   "sources": {
     "template": "build/sources/template_factory_660144d1886e.js (T0 pin, nest-feed query edited in place)",
     "gpchat_base": "jebbdykstra99/gpchat@7553762",
     "gpchat_pr31": "jebbdykstra99/gpchat@43a1936 (PR #31 hardened)",
-    "split": "build/split.mjs (opt-in files out of the folded single-file build: gp, rail, reports)"
+    "split": "build/split.mjs (opt-in files out of the folded single-file build: gp, rail, reports; --stories extracts the stories cluster after build/apply_v1211.py adopts the room v1.2.11 base sha256 f18d07e4)",
+    "room_v1211": "27chat factory.js sha256 f18d07e4db5aaa2722f284aba542eb6b41a48699ae2bad0c54bbec5e558a29d0 (254966 B), identical across the v1.2.11 rooms; adopted as the pre-split base"
   },
-  "built": "2026-11-12 (MT) cursor/signin-popup-redirect-2026-11-12: blocked Google popup falls back to signInWithRedirect (v1.2.9 design); a blocked notice replaces the normal button block instead of sitting next to it; 18+ gate unchanged. Phone cat (prior): top bar reserves space for the 44px cat (tune --cat, default 7.05rem) and a light #fff backing with #111 ink; desktop cat color is var(--nav-text,#fff)",
+  "built": "2026-11-19 (MT) v1.2.11: room v1.2.11 factory.js is the base (featured addon, https-only post images). The stories cluster (48 functions) loads lazily from same-origin factory-stories.js only when stories are on. Core 224213 B, budget 226000 B. factory-signin.js and factory-reports.js are unchanged.",
   "optIn": {
     "factory-gp.js": {
       "sha256": "33c158f1490800b3efe641ac526516b9a89f7fbd2ef0d29e5a8643c07f4bc6fc",
@@ -36,7 +37,17 @@
       "sha256": "51ce100803d5cc7270fbfa488841cb75594b8c0bf092ee41c28460c1d4105958",
       "bytes": 24583,
       "loadWhen": "lazy, prefetched at factory boot so a Google tap can call signInWithPopup in the same gesture; a blocked popup (or a silent iOS / in-app failure) falls back to signInWithRedirect; also handles redirect result, email, register, email-already-in-use, forgot password, the join-sheet layout, and the in-app-browser Open in your browser note"
+    },
+    "factory-stories.js": {
+      "sha256": "acfd124d2e58ab30a915134058f1405692a0379f38163668b10dbe20fd1540a7",
+      "bytes": 35549,
+      "loadWhen": "lazy, fixed same-origin path (addon('factory-stories'), the loadSigninModule pattern) only when storiesOn() (site.stories.enabled !== false). Rooms with stories off do not request the file"
+    },
+    "factory-featured.js": {
+      "sha256": "6a7b0944ad5ddffee073b0818d711fe88dc3761d310d3c3efb67d82759bda306",
+      "bytes": 9407,
+      "loadWhen": "lazy, addon('factory-featured') only when site.json has a featured block. Copy of the room file (no innerHTML; textContent and setAttribute only)"
     }
   },
-  "coreBudgetBytes": 255000
+  "coreBudgetBytes": 226000
 }
