@@ -215,9 +215,10 @@ ok('Small rooms for big interests.' in idx and 'class="hub-tagline"' in idx and 
 ok('id="hub-feed"' in idx and 'id="hub-rooms"' in idx, 'home: highlights feed + rooms tab containers')
 ok('href="%s"' % brand['topicPathPrefix'] in read(os.path.join(SITE, 'about.html')), 'about: links the topic index stub')
 credits = read(os.path.join(SITE, 'credits.html'))
-ok('Cropped version by %s, available under CC BY-SA 4.0.' % brand['legalEntity'] in re.sub(r'<[^>]+>', '', credits.replace('\n',' ')).replace('  ',' ') or
-   ('Cropped version by %s, available under' % brand['legalEntity'] in credits and 'https://creativecommons.org/licenses/by-sa/4.0/' in credits),
-   'credits.html includes the cropped-version line with the legal entity and CC BY-SA 4.0')
+ok(('Cropped and resized by %s' % brand['legalEntity']) in credits
+   and 'Adaptation licensed' in credits
+   and 'https://creativecommons.org/licenses/by-sa/4.0/' in credits,
+   'credits.html includes Cropped and resized by the legal entity and Adaptation licensed CC BY-SA 4.0')
 ok('Haleakalā' in credits and 'id="hi02-haleakala-dawn"' in credits
    and 'https://commons.wikimedia.org/wiki/File:Dawn_on_Haleakala_Volcano,_Hawaii.jpg' in credits
    and 'https://creativecommons.org/licenses/by-sa/4.0/' in credits,
