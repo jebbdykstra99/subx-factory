@@ -12,6 +12,8 @@ jobs:
         with: { python-version: '3.13.18' }
       - name: Python version (the drift checker is tested on this exact version)
         run: python3 --version
+      - name: Room static checker (unit tests)
+        run: python3 test/room_static_check.test.py
       - run: npm install --no-audit --no-fund
       - run: node --check factory/factory.js && node --check factory/factory-signin.js && node --check factory/factory-gp.js && node --check factory/factory-rail.js && node --check factory/factory-reports.js
       - run: npx eslint --no-eslintrc -c .eslintrc.json factory/factory.js factory/factory-signin.js factory/factory-gp.js factory/factory-rail.js factory/factory-reports.js
