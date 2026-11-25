@@ -4,6 +4,13 @@ name: room-static-check
 # Check out the caller room and this workflow's factory SHA, then run
 # tools/room_static_check.py (HTML/links, sitemap, site.json, typography/PII,
 # noindex/banner, factory.js budget, FACTORY.lock vs room and vs this release).
+#
+# Factory checkout: hardcode repository jebbdykstra99/subx-factory. Do not use
+# github.action_repository or github.action_ref (in a workflow_call job those
+# resolve to the current step's action, e.g. actions/checkout). Prefer
+# github.job_workflow_sha when it is a 40-char SHA; otherwise use the
+# factory_ref input (the same 40-char SHA as the caller's uses: pin). Fail
+# closed if the two valid SHAs disagree, or if neither is a 40-char SHA.
 on:
   workflow_call:
     inputs:
@@ -22,6 +29,11 @@ on:
         type: number
         default: 255000
         required: false
+      factory_ref:
+        description: "40-char SHA of this factory workflow, the same SHA as the uses: pin. Fallback when github.job_workflow_sha is empty; must match it when both are set."
+        type: string
+        default: ""
+        required: false
 permissions: { contents: read }
 jobs:
   check:
@@ -31,10 +43,36 @@ jobs:
         with:
           path: room
           persist-credentials: false
+      - name: Resolve factory SHA
+        id: factory_sha
+        env:
+          JOB_WORKFLOW_SHA: ${{ github.job_workflow_sha }}
+          FACTORY_REF: ${{ inputs.factory_ref }}
+        run: |
+          set -euo pipefail
+          is_sha() { [[ "$1" =~ ^[0-9a-fA-F]{40}$ ]]; }
+          job=""
+          pin=""
+          if is_sha "${JOB_WORKFLOW_SHA:-}"; then
+            job=$(printf '%s' "$JOB_WORKFLOW_SHA" | tr 'A-F' 'a-f')
+          fi
+          if is_sha "${FACTORY_REF:-}"; then
+            pin=$(printf '%s' "$FACTORY_REF" | tr 'A-F' 'a-f')
+          fi
+          if [ -n "$job" ] && [ -n "$pin" ] && [ "$job" != "$pin" ]; then
+            echo "factory SHA mismatch: job_workflow_sha and factory_ref are both 40-char SHAs but do not match" >&2
+            exit 1
+          fi
+          sha="${job:-$pin}"
+          if ! is_sha "$sha"; then
+            echo "factory SHA missing: pass inputs.factory_ref as the same 40-char SHA used in the uses: pin, or rely on github.job_workflow_sha" >&2
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          repository: ${{ github.action_repository }}
-          ref: ${{ github.action_ref }}
+          repository: jebbdykstra99/subx-factory
+          ref: ${{ steps.factory_sha.outputs.sha }}
           path: factory
           persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
