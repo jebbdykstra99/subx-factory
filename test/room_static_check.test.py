@@ -644,6 +644,21 @@ try:
        'direct read of FACTORY.lock rejects a symlink')
     no_outside(findings, 'FACTORY.lock symlink')
 
+    outside_tax = os.path.join(outside_dir, 'leaked-taxonomy.json')
+    with open(outside_tax, 'w', encoding='utf-8') as f:
+        f.write('{not valid json, leaked-taxonomy}\n')
+    syn_tax = os.path.join(td, 'symlink-taxonomy')
+    shutil.copytree(room, syn_tax)
+    os.symlink(outside_tax, os.path.join(syn_tax, 'taxonomy.json'))
+    rc, findings = run(syn_tax)
+    ok(has_error(findings, 'path', 'taxonomy.json is a symlink'),
+       'direct read of taxonomy.json rejects a symlink')
+    ok(not has_error(findings, 'taxonomy.json', 'not valid JSON'),
+       'taxonomy.json symlink target is not parsed as JSON')
+    no_outside(findings, 'taxonomy.json symlink')
+    ok(all('leaked-taxonomy' not in f.msg for f in findings),
+       'taxonomy.json symlink findings do not include leaked target text')
+
     # ---- budget check with relative --room / --factory (the CI layout) ----
     rel_root = os.path.join(td, 'ci-layout')
     os.makedirs(rel_root)
@@ -674,8 +689,10 @@ try:
        'factory checkout hardcodes jebbdykstra99/subx-factory')
     ok('factory_ref:' in wf_text,
        'workflow_call accepts factory_ref')
-    ok('github.job_workflow_sha' in wf_text,
-       'resolve step considers github.job_workflow_sha')
+    ok('${{ job.workflow_sha }}' in wf_text,
+       'resolve step uses job.workflow_sha')
+    ok('${{ github.job_workflow_sha }}' not in wf_text,
+       'resolve step does not use github.job_workflow_sha')
     ok('[0-9a-fA-F]{40}' in wf_text,
        'resolve step requires a 40-char SHA')
     ok('steps.factory_sha.outputs.sha' in wf_text,
