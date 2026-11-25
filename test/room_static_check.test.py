@@ -369,6 +369,179 @@ try:
     ok(rc == 0 or not has_error(findings, 'robots'),
        'expect_indexable false does not fail a preview robots Disallow: /')
 
+    # ---- N1: wrong-host sitemap loc does not join the host set or count as coverage ----
+    n1 = os.path.join(td, 'sitemap-wrong-host')
+    room_n1 = write_good_room(
+        n1,
+        extra_html={'oahu.html': page('Oahu', '<p>Oahu page.</p>')},
+        sitemap_pages=['index.html', 'about.html', 'terms.html', 'privacy.html', 'guidelines.html'],
+    )
+    with open(os.path.join(room_n1, 'sitemap.xml'), 'w', encoding='utf-8') as f:
+        f.write(
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            '  <url><loc>https://testroom.example/</loc></url>\n'
+            '  <url><loc>https://testroom.example/about.html</loc></url>\n'
+            '  <url><loc>https://testroom.example/terms.html</loc></url>\n'
+            '  <url><loc>https://testroom.example/privacy.html</loc></url>\n'
+            '  <url><loc>https://testroom.example/guidelines.html</loc></url>\n'
+            '  <url><loc>https://evil.example/oahu</loc></url>\n'
+            '</urlset>\n'
+        )
+    rc, findings = run(room_n1)
+    ok(has_error(findings, 'sitemap', 'not this room') and has_error(findings, 'sitemap', 'oahu.html'),
+       'wrong-host sitemap loc fails and does not count as coverage for oahu.html')
+
+    # ---- N6: pretty sitemap /oahu covers oahu.html ----
+    n6 = os.path.join(td, 'sitemap-pretty')
+    room_n6 = write_good_room(
+        n6,
+        extra_html={'oahu.html': page('Oahu', '<p>Oahu page.</p>')},
+        sitemap_pages=['index.html', 'about.html', 'terms.html', 'privacy.html', 'guidelines.html'],
+    )
+    with open(os.path.join(room_n6, 'sitemap.xml'), 'w', encoding='utf-8') as f:
+        f.write(
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            '  <url><loc>https://testroom.example/</loc></url>\n'
+            '  <url><loc>https://testroom.example/about.html</loc></url>\n'
+            '  <url><loc>https://testroom.example/terms.html</loc></url>\n'
+            '  <url><loc>https://testroom.example/privacy.html</loc></url>\n'
+            '  <url><loc>https://testroom.example/guidelines.html</loc></url>\n'
+            '  <url><loc>https://testroom.example/oahu</loc></url>\n'
+            '</urlset>\n'
+        )
+    rc, findings = run(room_n6)
+    ok(rc == 0 and not has_error(findings, 'sitemap'),
+       'pretty sitemap path /oahu is normalized to oahu.html for coverage')
+
+    # ---- Aegis N1 / Juno N2: start-only operator mailbox ----
+    op_email = 'j' + '@' + 'subx.it'
+    st_ok = os.path.join(td, 'start-ok')
+    shutil.copytree(room, st_ok)
+    start_html = page('Start', '<p>Contact the operator at %s.</p>' % op_email)
+    with open(os.path.join(st_ok, 'start.html'), 'w', encoding='utf-8') as f:
+        f.write(start_html)
+    with open(os.path.join(st_ok, 'sitemap.xml'), encoding='utf-8') as f:
+        sm = f.read()
+    with open(os.path.join(st_ok, 'sitemap.xml'), 'w', encoding='utf-8') as f:
+        f.write(sm.replace('</urlset>', '  <url><loc>https://testroom.example/start.html</loc></url>\n</urlset>'))
+    rc, findings = run(st_ok)
+    ok(rc == 0 and not has_error(findings, 'pii'),
+       'operator email on start.html is allowed')
+    ok(all(op_email not in f.msg for f in findings),
+       'start-page finding messages do not include the operator email value')
+
+    st_bad = os.path.join(td, 'start-elsewhere')
+    shutil.copytree(room, st_bad)
+    with open(os.path.join(st_bad, 'about.html'), encoding='utf-8') as f:
+        txt = f.read()
+    with open(os.path.join(st_bad, 'about.html'), 'w', encoding='utf-8') as f:
+        f.write(txt.replace('About this room.', 'Contact %s please.' % op_email))
+    rc, findings = run(st_bad)
+    ok(rc == 1 and has_error(findings, 'pii', 'only allowed on /start'),
+       'operator email outside start.html fails')
+    ok(all(op_email not in f.msg for f in findings),
+       'off-start PII finding does not include the operator email value')
+
+    # ---- Aegis N3: reject symlinks and paths that escape the room ----
+    outside = os.path.join(td, 'outside-secret.html')
+    with open(outside, 'w', encoding='utf-8') as f:
+        f.write('<!DOCTYPE html><html><body>secret \u2014 dash</body></html>\n')
+    syn = os.path.join(td, 'symlink')
+    shutil.copytree(room, syn)
+    os.symlink(outside, os.path.join(syn, 'leaked.html'))
+    rc, findings = run(syn)
+    ok(has_error(findings, 'path', 'symlink rejected'),
+       'a file symlink in the room is rejected')
+    ok(not has_error(findings, 'copy'),
+       'symlink target contents are not scanned as public copy')
+
+    esc = os.path.join(td, 'href-escape')
+    shutil.copytree(room, esc)
+    with open(os.path.join(esc, 'about.html'), encoding='utf-8') as f:
+        txt = f.read()
+    with open(os.path.join(esc, 'about.html'), 'w', encoding='utf-8') as f:
+        f.write(txt.replace('<a href="terms.html">Terms</a>', '<a href="../outside-secret.html">Terms</a>'))
+    rc, findings = run(esc)
+    ok(rc == 1 and has_error(findings, 'path', 'escapes the room root'),
+       'href that climbs out of the room root fails')
+
+    lck = os.path.join(td, 'lock-escape')
+    shutil.copytree(room, lck)
+    with open(os.path.join(lck, 'FACTORY.lock'), encoding='utf-8') as f:
+        lock = json.load(f)
+    lock['files']['../outside-secret.html'] = '0' * 64
+    with open(os.path.join(lck, 'FACTORY.lock'), 'w', encoding='utf-8') as f:
+        json.dump(lock, f)
+        f.write('\n')
+    rc, findings = run(lck)
+    ok(rc == 1 and has_error(findings, 'path', 'FACTORY.lock path escapes'),
+       'FACTORY.lock path with .. is rejected')
+
+    # ---- Juno N4: nested HTML is checked ----
+    nest = os.path.join(td, 'nested')
+    shutil.copytree(room, nest)
+    os.makedirs(os.path.join(nest, 'stories'), exist_ok=True)
+    with open(os.path.join(nest, 'stories', 'talk.html'), 'w', encoding='utf-8') as f:
+        f.write(page('Talk', '<p>Nested talk.</p>'))
+    rc, findings = run(nest)
+    ok(rc == 1 and has_error(findings, 'sitemap', 'stories/talk.html'),
+       'nested indexable stories/talk.html is required in the sitemap')
+
+    # ---- Juno N7: decimal dash entities, wrapped banner, empty Disallow ----
+    ent = os.path.join(td, 'entity-8210')
+    shutil.copytree(room, ent)
+    with open(os.path.join(ent, 'about.html'), encoding='utf-8') as f:
+        txt = f.read()
+    with open(os.path.join(ent, 'about.html'), 'w', encoding='utf-8') as f:
+        f.write(txt.replace('About this room.', 'About this room&#8210;more.'))
+    rc, findings = run(ent)
+    ok(rc == 1 and has_error(findings, 'copy', 'en or em dash'),
+       'decimal entity &#8210; (U+2012) fails the copy check')
+
+    ent2 = os.path.join(td, 'entity-8213')
+    shutil.copytree(room, ent2)
+    with open(os.path.join(ent2, 'about.html'), encoding='utf-8') as f:
+        txt = f.read()
+    with open(os.path.join(ent2, 'about.html'), 'w', encoding='utf-8') as f:
+        f.write(txt.replace('About this room.', 'About this room&#8213;more.'))
+    rc, findings = run(ent2)
+    ok(rc == 1 and has_error(findings, 'copy', 'en or em dash'),
+       'decimal entity &#8213; (U+2015) fails the copy check')
+
+    wrap = os.path.join(td, 'banner-wrap')
+    shutil.copytree(room, wrap)
+    with open(os.path.join(wrap, 'index.html'), encoding='utf-8') as f:
+        txt = f.read()
+    with open(os.path.join(wrap, 'index.html'), 'w', encoding='utf-8') as f:
+        f.write(txt.replace(
+            '>Beta: early and a bit unfinished. Not a brochure.</div>',
+            '><span>Beta: early and a bit unfinished. Not a brochure.</span></div>',
+        ))
+    rc, findings = run(wrap)
+    ok(rc == 0 and not has_error(findings, 'banner'),
+       'Beta banner text wrapped in a child element still passes')
+
+    wrap_bad = os.path.join(td, 'banner-wrap-preview')
+    shutil.copytree(room, wrap_bad)
+    with open(os.path.join(wrap_bad, 'index.html'), encoding='utf-8') as f:
+        txt = f.read()
+    with open(os.path.join(wrap_bad, 'index.html'), 'w', encoding='utf-8') as f:
+        f.write(txt.replace(
+            '>Beta: early and a bit unfinished. Not a brochure.</div>',
+            '><span>Preview only.</span></div>',
+        ))
+    rc, findings = run(wrap_bad)
+    ok(rc == 1 and has_error(findings, 'banner', 'Preview only'),
+       'Preview only banner text wrapped in a child element fails')
+
+    empty_d = os.path.join(td, 'robots-empty-disallow')
+    room_ed = write_good_room(empty_d, robots='User-agent: *\nAllow: /\nDisallow:\n')
+    rc, findings = run(room_ed)
+    ok(rc == 0 and not has_error(findings, 'robots'),
+       'empty Disallow: is not a blanket disallow')
+
 finally:
     shutil.rmtree(td, ignore_errors=True)
 
