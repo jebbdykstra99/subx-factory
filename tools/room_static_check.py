@@ -128,6 +128,51 @@ def safe_under_room(room: Path, p: Path) -> bool:
     return True
 
 
+def well_known_status(room: Path, name: str) -> tuple[str, Path]:
+    """Status of a room-root well-known file: ok, missing, symlink, or outside.
+
+    Does not follow a symlink. The path returned for non-ok statuses is the
+    lexical room/name join, never the resolved outside target.
+    """
+    p = room / name
+    if target_escapes(name) or len(Path(name).parts) != 1:
+        return 'outside', p
+    try:
+        p.relative_to(room)
+    except ValueError:
+        return 'outside', p
+    if p.is_symlink():
+        return 'symlink', p
+    if not p.exists():
+        return 'missing', p
+    if not safe_under_room(room, p):
+        return 'outside', p
+    return 'ok', p
+
+
+def well_known_error(name: str, status: str) -> str:
+    if status == 'symlink':
+        return '%s is a symlink' % name
+    return '%s is outside the room root' % name
+
+
+def redact_outside_paths(room: Path, text: str) -> str:
+    """Replace absolute paths that are not under the room with factory.js.\n\n    Only matches a path that starts at a string/whitespace boundary with /,
+    so a relative token like factory/tools/check_budget.sh is left alone.
+    """
+    room_r = room.resolve()
+
+    def repl(m: re.Match) -> str:
+        raw = m.group(1)
+        try:
+            Path(raw).resolve().relative_to(room_r)
+        except (ValueError, OSError):
+            return 'factory.js'
+        return raw
+
+    return re.sub(r'(?<![A-Za-z0-9_./-])(/[^\s:]+)', repl, text)
+
+
 def walk_room(room: Path) -> tuple[list[Path], list[str]]:
     """Safe walk: no follow-symlinks. Returns (files, path-error messages)."""
     files: list[Path] = []
@@ -194,8 +239,9 @@ def html_files(room: Path, path_errors: list[str] | None = None) -> list[Path]:
 
 
 def is_start_path(room: Path, p: Path) -> bool:
+    """True only for room-root start.html or /start(/): start, start.html, start/index.html."""
     r = rel(room, p).lower()
-    return r in {'start.html', 'start'} or r.endswith('/start.html') or r == 'start/index.html'
+    return r in {'start.html', 'start', 'start/index.html'}
 
 
 def page_rel(room: Path, p: Path) -> str:
@@ -334,8 +380,8 @@ def _add_host(hosts: set[str], raw: str) -> None:
 def room_hosts(room: Path, site: dict | None, factory: Path | None = None) -> set[str]:
     """Internal hosts from CNAME, site.json domain, and rooms.json only. Never sitemap locs."""
     hosts: set[str] = set()
-    cname = room / 'CNAME'
-    if cname.is_file() and not cname.is_symlink() and safe_under_room(room, cname):
+    cname_status, cname = well_known_status(room, 'CNAME')
+    if cname_status == 'ok':
         line = cname.read_text(encoding='utf-8', errors='replace').strip().splitlines()
         if line:
             _add_host(hosts, line[0])
@@ -518,9 +564,11 @@ def collect(room: Path, factory: Path, *, expect_indexable: bool, fail_on_stale:
         return findings
 
     site = None
-    site_path = room / 'site.json'
-    if not site_path.is_file():
+    site_status, site_path = well_known_status(room, 'site.json')
+    if site_status == 'missing':
         err('site.json', 'site.json is missing')
+    elif site_status != 'ok':
+        err('path', well_known_error('site.json', site_status))
     else:
         try:
             site = load_json(site_path)
@@ -542,9 +590,9 @@ def collect(room: Path, factory: Path, *, expect_indexable: bool, fail_on_stale:
         except Exception as e:
             err('taxonomy.json', 'taxonomy.json is not valid JSON: %s' % e)
 
-    cname_path = room / 'CNAME'
+    cname_status, cname_path = well_known_status(room, 'CNAME')
     cname_val = ''
-    if cname_path.is_file():
+    if cname_status == 'ok':
         cname_val = cname_path.read_text(encoding='utf-8', errors='replace').strip().splitlines()
         cname_val = cname_val[0].strip() if cname_val else ''
         if not cname_val:
@@ -554,6 +602,8 @@ def collect(room: Path, factory: Path, *, expect_indexable: bool, fail_on_stale:
             domain = rooms_domain(factory, site_id if isinstance(site_id, str) else None)
             if domain and cname_val.lower() != domain.lower():
                 err('cname', 'CNAME %s does not match rooms.json domain %s' % (cname_val, domain))
+    elif cname_status != 'missing':
+        err('path', well_known_error('CNAME', cname_status))
 
     walk_files, walk_errs = walk_room(room)
     for e in walk_errs:
@@ -731,10 +781,12 @@ def collect(room: Path, factory: Path, *, expect_indexable: bool, fail_on_stale:
                         err('banner', '%s:%d: leftover Preview copy' % (rname, i))
 
     # 6. factory.js budget
-    core = room / 'factory.js'
+    core_status, core = well_known_status(room, 'factory.js')
     budget_sh = factory / 'tools' / 'check_budget.sh'
-    if not core.is_file():
+    if core_status == 'missing':
         err('budget', 'factory.js is missing')
+    elif core_status != 'ok':
+        err('path', well_known_error('factory.js', core_status))
     elif not budget_sh.is_file():
         err('budget', 'tools/check_budget.sh is missing in the factory checkout')
     else:
@@ -742,8 +794,8 @@ def collect(room: Path, factory: Path, *, expect_indexable: bool, fail_on_stale:
         env['CORE_BUDGET_BYTES'] = str(int(core_budget_bytes))
         try:
             proc = subprocess.run(
-                ['bash', str(budget_sh), str(core.resolve()), str(int(core_budget_bytes))],
-                cwd=str(factory),
+                ['bash', str(budget_sh.resolve()), str(core.resolve()), str(int(core_budget_bytes))],
+                cwd=str(factory.resolve()),
                 env=env,
                 capture_output=True,
                 text=True,
@@ -752,17 +804,19 @@ def collect(room: Path, factory: Path, *, expect_indexable: bool, fail_on_stale:
         except Exception as e:
             err('budget', 'check_budget.sh failed to run: %s' % e)
         else:
-            out = (proc.stdout or '') + (proc.stderr or '')
+            out = redact_outside_paths(room, (proc.stdout or '') + (proc.stderr or ''))
             for line in out.splitlines():
                 note('budget', line)
             if proc.returncode != 0:
                 err('budget', 'factory.js exceeds budget %s B' % int(core_budget_bytes))
 
     # 7. FACTORY.lock vs room and vs this release
-    lock_path = room / 'FACTORY.lock'
+    lock_status, lock_path = well_known_status(room, 'FACTORY.lock')
     lock = None
-    if not lock_path.is_file():
+    if lock_status == 'missing':
         err('lock', 'FACTORY.lock is missing')
+    elif lock_status != 'ok':
+        err('path', well_known_error('FACTORY.lock', lock_status))
     else:
         try:
             lock = load_json(lock_path)

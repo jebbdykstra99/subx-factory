@@ -542,6 +542,145 @@ try:
     ok(rc == 0 and not has_error(findings, 'robots'),
        'empty Disallow: is not a blanket disallow')
 
+    # ---- room-root /start only (Aegis / Juno LOW) ----
+    room_p = RSC.Path(room)
+    ok(RSC.is_start_path(room_p, room_p / 'start.html'),
+       'is_start_path accepts room-root start.html')
+    ok(RSC.is_start_path(room_p, room_p / 'start'),
+       'is_start_path accepts room-root start')
+    ok(RSC.is_start_path(room_p, room_p / 'start' / 'index.html'),
+       'is_start_path accepts room-root start/index.html')
+    ok(not RSC.is_start_path(room_p, room_p / 'stories' / 'start.html'),
+       'is_start_path rejects nested stories/start.html')
+    ok(not RSC.is_start_path(room_p, room_p / 'legal' / 'start.html'),
+       'is_start_path rejects nested legal/start.html')
+    ok(not RSC.is_start_path(room_p, room_p / 'start-anything.html'),
+       'is_start_path rejects start-anything.html')
+
+    st_nested = os.path.join(td, 'start-nested')
+    shutil.copytree(room, st_nested)
+    os.makedirs(os.path.join(st_nested, 'stories'), exist_ok=True)
+    with open(os.path.join(st_nested, 'stories', 'start.html'), 'w', encoding='utf-8') as f:
+        f.write(page('Nested start', '<p>Contact the operator at %s.</p>' % op_email))
+    rc, findings = run(st_nested)
+    ok(rc == 1 and has_error(findings, 'pii', 'only allowed on /start'),
+       'operator email on nested stories/start.html fails')
+    ok(all(op_email not in f.msg for f in findings),
+       'nested start finding messages do not include the operator email value')
+
+    st_idx = os.path.join(td, 'start-index')
+    shutil.copytree(room, st_idx)
+    os.makedirs(os.path.join(st_idx, 'start'), exist_ok=True)
+    with open(os.path.join(st_idx, 'start', 'index.html'), 'w', encoding='utf-8') as f:
+        f.write(page('Start', '<p>Contact the operator at %s.</p>' % op_email))
+    with open(os.path.join(st_idx, 'sitemap.xml'), encoding='utf-8') as f:
+        sm = f.read()
+    with open(os.path.join(st_idx, 'sitemap.xml'), 'w', encoding='utf-8') as f:
+        f.write(sm.replace('</urlset>', '  <url><loc>https://testroom.example/start/index.html</loc></url>\n</urlset>'))
+    rc, findings = run(st_idx)
+    ok(not has_error(findings, 'pii'),
+       'operator email on room-root start/index.html is allowed')
+    ok(all(op_email not in f.msg for f in findings),
+       'start/index.html finding messages do not include the operator email value')
+
+    # ---- well-known named reads reject symlinks and do not print outside paths ----
+    marker = 'outside-secret-wellknown'
+    outside_dir = os.path.join(td, marker)
+    os.makedirs(outside_dir, exist_ok=True)
+    outside_site = os.path.join(outside_dir, 'leaked-site.json')
+    with open(outside_site, 'w', encoding='utf-8') as f:
+        f.write('{"dash": "this file uses an em dash: \u2014"}\n')
+    outside_cname = os.path.join(outside_dir, 'leaked-CNAME')
+    with open(outside_cname, 'w', encoding='utf-8') as f:
+        f.write('evil.example\n')
+    outside_js = os.path.join(outside_dir, 'leaked-factory.js')
+    with open(outside_js, 'wb') as f:
+        f.write(b'/* outside factory.js */\n')
+    outside_lock = os.path.join(outside_dir, 'leaked-FACTORY.lock')
+    with open(outside_lock, 'w', encoding='utf-8') as f:
+        f.write('{"files": {}}\n')
+
+    def no_outside(findings, label):
+        msgs = ' | '.join(f.msg for f in findings)
+        ok(marker not in msgs and 'leaked-site.json' not in msgs and 'leaked-CNAME' not in msgs
+           and 'leaked-factory.js' not in msgs and 'leaked-FACTORY.lock' not in msgs,
+           '%s findings do not print the outside path' % label)
+
+    syn_site = os.path.join(td, 'symlink-site')
+    shutil.copytree(room, syn_site)
+    os.remove(os.path.join(syn_site, 'site.json'))
+    os.symlink(outside_site, os.path.join(syn_site, 'site.json'))
+    rc, findings = run(syn_site)
+    ok(has_error(findings, 'path', 'site.json is a symlink'),
+       'direct read of site.json rejects a symlink')
+    no_outside(findings, 'site.json symlink')
+
+    syn_cn = os.path.join(td, 'symlink-cname')
+    shutil.copytree(room, syn_cn)
+    os.remove(os.path.join(syn_cn, 'CNAME'))
+    os.symlink(outside_cname, os.path.join(syn_cn, 'CNAME'))
+    rc, findings = run(syn_cn)
+    ok(has_error(findings, 'path', 'CNAME is a symlink'),
+       'direct read of CNAME rejects a symlink')
+    no_outside(findings, 'CNAME symlink')
+
+    syn_js = os.path.join(td, 'symlink-factory-js')
+    shutil.copytree(room, syn_js)
+    os.remove(os.path.join(syn_js, 'factory.js'))
+    os.symlink(outside_js, os.path.join(syn_js, 'factory.js'))
+    rc, findings = run(syn_js)
+    ok(has_error(findings, 'path', 'factory.js is a symlink'),
+       'direct read of factory.js rejects a symlink')
+    ok(not any(marker in f.msg or 'leaked-factory.js' in f.msg for f in findings),
+       'budget step does not print an outside factory.js path')
+    no_outside(findings, 'factory.js symlink')
+
+    syn_lock = os.path.join(td, 'symlink-lock')
+    shutil.copytree(room, syn_lock)
+    os.remove(os.path.join(syn_lock, 'FACTORY.lock'))
+    os.symlink(outside_lock, os.path.join(syn_lock, 'FACTORY.lock'))
+    rc, findings = run(syn_lock)
+    ok(has_error(findings, 'path', 'FACTORY.lock is a symlink'),
+       'direct read of FACTORY.lock rejects a symlink')
+    no_outside(findings, 'FACTORY.lock symlink')
+
+    # ---- budget check with relative --room / --factory (the CI layout) ----
+    rel_root = os.path.join(td, 'ci-layout')
+    os.makedirs(rel_root)
+    write_good_room(rel_root)
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(rel_root)
+        rc, findings = RSC.run_check('room', os.path.relpath(ROOT, rel_root),
+                                     expect_indexable=True, fail_on_stale=False,
+                                     core_budget_bytes=255000, print_report=False)
+    finally:
+        os.chdir(old_cwd)
+    ok(not has_error(findings, 'budget'),
+       'budget check works when --room and --factory are relative paths (got %s)' %
+       [f.msg for f in findings if f.code == 'budget'])
+    ok(not any('No such file' in f.msg or 'factoryfactory.js' in f.msg for f in findings),
+       'budget notes do not mangle a relative check_budget.sh path')
+
+    # ---- reusable workflow checkout contract ----
+    wf = os.path.join(ROOT, '.github', 'workflows', 'room-static-check.yml')
+    with open(wf, encoding='utf-8') as f:
+        wf_text = f.read()
+    ok('${{ github.action_repository }}' not in wf_text,
+       'workflow does not use github.action_repository')
+    ok('${{ github.action_ref }}' not in wf_text,
+       'workflow does not use github.action_ref')
+    ok('repository: jebbdykstra99/subx-factory' in wf_text,
+       'factory checkout hardcodes jebbdykstra99/subx-factory')
+    ok('factory_ref:' in wf_text,
+       'workflow_call accepts factory_ref')
+    ok('github.job_workflow_sha' in wf_text,
+       'resolve step considers github.job_workflow_sha')
+    ok('[0-9a-fA-F]{40}' in wf_text,
+       'resolve step requires a 40-char SHA')
+    ok('steps.factory_sha.outputs.sha' in wf_text,
+       'factory checkout uses the resolved SHA')
+
 finally:
     shutil.rmtree(td, ignore_errors=True)
 
