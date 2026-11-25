@@ -1,0 +1,49 @@
+name: room-static-check
+# Reusable workflow for static clone rooms. Called from a thin per-room ci.yml
+# pinned to a subx-factory SHA (not @main). No secrets. No paid services.
+# Check out the caller room and this workflow's factory SHA, then run
+# tools/room_static_check.py (HTML/links, sitemap, site.json, typography/PII,
+# noindex/banner, factory.js budget, FACTORY.lock vs room and vs this release).
+on:
+  workflow_call:
+    inputs:
+      expect_indexable:
+        description: "true = lifted room (search indexing on; 404 and report stay noindex)"
+        type: boolean
+        default: true
+        required: false
+      fail_on_stale:
+        description: "true = fail when FACTORY.lock does not match this factory release (STALE)"
+        type: boolean
+        default: false
+        required: false
+      core_budget_bytes:
+        description: "factory.js byte cap (default 255000)"
+        type: number
+        default: 255000
+        required: false
+permissions: { contents: read }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: room
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.action_repository }}
+          ref: ${{ github.action_ref }}
+          path: factory
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13.18' }
+      - name: Room static check
+        run: >
+          python3 factory/tools/room_static_check.py
+          --room room
+          --factory factory
+          --expect-indexable ${{ inputs.expect_indexable }}
+          --fail-on-stale ${{ inputs.fail_on_stale }}
+          --core-budget-bytes ${{ inputs.core_budget_bytes }}

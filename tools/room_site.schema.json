@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://subx.it/schema/room_site.schema.json",
+  "title": "SubX clone-room site.json (minimal)",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "siteId",
+    "name",
+    "tagline",
+    "minAge",
+    "accountsOpen",
+    "stories",
+    "features",
+    "pixel",
+    "redditCrosspost"
+  ],
+  "properties": {
+    "siteId": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "tagline": { "type": "string" },
+    "minAge": { "type": "integer", "minimum": 18 },
+    "accountsOpen": { "type": "boolean" },
+    "stories": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "features": { "type": "object" },
+    "pixel": { "type": "boolean" },
+    "redditCrosspost": { "type": "boolean", "const": false },
+    "imageUploads": { "type": "boolean" }
+  }
+}
