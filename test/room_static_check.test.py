@@ -644,6 +644,24 @@ try:
        'direct read of FACTORY.lock rejects a symlink')
     no_outside(findings, 'FACTORY.lock symlink')
 
+    # ---- budget check with relative --room / --factory (the CI layout) ----
+    rel_root = os.path.join(td, 'ci-layout')
+    os.makedirs(rel_root)
+    write_good_room(rel_root)
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(rel_root)
+        rc, findings = RSC.run_check('room', os.path.relpath(ROOT, rel_root),
+                                     expect_indexable=True, fail_on_stale=False,
+                                     core_budget_bytes=255000, print_report=False)
+    finally:
+        os.chdir(old_cwd)
+    ok(not has_error(findings, 'budget'),
+       'budget check works when --room and --factory are relative paths (got %s)' %
+       [f.msg for f in findings if f.code == 'budget'])
+    ok(not any('No such file' in f.msg or 'factoryfactory.js' in f.msg for f in findings),
+       'budget notes do not mangle a relative check_budget.sh path')
+
     # ---- reusable workflow checkout contract ----
     wf = os.path.join(ROOT, '.github', 'workflows', 'room-static-check.yml')
     with open(wf, encoding='utf-8') as f:

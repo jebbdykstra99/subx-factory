@@ -157,18 +157,20 @@ def well_known_error(name: str, status: str) -> str:
 
 
 def redact_outside_paths(room: Path, text: str) -> str:
-    """Replace any absolute path that is not under the room with factory.js."""
+    """Replace absolute paths that are not under the room with factory.js.\n\n    Only matches a path that starts at a string/whitespace boundary with /,
+    so a relative token like factory/tools/check_budget.sh is left alone.
+    """
     room_r = room.resolve()
 
     def repl(m: re.Match) -> str:
-        raw = m.group(0)
+        raw = m.group(1)
         try:
             Path(raw).resolve().relative_to(room_r)
         except (ValueError, OSError):
             return 'factory.js'
         return raw
 
-    return re.sub(r'(?:/[^\s:]+)+', repl, text)
+    return re.sub(r'(?<![A-Za-z0-9_./-])(/[^\s:]+)', repl, text)
 
 
 def walk_room(room: Path) -> tuple[list[Path], list[str]]:
@@ -792,8 +794,8 @@ def collect(room: Path, factory: Path, *, expect_indexable: bool, fail_on_stale:
         env['CORE_BUDGET_BYTES'] = str(int(core_budget_bytes))
         try:
             proc = subprocess.run(
-                ['bash', str(budget_sh), str(core.resolve()), str(int(core_budget_bytes))],
-                cwd=str(factory),
+                ['bash', str(budget_sh.resolve()), str(core.resolve()), str(int(core_budget_bytes))],
+                cwd=str(factory.resolve()),
                 env=env,
                 capture_output=True,
                 text=True,
