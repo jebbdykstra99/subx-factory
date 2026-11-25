@@ -583,12 +583,14 @@ def collect(room: Path, factory: Path, *, expect_indexable: bool, fail_on_stale:
                 for e in validate_schema(site, schema):
                     err('site.json', e)
 
-    tax = room / 'taxonomy.json'
-    if tax.is_file():
+    tax_status, tax = well_known_status(room, 'taxonomy.json')
+    if tax_status == 'ok':
         try:
             load_json(tax)
         except Exception as e:
             err('taxonomy.json', 'taxonomy.json is not valid JSON: %s' % e)
+    elif tax_status != 'missing':
+        err('path', well_known_error('taxonomy.json', tax_status))
 
     cname_status, cname_path = well_known_status(room, 'CNAME')
     cname_val = ''
